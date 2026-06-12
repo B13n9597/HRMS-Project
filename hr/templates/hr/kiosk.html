@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT HRMS - Office Kiosk Simulator</title>
+    <meta name="description" content="Front office attendance check-in tablet kiosk for ACT College.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            /* Light Theme Configuration */
+            --bg-base: #f8fafc;
+            --bg-surface: #ffffff;
+            --border-color: #e2e8f0;
+            --border-hover: #025da2;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-light: #64748b;
+            
+            --primary: #025da2;
+            --primary-hover: #01477d;
+            --primary-light: rgba(2, 93, 162, 0.08);
+            
+            --success: #10b981;
+            --success-light: rgba(16, 185, 129, 0.1);
+            --success-dark: #065f46;
+            
+            --warning: #d97706;
+            --warning-light: rgba(217, 119, 6, 0.1);
+            --warning-dark: #78350f;
+            
+            --danger: #ef4444;
+            --danger-light: rgba(239, 68, 68, 0.1);
+            --danger-dark: #7f1d1d;
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(2, 93, 162, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(226, 232, 240, 0.6) 0px, transparent 50%);
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        /* Top header */
+        .kiosk-header {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            right: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: calc(100% - 48px);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 20px;
+            color: var(--primary);
+        }
+
+        .logo-box {
+            background: var(--primary);
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-back {
+            text-decoration: none;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            background: var(--bg-surface);
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-back:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        /* Main Kiosk Layout */
+        .kiosk-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            width: 100%;
+            max-width: 960px;
+            margin-top: 40px;
+            align-items: stretch;
+        }
+
+        /* Left Side: Clock Card */
+        .kiosk-clock-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 48px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .kiosk-time {
+            font-family: var(--font-display);
+            font-size: 64px;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+
+        .kiosk-date {
+            font-size: 18px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .kiosk-subtitle {
+            font-size: 13px;
+            color: var(--text-light);
+            margin-top: 24px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+            width: 100%;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        /* Right Side: Simulation Form Card */
+        .kiosk-form-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .kiosk-form-card h3 {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        .kiosk-form-card p {
+            color: var(--text-light);
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            background: #f8fafc;
+            color: var(--text-main);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            background: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(2, 93, 162, 0.15);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: var(--primary);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(2, 93, 162, 0.2);
+        }
+
+        .btn:disabled {
+            background: #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Result Display Alerts */
+        .kiosk-result {
+            margin-top: 24px;
+            padding: 20px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            display: none;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid transparent;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .result-success {
+            background: var(--success-light);
+            color: var(--success-dark);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .result-primary {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-color: rgba(2, 93, 162, 0.2);
+        }
+
+        .result-warning {
+            background: var(--warning-light);
+            color: var(--warning-dark);
+            border-color: rgba(217, 119, 6, 0.2);
+        }
+
+        .result-danger {
+            background: var(--danger-light);
+            color: var(--danger-dark);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .result-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            font-family: var(--font-display);
+        }
+
+        .result-meta {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 800px) {
+            .kiosk-grid {
+                grid-template-columns: 1fr;
+            }
+            .kiosk-clock-card {
+                padding: 32px;
+            }
+            .kiosk-time {
+                font-size: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="kiosk-header">
+        <div class="logo-container">
+            <span class="logo-box">ACT</span>
+            <span>HRMS</span>
+        </div>
+        <a href="/" class="btn-back">
+            <i data-lucide="home" style="width:16px; height:16px;"></i>
+            <span>Back to Home</span>
+        </a>
+    </header>
+
+    <div class="kiosk-grid">
+        <div class="kiosk-clock-card">
+            <div class="kiosk-time" id="kioskClock">00:00:00</div>
+            <div class="kiosk-date" id="kioskDate">Today</div>
+            <div class="kiosk-subtitle">Front Office Check-in tablet</div>
+        </div>
+
+        <div class="kiosk-form-card">
+            <div>
+                <h3>Simulate Scan Check-in</h3>
+                <p>In a production deployment, employees present their rotating QR tokens to the device camera. For simulation, select a staff profile from the directory registry below.</p>
+                
+                <div class="form-group">
+                    <label for="kioskEmployeeSelector">Select Staff Member</label>
+                    <select id="kioskEmployeeSelector" class="form-select">
+                        <option value="">Loading active directory...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <button class="btn" id="kioskSimulateBtn" disabled>
+                    <i data-lucide="scan" style="width:18px; height:18px;"></i>
+                    <span>Simulate Badge Check-in</span>
+                </button>
+
+                <div id="kioskResultBox" class="kiosk-result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Init Lucide
+        lucide.createIcons();
+
+        // Clock logic
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            const dateStr = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
+            const clockEl = document.getElementById('kioskClock');
+            const dateEl = document.getElementById('kioskDate');
+            if (clockEl) clockEl.textContent = timeStr;
+            if (dateEl) dateEl.textContent = dateStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Cookie getter for CSRF
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Generic API caller
+        async function apiCall(url, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                }
+            };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            try {
+                const res = await fetch(url, options);
+                return await res.json();
+            } catch (err) {
+                console.error(err);
+                return null;
+            }
+        }
+
+        // Load employees on load
+        const selector = document.getElementById('kioskEmployeeSelector');
+        const simulateBtn = document.getElementById('kioskSimulateBtn');
+        const resultBox = document.getElementById('kioskResultBox');
+
+        async function loadEmployees() {
+            const data = await apiCall('/kiosk/api/employees/');
+            if (data && data.success && data.employees.length > 0) {
+                selector.innerHTML = '<option value="">-- Choose Employee --</option>';
+                data.employees.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.id;
+                    opt.textContent = `${emp.full_name} (${emp.department})`;
+                    selector.appendChild(opt);
+                });
+                simulateBtn.disabled = false;
+            } else {
+                selector.innerHTML = '<option value="">Failed to load active directory</option>';
+            }
+        }
+        loadEmployees();
+
+        // Simulate scan check-in
+        simulateBtn.addEventListener('click', async () => {
+            const employeeId = selector.value;
+            if (!employeeId) {
+                alert('Please select an employee profile first.');
+                return;
+            }
+
+            simulateBtn.disabled = true;
+            simulateBtn.querySelector('span').textContent = 'Processing scan...';
+            resultBox.style.display = 'none';
+            resultBox.className = 'kiosk-result';
+
+            const data = await apiCall('/kiosk/api/scan/', 'POST', { employee_id: employeeId });
+            simulateBtn.disabled = false;
+            simulateBtn.querySelector('span').textContent = 'Simulate Badge Check-in';
+
+            if (data && data.success) {
+                const resData = data.data;
+                resultBox.innerHTML = `
+                    <div class="result-title">${resData.employee}</div>
+                    <div class="result-meta">Clocked: ${resData.time}</div>
+                    <div>${resData.message}</div>
+                `;
+
+                if (resData.result === 'time_in') {
+                    resultBox.classList.add('result-success');
+                } else if (resData.result === 'time_out') {
+                    resultBox.classList.add('result-primary');
+                } else {
+                    resultBox.classList.add('result-warning');
+                }
+                resultBox.style.display = 'block';
+            } else {
+                resultBox.innerHTML = `
+                    <div class="result-title">Scan Failed</div>
+                    <div>${data ? data.error : 'Connection error during scanning simulation.'}</div>
+                `;
+                resultBox.classList.add('result-danger');
+                resultBox.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

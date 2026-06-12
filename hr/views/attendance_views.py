@@ -1,181 +1,196 @@
-from django.shortcuts import get_object_or_404
+# hrms/views/attendance_views.py
+#
+# Attendance Logs + Live Attendance dashboard views.
+# All logic delegated to attendance_service.
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.utils import timezone
-from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 
-# Security tools for Rate Limiting
-from rest_framework.decorators import api_view, throttle_classes
-from rest_framework.throttling import AnonRateThrottle
+from hr.services.attendance_service import (
+    get_todays_attendance,
+    get_employee_attendance_report,
+    get_my_attendance,
+    process_qr_scan,
+    log_scan,
+    get_employee_qr_token,
+)
+from hr.models import Employee
 
-# Import your models and your 30-second QR utilities
-from hr.models import Employee, Attendance, QRScanLog, SystemSetting
-from hr.utils import generate_daily_token, verify_daily_token
 
-# ============================================================
-#  1. STANDARDIZED JSON RESPONSES (Fix 7)
-#  Ensures your React frontend always gets the exact same format.
-# ============================================================
-def ok(data: dict, status: int = 200):
-    return JsonResponse({'success': True,  'data': data,  'error': None}, status=status)
+def is_hr(user):
+    """Check if user is HR manager or admin."""
+    if user.is_superuser or user.is_staff:
+        return True
+    try:
+        employee = Employee.objects.get(user=user)
+        if employee.role and 'hr' in employee.role.name.lower():
+            return True
+    except Employee.DoesNotExist:
+        pass
+    return False
 
-def err(message: str, status: int = 400):
-    return JsonResponse({'success': False, 'data': None,  'error': message}, status=status)
 
-# ============================================================
-#  2. SECURITY LOGGING HELPERS (Fix 4)
-#  Catches IP addresses of anyone trying to scan fake codes.
-# ============================================================
-def get_client_ip(request):
-    forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
-    if forwarded:
-        return forwarded.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR')
+@login_required(login_url='/login/')
+def attendance_logs(request):
+    if not is_hr(request.user):
+        return redirect('/login/')
+    """
+    HR sees filterable attendance logs for all employees.
+    Filters: department, status, month, year via GET params.
+    """
+    from hr.models import Attendance, Department
+    from django.utils import timezone
 
-def log_failed_scan(request, employee=None, reason=''):
-    QRScanLog.objects.create(
-        employee=employee,
-        scan_type='failed',
-        is_successful=False,
-        ip_address=get_client_ip(request),
-        failure_reason=reason,
+    month      = int(request.GET.get('month', timezone.localdate().month))
+    year       = int(request.GET.get('year',  timezone.localdate().year))
+    dept_id    = request.GET.get('department_id')
+    status_f   = request.GET.get('status', '')
+
+    records = (
+        __import__('hr.models', fromlist=['Attendance']).Attendance.objects
+        .filter(date__month=month, date__year=year)
+        .select_related('employee', 'employee__department')
+        .order_by('-date', 'employee__last_name')
     )
 
-# ============================================================
-#  3. THE HARDENED SCANNER ENDPOINT (Fix 1 & Fix 5)
-#  Limits to 10 scans per minute to prevent brute-force attacks.
-# ============================================================
-class QRScanThrottle(AnonRateThrottle):
-    scope = 'qr_scan'
+    if dept_id:
+        records = records.filter(employee__department_id=dept_id)
+    if status_f:
+        records = records.filter(status=status_f)
 
-@api_view(['POST'])
-@throttle_classes([QRScanThrottle])
-def scan_qr_secure(request):
+    departments = Department.objects.all()
+
+    context = {
+        'records':     records,
+        'departments': departments,
+        'month':       month,
+        'year':        year,
+        'dept_id':     dept_id or '',
+        'status_f':    status_f,
+        'months':      [
+            (1,'January'),(2,'February'),(3,'March'),(4,'April'),
+            (5,'May'),(6,'June'),(7,'July'),(8,'August'),
+            (9,'September'),(10,'October'),(11,'November'),(12,'December')
+        ],
+        'years':  [2024, 2025, 2026],
+        'statuses':['Present','Late','Absent','On Leave'],
+    }
+    return render(request, 'attendance/attendance_logs.html', context)
+
+
+@login_required(login_url='/login/')
+def live_attendance(request):
+    """Live attendance page — today's summary + kiosk simulator."""
+    if not is_hr(request.user):
+        return redirect('/login/')
+    from hr.models import Employee as Emp
+    today_data = get_todays_attendance()
+    employees  = Emp.objects.select_related('department').order_by('first_name')
+    context = {
+        'today':     today_data,
+        'employees': employees,
+    }
+    return render(request, 'attendance/live_attendance.html', context)
+
+
+@csrf_exempt
+def api_scan(request):
     """
-    POST /api/attendance/scan/
-    The office tablet sends the scanned QR token here.
+    POST /api/scan/  { "token": "<uuid>" }
+    Called by the kiosk simulator on the frontend.
     """
-    signed_token = request.data.get('token', '')
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
 
-    if not signed_token:
-        log_failed_scan(request, reason='No token in request body')
-        return err('Token is required.', status=400)
+    import json
+    try:
+        body  = json.loads(request.body)
+        token = body.get('token', '')
+    except Exception:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    # 1. Verify the 30-second signed token using your utils.py
-    employee, token_error = verify_daily_token(signed_token)
-
-    if not employee:
-        log_failed_scan(request, reason=token_error)
-        return err(token_error, status=403)
-
-    now = timezone.now()
-    now_local = timezone.localtime(now)
-    today = timezone.localdate()
-
-    # 2. Core logic: Check them in or check them out
-    attendance, created = Attendance.objects.get_or_create(
-        employee=employee,
-        date=today,
-        defaults={'time_in': now, 'status': 'Present'},
-    )
-
-    if created:
-        # First scan of the day -> Clock In
-        attendance.calculate_status() # Assuming you have this method to check 'Late' vs 'Present'
-        attendance.save()
-        QRScanLog.objects.create(
-            employee=employee, scan_type='time_in', is_successful=True, ip_address=get_client_ip(request)
-        )
-        return ok({
-            'result':   'time_in',
-            'employee': employee.get_full_name(),
-            'time':     now_local.strftime('%H:%M:%S'),
-            'message':  f"Welcome, {employee.first_name}! Clocked in successfully."
-        })
-
-    elif attendance.time_out is None:
-        # Second scan of the day -> Clock Out
-        attendance.time_out = now
-        attendance.save()
-        hours = round((now - attendance.time_in).total_seconds() / 3600, 2)
-        QRScanLog.objects.create(
-            employee=employee, scan_type='time_out', is_successful=True, ip_address=get_client_ip(request)
-        )
-        return ok({
-            'result':       'time_out',
-            'employee':     employee.get_full_name(),
-            'time':         now_local.strftime('%H:%M:%S'),
-            'hours_worked': hours,
-            'message':      f"Goodbye, {employee.first_name}! You worked {hours} hours."
-        })
-
-    else:
-        # Third scan of the day -> Already clocked out
-        QRScanLog.objects.create(
-            employee=employee, scan_type='duplicate', is_successful=False, ip_address=get_client_ip(request)
-        )
-        return ok({
-            'result':   'already_complete',
-            'employee': employee.get_full_name(),
-            'message':  'Attendance already fully recorded for today.'
-        })
+    # Mock request-like object for process_qr_scan
+    class MockRequest:
+        def __init__(self):
+            self.META = request.META
+            self.data = {'token': token}
+    
+    try:
+        result = process_qr_scan(MockRequest())
+        return JsonResponse(result, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
 
 
-# ============================================================
-#  4. EMPLOYEE & HR VIEWS
-#  The rest of the endpoints mapped in your urls.py
-# ============================================================
-
-@login_required
-def my_qr_code(request):
-    """
-    GET /api/attendance/my-qr/
-    Returns the rotating 30-second token for the React app to render as a QR code.
-    """
-    employee = get_object_or_404(Employee, user=request.user)
-    token = generate_daily_token(employee)
-    return ok({'qr_token': token, 'expires_in_seconds': 30})
-
-@login_required
-def today_attendance(request):
-    """
-    GET /api/attendance/today/
-    For HR: Returns a list of everyone who checked in today.
-    """
-    # Verify user has HR/Admin role here
-    today = timezone.localdate()
-    records = Attendance.objects.filter(date=today).values(
-        'employee__first_name', 'employee__last_name', 'time_in', 'time_out', 'status'
-    )
-    return ok(list(records))
-
-@login_required
+@login_required(login_url='/login/')
 def my_attendance(request):
-    """
-    GET /api/attendance/my-record/
-    For Employee: See their own attendance history.
-    """
-    employee = get_object_or_404(Employee, user=request.user)
-    records = Attendance.objects.filter(employee=employee).order_by('-date')[:30] # Last 30 days
-    
-    data = []
-    for r in records:
-        data.append({
-            'date': r.date,
-            'time_in': r.time_in.strftime('%H:%M') if r.time_in else None,
-            'time_out': r.time_out.strftime('%H:%M') if r.time_out else None,
-            'status': r.status
-        })
-    return ok(data)
+    """Employee's own attendance history."""
+    history = get_my_attendance(request.user)
+    context = {
+        'records': history,
+    }
+    return render(request, 'attendance/my_attendance.html', context)
 
-@login_required
+
+@login_required(login_url='/login/')
 def employee_attendance_report(request, employee_id):
-    """
-    GET /api/attendance/report/<employee_id>/
-    For HR: Look up a specific employee's history.
-    """
-    # Verify user has HR/Admin role here
-    employee = get_object_or_404(Employee, id=employee_id)
-    records = Attendance.objects.filter(employee=employee).order_by('-date')[:30]
-    
-    data = [{'date': r.date, 'status': r.status} for r in records]
-    return ok({'employee': employee.get_full_name(), 'history': data})
+    """HR views one employee's monthly attendance."""
+    if not is_hr(request.user):
+        return redirect('/login/')
+    history = get_employee_attendance_report(employee_id)
+    return render(request, 'attendance/employee_report.html', history)
+
+
+# ─────────────────────────────────────────────
+# JSON API ENDPOINTS FOR FRONTEND SPA
+# ─────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def my_qr_code(request):
+    """Get the rotating QR token for the logged-in employee."""
+    try:
+        data = get_employee_qr_token(request.user)
+        return JsonResponse({'success': True, 'data': data}, status=200)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required(login_url='/login/')
+def today_attendance(request):
+    """Get today's attendance for HR dashboard live tracker."""
+    if not is_hr(request.user):
+        return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
+    try:
+        data = get_todays_attendance()
+        return JsonResponse({'success': True, 'data': data}, status=200)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@csrf_exempt
+def scan_qr_secure(request):
+    """QR scan endpoint for kiosk or frontend scanner."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST required'}, status=405)
+
+    import json
+    try:
+        body = json.loads(request.body)
+        token = body.get('token', '')
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+    # Mock a request-like object for process_qr_scan
+    class MockRequest:
+        def __init__(self, http_request):
+            self.META = http_request.META
+            self.data = {'token': token}
+
+    try:
+        result = process_qr_scan(MockRequest(request))
+        return JsonResponse({'success': True, 'data': result}, status=200)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)

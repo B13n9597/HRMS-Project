@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT HRMS - Tablet Kiosk (PIN + Signature)</title>
+    <meta name="description" content="Tablet attendance check-in kiosk with PIN authentication and digital signature canvas.">
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-base: #0f172a;
+            --bg-surface: #1e293b;
+            --border-color: #334155;
+            --border-hover: #0ea5e9;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --text-light: #cbd5e1;
+            
+            --primary: #0ea5e9;
+            --primary-hover: #38bdf8;
+            --primary-light: rgba(14, 165, 233, 0.1);
+            
+            --success: #10b981;
+            --success-light: rgba(16, 185, 129, 0.15);
+            --success-dark: #34d399;
+            
+            --warning: #f59e0b;
+            --warning-light: rgba(245, 158, 11, 0.15);
+            --warning-dark: #fbbf24;
+            
+            --danger: #ef4444;
+            --danger-light: rgba(239, 68, 68, 0.15);
+            --danger-dark: #f87171;
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.2);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.5);
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(30, 41, 59, 0.5) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(15, 23, 42, 0.8) 0px, transparent 50%);
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+
+        header {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            right: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: calc(100% - 48px);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 22px;
+            color: var(--primary);
+        }
+
+        .logo-box {
+            background: var(--primary);
+            color: var(--bg-base);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-back {
+            text-decoration: none;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            background: rgba(30, 41, 59, 0.5);
+            transition: var(--transition);
+        }
+
+        .btn-back:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        /* Digital Clock */
+        .kiosk-clock-card {
+            margin-top: 50px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .kiosk-time {
+            font-family: var(--font-display);
+            font-size: 54px;
+            font-weight: 800;
+            color: var(--primary);
+            letter-spacing: -1px;
+            text-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+            margin-bottom: 4px;
+        }
+
+        .kiosk-date {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Main Card Container */
+        .kiosk-container {
+            width: 100%;
+            max-width: 760px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            box-shadow: var(--shadow-lg);
+            min-height: 480px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        /* Screens switcher styles */
+        .screen {
+            display: none;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header Texts */
+        .screen-title {
+            font-family: var(--font-display);
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .screen-desc {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+
+        /* Authentication Screen Form Layout */
+        .auth-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 18px;
+            font-weight: 600;
+            background: var(--bg-base);
+            color: var(--text-main);
+            transition: var(--transition);
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+        }
+
+        .form-input::placeholder {
+            letter-spacing: 0;
+            font-weight: 400;
+            color: #475569;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: var(--primary);
+            color: var(--bg-base);
+            font-weight: 700;
+            font-size: 17px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
+        }
+
+        .btn:disabled {
+            background: var(--border-color);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Success & Failure Alerts */
+        .alert-box {
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            margin-top: 20px;
+            display: none;
+            border: 1px solid transparent;
+            font-weight: 500;
+        }
+
+        .alert-error {
+            background: var(--danger-light);
+            color: var(--danger-dark);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        /* Verified Employee Block */
+        .employee-banner {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: var(--bg-base);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px 24px;
+            margin-bottom: 24px;
+        }
+
+        .employee-photo {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+            background: var(--border-color);
+        }
+
+        .employee-info h4 {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .employee-info p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Signature Canvas Pad styling */
+        .signature-container {
+            margin-bottom: 24px;
+        }
+
+        .signature-canvas-wrapper {
+            background: #ffffff;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            position: relative;
+            width: 100%;
+            height: 180px;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #sigCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        .signature-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .btn-clear {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-clear:hover {
+            color: var(--danger-dark);
+            border-color: var(--danger);
+            background: var(--danger-light);
+        }
+
+        /* Check In / Out grid */
+        .action-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .btn-checkin {
+            background: var(--success);
+            color: var(--bg-base);
+        }
+        .btn-checkin:hover {
+            background: var(--success-dark);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-checkout {
+            background: var(--primary);
+            color: var(--bg-base);
+        }
+        .btn-checkout:hover {
+            background: var(--primary-hover);
+            box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
+        }
+
+        /* Success screen card styling */
+        .success-card {
+            text-align: center;
+            padding: 30px 10px;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--success-light);
+            color: var(--success);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            border: 2px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .success-title {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--success-dark);
+            margin-bottom: 12px;
+        }
+
+        .success-msg {
+            font-size: 16px;
+            color: var(--text-light);
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .success-countdown {
+            font-size: 13px;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <span class="logo-box">ACT</span>
+            <span>Tablet Attendance</span>
+        </div>
+        <a href="/kiosk/" class="btn-back">
+            <i data-lucide="scan" style="width:16px; height:16px;"></i>
+            <span>Back to QR Kiosk</span>
+        </a>
+    </header>
+
+    <div class="kiosk-clock-card">
+        <div class="kiosk-time" id="kioskClock">00:00:00</div>
+        <div class="kiosk-date" id="kioskDate">Wednesday, June 3, 2026</div>
+    </div>
+
+    <div class="kiosk-container">
+        
+        <!-- SCREEN 1: LOGIN (Credentials Verification) -->
+        <div id="screenAuth" class="screen active">
+            <h3 class="screen-title">
+                <i data-lucide="lock" style="width:24px; height:24px;"></i>
+                <span>Employee Authentication</span>
+            </h3>
+            <p class="screen-desc">Please enter your unique Employee ID and secret PIN to access the tablet attendance ledger.</p>
+            
+            <div class="auth-grid">
+                <div class="form-group">
+                    <label for="employeeIdInput">Employee ID</label>
+                    <input type="text" id="employeeIdInput" class="form-input" placeholder="e.g. EMP-123456" autocomplete="off" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="pinInput">Secret PIN</label>
+                    <input type="password" id="pinInput" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" required>
+                </div>
+
+                <button class="btn" id="btnVerify">
+                    <i data-lucide="user-check" style="width:18px; height:18px;"></i>
+                    <span>Verify Credentials</span>
+                </button>
+
+                <div id="authAlert" class="alert-box alert-error"></div>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: SIGNATURE PAD & ATTENDANCE ACTIONS -->
+        <div id="screenAttendance" class="screen">
+            <h3 class="screen-title">
+                <i data-lucide="pen-tool" style="width:24px; height:24px;"></i>
+                <span>Attendance Log Signature</span>
+            </h3>
+            <p class="screen-desc">Verify your profile details, sign on the touch canvas below, and choose your attendance log action.</p>
+
+            <!-- Employee Profile Banner -->
+            <div class="employee-banner">
+                <img id="verifiedPhoto" src="" alt="Employee Photo" class="employee-photo">
+                <div class="employee-info">
+                    <h4 id="verifiedName">Jane Doe</h4>
+                    <p id="verifiedDetails">Operations — Office Assistant</p>
+                </div>
+            </div>
+
+            <!-- Signature Pad Canvas -->
+            <div class="signature-container">
+                <div class="form-group">
+                    <label>Sign Here (Touch or Drag mouse)</label>
+                    <div class="signature-canvas-wrapper">
+                        <canvas id="sigCanvas"></canvas>
+                    </div>
+                </div>
+                <div class="signature-controls">
+                    <span class="screen-countdown" style="color: var(--text-muted); font-size:12px;">* Signature is required to submit</span>
+                    <button type="button" class="btn-clear" id="btnClearSig">Clear Signature</button>
+                </div>
+            </div>
+
+            <!-- Punch Actions Grid -->
+            <div class="action-grid">
+                <button class="btn btn-checkin" id="btnCheckIn">
+                    <i data-lucide="log-in" style="width:18px; height:18px;"></i>
+                    <span>Check In</span>
+                </button>
+                <button class="btn btn-checkout" id="btnCheckOut">
+                    <i data-lucide="log-out" style="width:18px; height:18px;"></i>
+                    <span>Check Out</span>
+                </button>
+            </div>
+            
+            <div id="attendanceAlert" class="alert-box alert-error" style="margin-top: 16px;"></div>
+        </div>
+
+        <!-- SCREEN 3: SUCCESS CONFIRMATION -->
+        <div id="screenSuccess" class="screen">
+            <div class="success-card">
+                <div class="success-icon">
+                    <i data-lucide="check" style="width:40px; height:40px;"></i>
+                </div>
+                <h2 id="successTitle" class="success-title">Attendance Recorded</h2>
+                <p id="successMsg" class="success-msg">Welcome, Amina! You successfully clocked in at 09:00 AM.</p>
+                <div class="success-countdown" id="successCountdown">Redirecting to login in 5 seconds...</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // 1. DIGITAL CLOCK LOGIC
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            const dateStr = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
+            const clockEl = document.getElementById('kioskClock');
+            const dateEl = document.getElementById('kioskDate');
+            if (clockEl) clockEl.textContent = timeStr;
+            if (dateEl) dateEl.textContent = dateStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // 2. STATE STORAGE
+        let currentEmployee = null; // Stores verified employee profile
+        let sigCanvas = document.getElementById('sigCanvas');
+        let ctx = sigCanvas.getContext('2d');
+        let isDrawing = false;
+        let hasSigned = false;
+
+        // Auto-scaling Canvas to its container size
+        function resizeCanvas() {
+            const rect = sigCanvas.getBoundingClientRect();
+            sigCanvas.width = rect.width;
+            sigCanvas.height = rect.height;
+            
+            // Re-setup context styling since width reset clears context variables
+            ctx.strokeStyle = '#0f172a'; // Navy dark stroke
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            hasSigned = false;
+        }
+        
+        // Resize canvas on activation
+        window.addEventListener('resize', resizeCanvas);
+
+        // 3. CANVAS DRAWING IMPLEMENTATION
+        function getCoords(e) {
+            const rect = sigCanvas.getBoundingClientRect();
+            let clientX, clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const coords = getCoords(e);
+            ctx.beginPath();
+            ctx.moveTo(coords.x, coords.y);
+            e.preventDefault();
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const coords = getCoords(e);
+            ctx.lineTo(coords.x, coords.y);
+            ctx.stroke();
+            hasSigned = true;
+            e.preventDefault();
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // Event listeners for draw
+        sigCanvas.addEventListener('mousedown', startDrawing);
+        sigCanvas.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', stopDrawing);
+
+        sigCanvas.addEventListener('touchstart', startDrawing, {passive: false});
+        sigCanvas.addEventListener('touchmove', draw, {passive: false});
+        window.addEventListener('touchend', stopDrawing);
+
+        document.getElementById('btnClearSig').addEventListener('click', () => {
+            ctx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+            hasSigned = false;
+        });
+
+        // 4. SCREEN ROUTING
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(scr => {
+                scr.classList.remove('active');
+            });
+            const target = document.getElementById(screenId);
+            target.classList.add('active');
+            
+            if (screenId === 'screenAttendance') {
+                // Ensure canvas sizing is correct once visible
+                setTimeout(resizeCanvas, 50);
+            }
+        }
+
+        // 5. API CALLS
+        async function fetchAPI(url, data) {
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                return await response.json();
+            } catch (err) {
+                console.error(err);
+                return { success: false, error: 'Connection failed. Please check network connectivity.' };
+            }
+        }
+
+        // 6. ACTIONS
+
+        // A. Verification Button
+        const btnVerify = document.getElementById('btnVerify');
+        const authAlert = document.getElementById('authAlert');
+        
+        btnVerify.addEventListener('click', async () => {
+            const employeeId = document.getElementById('employeeIdInput').value.trim();
+            const pin = document.getElementById('pinInput').value.trim();
+
+            if (!employeeId || !pin) {
+                authAlert.textContent = 'Please fill out both Employee ID and PIN fields.';
+                authAlert.style.display = 'block';
+                return;
+            }
+
+            authAlert.style.display = 'none';
+            btnVerify.disabled = true;
+            btnVerify.querySelector('span').textContent = 'Authenticating...';
+
+            const res = await fetchAPI('/attendance/api/attendance/tablet/authenticate/', {
+                employee_id: employeeId,
+                pin: pin
+            });
+
+            btnVerify.disabled = false;
+            btnVerify.querySelector('span').textContent = 'Verify Credentials';
+
+            if (res.success && res.employee) {
+                currentEmployee = res.employee;
+                currentEmployee.pin = pin; // Store temporarily for submit API
+                
+                // Set UI details
+                document.getElementById('verifiedName').textContent = currentEmployee.full_name;
+                document.getElementById('verifiedDetails').textContent = `${currentEmployee.position} — ${currentEmployee.department}`;
+                document.getElementById('verifiedPhoto').src = currentEmployee.photo_url;
+                
+                // Clear password input for security
+                document.getElementById('pinInput').value = '';
+                
+                showScreen('screenAttendance');
+            } else {
+                authAlert.textContent = res.error || 'Authentication failed. Please verify credentials.';
+                authAlert.style.display = 'block';
+            }
+        });
+
+        // B. Check In & Check Out Submission
+        async function submitAttendance(actionType) {
+            if (!hasSigned) {
+                const attAlert = document.getElementById('attendanceAlert');
+                attAlert.textContent = 'Please provide a signature on the canvas to log attendance.';
+                attAlert.style.display = 'block';
+                return;
+            }
+
+            document.getElementById('attendanceAlert').style.display = 'none';
+            const btnCheckIn = document.getElementById('btnCheckIn');
+            const btnCheckOut = document.getElementById('btnCheckOut');
+
+            btnCheckIn.disabled = true;
+            btnCheckOut.disabled = true;
+
+            const base64Sig = sigCanvas.toDataURL('image/png');
+
+            const payload = {
+                employee_id: currentEmployee.employee_id,
+                pin: currentEmployee.pin,
+                signature: base64Sig,
+                action: actionType
+            };
+
+            const res = await fetchAPI('/attendance/api/attendance/tablet/submit/', payload);
+
+            btnCheckIn.disabled = false;
+            btnCheckOut.disabled = false;
+
+            if (res.success) {
+                // Show Success Screen
+                document.getElementById('successTitle').textContent = actionType === 'check_in' ? 'Check In Success' : 'Check Out Success';
+                document.getElementById('successMsg').textContent = res.message;
+                
+                showScreen('screenSuccess');
+
+                // Countdown Redirect
+                let countdown = 5;
+                const cEl = document.getElementById('successCountdown');
+                const interval = setInterval(() => {
+                    countdown--;
+                    cEl.textContent = `Redirecting to login in ${countdown} seconds...`;
+                    if (countdown <= 0) {
+                        clearInterval(interval);
+                        // Reset forms and go to authentication screen
+                        document.getElementById('employeeIdInput').value = '';
+                        document.getElementById('pinInput').value = '';
+                        currentEmployee = null;
+                        hasSigned = false;
+                        showScreen('screenAuth');
+                    }
+                }, 1000);
+            } else {
+                const attAlert = document.getElementById('attendanceAlert');
+                attAlert.textContent = res.error || 'Submission failed. Please check parameters.';
+                attAlert.style.display = 'block';
+            }
+        }
+
+        document.getElementById('btnCheckIn').addEventListener('click', () => submitAttendance('check_in'));
+        document.getElementById('btnCheckOut').addEventListener('click', () => submitAttendance('check_out'));
+    </script>
+</body>
+</html>

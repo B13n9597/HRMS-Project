@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT HRMS - Employee Dashboard</title>
+    <meta name="description" content="Employee Portal and Secure Rotating Badge Area.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            /* Light Theme Configuration */
+            --bg-base: #f8fafc;
+            --bg-surface: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-light: #64748b;
+            
+            --primary: #025da2;
+            --primary-hover: #01477d;
+            --primary-light: rgba(2, 93, 162, 0.08);
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(2, 93, 162, 0.03) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(226, 232, 240, 0.4) 0px, transparent 50%);
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        /* Portal Layout Structure */
+        .portal-container {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Wrapper */
+        .portal-sidebar {
+            width: 280px;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 32px 24px;
+            flex-shrink: 0;
+        }
+
+        .brand-title {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 32px;
+            letter-spacing: -0.5px;
+        }
+
+        /* Identity Profile Card with strict truncation to fix overlapping */
+        .user-profile-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: #f1f5f9;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 32px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .user-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+            font-family: var(--font-display);
+            font-size: 16px;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            min-width: 0; /* Forces internal block compression for ellipsis */
+            flex-grow: 1;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        /* Sidebar Menu Navigation */
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-grow: 1;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.75px;
+            margin-bottom: 8px;
+            padding-left: 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .nav-item:hover {
+            background-color: #f1f5f9;
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+            margin-top: auto;
+        }
+
+        .btn-logout {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            color: #ef4444;
+            font-weight: 500;
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        .btn-logout:hover {
+            background-color: rgba(239, 68, 68, 0.05);
+        }
+
+        /* Workspace Core Container */
+        .workspace {
+            flex-grow: 1;
+            padding: 48px;
+            overflow-y: auto;
+        }
+
+        .page-header-group {
+            margin-bottom: 32px;
+            max-width: 800px;
+        }
+
+        .page-eyebrow {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .page-title {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: 6px;
+            line-height: 1.3;
+        }
+
+        /* Main Workspace Two-Column Grid Setup */
+        .workspace-grid {
+            display: grid;
+            grid-template-columns: 440px 1fr;
+            gap: 40px;
+            align-items: start;
+        }
+
+        /* Token Badge Security Card */
+        .badge-rotation-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+
+        .employee-badge-title {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .employee-badge-meta {
+            font-size: 14px;
+            color: var(--text-light);
+            margin-bottom: 32px;
+        }
+
+        /* Elegant QR Image Shield Container */
+        .qr-outer-shield {
+            background-color: var(--bg-base);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .qr-inner-canvas {
+            width: 220px;
+            height: 220px;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+
+        .qr-inner-canvas img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            mix-blend-mode: multiply; /* Keeps barcode render sharp on light backgrounds */
+        }
+
+        /* Cycle Timing Indicator Progress Controls */
+        .rotation-indicator-tray {
+            width: 100%;
+            text-align: left;
+        }
+
+        .indicator-status-line {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .indicator-countdown {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            background-color: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 28px;
+        }
+
+        .progress-fill {
+            width: 100%;
+            height: 100%;
+            background-color: var(--primary);
+            transition: width 1s linear;
+        }
+
+        .btn-refresh-token {
+            width: 100%;
+            padding: 14px;
+            background-color: #f1f5f9;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            color: var(--text-main);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .btn-refresh-token:hover {
+            background-color: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+
+        /* Side Info Panel Area placeholder */
+        .info-side-panel {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .panel-heading {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-main);
+        }
+
+        /* Responsive Breakpoint Layout adjustments */
+        @media (max-width: 1024px) {
+            .workspace-grid {
+                grid-template-columns: 1fr;
+            }
+            .portal-sidebar {
+                width: 240px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .portal-container {
+                flex-direction: column;
+            }
+            .portal-sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                padding: 24px;
+            }
+            .workspace {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="portal-container">
+        
+        <aside class="portal-sidebar">
+            <div class="brand-title">ACT HRMS</div>
+
+            <div class="user-profile-card">
+                <div class="user-avatar">
+                    {% if employee %}
+                        {{ employee.first_name|slice:":1"|upper }}
+                    {% else %}
+                        {{ user.username|slice:":1"|upper }}
+                    {% endif %}
+                </div>
+                <div class="user-details">
+                    <span class="user-name">
+                        {% if employee %}{{ employee.get_full_name }}{% else %}{{ user.get_username }}{% endif %}
+                    </span>
+                    <span class="user-role">
+                        {{ employee.position.title|default:"Office Assistant" }}
+                    </span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">Employee Portal</div>
+                <a href="{% url 'dashboard_employee' %}" class="nav-item active">
+                    <i data-lucide="qr-code" style="width: 18px; height: 18px;"></i>
+                    <span>Rotating Badge</span>
+                </a>
+                <a href="{% url 'attendance_my_record' %}" class="nav-item">
+                    <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
+                    <span>Attendance Logs</span>
+                </a>
+                <a href="{% url 'hrms_dashboard' %}" class="nav-item">
+                    <i data-lucide="user-check" style="width: 18px; height: 18px;"></i>
+                    <span>Employee Lifecycle</span>
+                </a>
+                <a href="{% url 'leave_approvals' %}" class="nav-item">
+                    <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
+                    <span>Leave Manager</span>
+                </a>
+                <a href="{% url 'payroll_center' %}" class="nav-item">
+                    <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i>
+                    <span>Salary & Slips</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="/logout/" class="btn-logout">
+                    <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
+                    <span>Log Out</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="workspace">
+            <div class="page-header-group">
+                <span class="page-eyebrow">My Rotating Badge</span>
+                <h1 class="page-title">Present this QR code to the office scanner kiosk to check in or out</h1>
+            </div>
+
+            <div class="workspace-grid">
+                
+                <div class="badge-rotation-card">
+                    <h3 class="employee-badge-title">
+                        {% if employee %}{{ employee.get_full_name }}{% else %}{{ user.get_username }}{% endif %}
+                    </h3>
+                    <div class="employee-badge-meta">
+                        {{ employee.position.title|default:"Office Assistant" }} &bull; {{ employee.department.name|default:"Operations" }}
+                    </div>
+
+                    <div class="qr-outer-shield">
+                        <div class="qr-inner-canvas" id="qrContainer">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={{ current_token_string|default:'NoActiveTokenAvailable' }}" alt="Rotating Badge check-in Token">
+                        </div>
+                    </div>
+
+                    <div class="rotation-indicator-tray">
+                        <div class="indicator-status-line">
+                            <span>Updates automatically in</span>
+                            <span class="indicator-countdown"><span id="timerBox">30</span> seconds</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        <button class="btn-refresh-token" onclick="forceTokenRefresh()">
+                            <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+                            <span>Refresh Badge Token</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="info-side-panel">
+                    <h4 class="panel-heading">Kiosk Instructions</h4>
+                    <p style="color: var(--text-light); font-size: 14px; line-height: 1.6; margin-bottom: 16px;">
+                        To secure your attendance validations against copy attempts, tokens automatically rotate every 30 seconds.
+                    </p>
+                    <p style="color: var(--text-light); font-size: 14px; line-height: 1.6;">
+                        Hold this tablet display screen up toward any local checking desk kiosk camera array directly. Ensure screen brightness is up to clear optical scanning paths smoothly.
+                    </p>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Mount Lucide Vector Set
+        lucide.createIcons();
+
+        // Safe frontend mock timing cycle logic
+        let timeWindow = 30;
+        const timerBox = document.getElementById('timerBox');
+        const progressFill = document.getElementById('progressFill');
+
+        function runCycle() {
+            timeWindow--;
+            if (timeWindow < 0) {
+                timeWindow = 30;
+                // Optional: add your custom dynamic update ajax window loop dispatch targets here to refresh context tokens dynamically!
+                window.location.reload(); // Quick reset loop strategy fallback for simple structures
+            }
+            if (timerBox) timerBox.textContent = timeWindow;
+            if (progressFill) progressFill.style.width = `${(timeWindow / 30) * 100}%`;
+        }
+
+        let loopTrack = setInterval(runCycle, 1000);
+
+        function forceTokenRefresh() {
+            clearInterval(loopTrack);
+            timeWindow = 30;
+            if (timerBox) timerBox.textContent = timeWindow;
+            if (progressFill) progressFill.style.width = '100%';
+            
+            // Execute view refresh loop pattern
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>

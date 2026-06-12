@@ -1,0 +1,1370 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT HRMS — Staff Directory</title>
+    <meta name="description" content="Manage company employee directory profiles, create individuals, and bulk import rosters.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* ── Design Tokens ────────────────────────────────────────────── */
+        :root {
+            --bg-base:        #f4f7fc;
+            --bg-surface:     #ffffff;
+            --border-color:   #e2e8f0;
+            --text-main:      #0f172a;
+            --text-muted:     #475569;
+            --text-light:     #64748b;
+
+            --primary:        #025da2;
+            --primary-hover:  #01477d;
+            --primary-light:  rgba(2, 93, 162, 0.08);
+            --primary-mid:    rgba(2, 93, 162, 0.15);
+
+            --success:        #10b981;
+            --success-light:  rgba(16, 185, 129, 0.1);
+            --success-dark:   #065f46;
+
+            --warning:        #f59e0b;
+            --warning-light:  rgba(245, 158, 11, 0.1);
+
+            --danger:         #ef4444;
+            --danger-light:   rgba(239, 68, 68, 0.1);
+            --danger-dark:    #7f1d1d;
+
+            --radius-sm:      8px;
+            --radius-md:      12px;
+            --radius-lg:      16px;
+
+            --shadow-sm:      0 1px 2px 0 rgba(0,0,0,0.05);
+            --shadow-md:      0 4px 6px -1px rgba(0,0,0,0.05);
+            --shadow-lg:      0 10px 15px -3px rgba(0,0,0,0.08);
+
+            --font-sans:      'Inter', sans-serif;
+            --font-display:   'Outfit', sans-serif;
+            --transition:     all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        button, input, select, textarea { font-family: inherit; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* ── Sidebar ──────────────────────────────────────────────────── */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 22px;
+            color: var(--primary);
+            margin-bottom: 32px;
+        }
+
+        .logo-box {
+            background: var(--primary);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-light);
+            margin: 20px 0 8px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+            margin-bottom: 4px;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary);
+            background: var(--primary-light);
+            font-weight: 600;
+        }
+
+        .nav-link-logout { color: #ef4444; margin-top: auto; }
+        .nav-link-logout:hover { background: rgba(239,68,68,0.08); color: #ef4444; }
+
+        /* ── Main Content ─────────────────────────────────────────────── */
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 40px;
+            width: calc(100% - 260px);
+            max-width: 1400px;
+        }
+
+        /* ── Page Header ──────────────────────────────────────────────── */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .page-header-left h1 {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .page-header-left p {
+            color: var(--text-light);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* ── Action Row ───────────────────────────────────────────────── */
+        .action-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* ── Buttons ──────────────────────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 20px;
+            border-radius: var(--radius-sm);
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(2, 93, 162, 0.25);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover { background: #cbd5e1; }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-ghost:hover { background: var(--bg-base); }
+
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+        /* ── Cards ────────────────────────────────────────────────────── */
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-header h3 {
+            font-family: var(--font-display);
+            font-size: 17px;
+            font-weight: 700;
+            flex: 1;
+        }
+
+        .card-body { padding: 24px; }
+
+        /* ── Bulk Import Drop Zone ─────────────────────────────────────── */
+        .import-card {
+            border-left: 4px solid var(--primary);
+            margin-bottom: 28px;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 36px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: #f8fafc;
+            position: relative;
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .drop-zone-icon {
+            width: 52px;
+            height: 52px;
+            background: var(--primary-light);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            color: var(--primary);
+        }
+
+        .drop-zone h4 {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .drop-zone p {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .drop-zone-hint {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .col-badge {
+            background: #e2e8f0;
+            color: var(--text-main);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        .col-badge.required { background: var(--primary-light); color: var(--primary); }
+        .col-badge.optional { background: #fef9c3; color: #854d0e; }
+
+        .drop-file-input {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .selected-file-name {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-style: italic;
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        /* ── Alert Boxes ──────────────────────────────────────────────── */
+        .alert {
+            padding: 14px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            line-height: 1.6;
+            display: none;
+            border: 1px solid transparent;
+            margin-top: 16px;
+        }
+
+        .alert-success {
+            background: var(--success-light);
+            color: var(--success-dark);
+            border-color: rgba(16, 185, 129, 0.25);
+            display: block;
+        }
+
+        .alert-danger {
+            background: var(--danger-light);
+            color: var(--danger-dark);
+            border-color: rgba(239, 68, 68, 0.25);
+            display: block;
+        }
+
+        .alert-info {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-color: rgba(2, 93, 162, 0.2);
+            display: block;
+        }
+
+        /* ── Data Table ───────────────────────────────────────────────── */
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background: #f8fafc;
+            padding: 14px 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 15px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+
+        /* ── Status Badges ────────────────────────────────────────────── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .badge-success { background: var(--success-light); color: var(--success-dark); }
+        .badge-warning { background: var(--warning-light); color: #78350f; }
+        .badge-danger  { background: var(--danger-light);  color: var(--danger-dark); }
+        .badge-primary { background: var(--primary-light); color: var(--primary); }
+
+        /* ── Avatar ───────────────────────────────────────────────────── */
+        .emp-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary);
+            font-family: var(--font-display);
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .emp-name-cell {
+            display: flex;
+            align-items: center;
+        }
+
+        /* ── Modal Overlay ────────────────────────────────────────────── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(4px);
+            z-index: 500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .modal-overlay.open { display: flex; }
+
+        .modal {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 620px;
+            max-height: 92vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 22px 28px;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            background: var(--bg-surface);
+            z-index: 10;
+        }
+
+        .modal-head-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #025da2, #0ea5e9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+
+        .modal-title {
+            font-family: var(--font-display);
+            font-size: 19px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--text-light);
+            padding: 4px;
+            border-radius: 6px;
+            transition: var(--transition);
+        }
+
+        .modal-close:hover { background: #f1f5f9; color: var(--text-main); }
+
+        .modal-body { padding: 24px 28px; }
+
+        /* ── Form Fields ──────────────────────────────────────────────── */
+        .form-section-label {
+            font-family: var(--font-display);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-light);
+            margin: 20px 0 10px;
+        }
+
+        .form-section-label:first-child { margin-top: 0; }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .form-grid-1 { margin-bottom: 14px; }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group label .req { color: var(--danger); }
+
+        .form-input {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            background: #f8fafc;
+            color: var(--text-main);
+            transition: var(--transition);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(2, 93, 162, 0.12);
+        }
+
+        .form-input.error { border-color: var(--danger); }
+
+        .field-error {
+            font-size: 12px;
+            color: var(--danger);
+            display: none;
+        }
+
+        .modal-footer {
+            padding: 18px 28px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: #f8fafc;
+        }
+
+        /* ── Loading spinner ──────────────────────────────────────────── */
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Empty State ──────────────────────────────────────────────── */
+        .empty-state td {
+            text-align: center;
+            color: var(--text-light);
+            padding: 48px 24px;
+        }
+
+        /* ── Responsive ───────────────────────────────────────────────── */
+        @media (max-width: 900px) {
+            .sidebar { transform: translateX(-260px); }
+            .main-content { margin-left: 0; width: 100%; }
+            .form-grid-2 { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            .page-header { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ─── SIDEBAR ──────────────────────────────────────────────────── -->
+    <aside class="sidebar">
+        <div class="logo-container">
+            <span class="logo-box">ACT</span>
+            <span>HRMS</span>
+        </div>
+
+        <div class="nav-section-title">Core Modules</div>
+        <a href="{% url 'attendance_logs' %}" class="nav-link">
+            <i data-lucide="clock" style="width:18px;height:18px;"></i> Attendance Logs
+        </a>
+        <a href="{% url 'dashboard_hr' %}" class="nav-link">
+            <i data-lucide="git-branch" style="width:18px;height:18px;"></i> Employee Lifecycle
+        </a>
+        <a href="{% url 'leave_approvals' %}" class="nav-link">
+            <i data-lucide="calendar" style="width:18px;height:18px;"></i> Leave Manager
+        </a>
+        <a href="{% url 'payroll_center' %}" class="nav-link">
+            <i data-lucide="wallet" style="width:18px;height:18px;"></i> Salary &amp; Slips
+        </a>
+
+        <div class="nav-section-title">HR &amp; Administration</div>
+        <a href="{% url 'live_attendance' %}" class="nav-link">
+            <i data-lucide="activity" style="width:18px;height:18px;"></i> Live Attendance
+        </a>
+        <a href="{% url 'staff_directory' %}" class="nav-link active">
+            <i data-lucide="users" style="width:18px;height:18px;"></i> Staff Directory
+        </a>
+        <a href="{% url 'leave_approvals' %}" class="nav-link">
+            <i data-lucide="check-square" style="width:18px;height:18px;"></i> Leave Approvals
+        </a>
+        <a href="{% url 'payroll_center' %}" class="nav-link">
+            <i data-lucide="banknote" style="width:18px;height:18px;"></i> Payroll Center
+        </a>
+        <a href="{% url 'performance_kpis' %}" class="nav-link">
+            <i data-lucide="bar-chart-3" style="width:18px;height:18px;"></i> Performance KPIs
+        </a>
+        <a href="{% url 'candidate_screen' %}" class="nav-link">
+            <i data-lucide="briefcase" style="width:18px;height:18px;"></i> Candidate Screen
+        </a>
+        <a href="{% url 'global_settings' %}" class="nav-link">
+            <i data-lucide="sliders" style="width:18px;height:18px;"></i> Global Settings
+        </a>
+
+        <a href="{% url 'logout' %}" class="nav-link nav-link-logout">
+            <i data-lucide="log-out" style="width:18px;height:18px;"></i> Log Out
+        </a>
+    </aside>
+
+    <!-- ─── MAIN CONTENT ─────────────────────────────────────────────── -->
+    <main class="main-content">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-header-left">
+                <h1>Staff Directory</h1>
+                <p>Manage employee profiles, onboard individuals, or bulk-import a full roster.</p>
+            </div>
+            <div class="action-row">
+                <button class="btn btn-primary" id="openCreateModalBtn">
+                    <i data-lucide="user-plus" style="width:16px;height:16px;"></i>
+                    Create Employee
+                </button>
+            </div>
+        </div>
+
+        <!-- ─── BULK IMPORT CARD ─────────────────────────────────────── -->
+        <div class="card import-card">
+            <div class="card-header">
+                <i data-lucide="upload-cloud" style="width:20px;height:20px;color:var(--primary);"></i>
+                <h3>Bulk Import — Upload Roster</h3>
+            </div>
+            <div class="card-body">
+                <div class="drop-zone" id="dropZone">
+                    <!-- Hidden real file input that covers the drop zone -->
+                    <input type="file" class="drop-file-input" id="bulkFileInput" accept=".csv,.xlsx,.xls">
+                    <div class="drop-zone-icon">
+                        <i data-lucide="file-spreadsheet" style="width:28px;height:28px;"></i>
+                    </div>
+                    <h4>Drag &amp; drop your CSV or Excel file here</h4>
+                    <p>or click anywhere in this area to browse</p>
+
+                    <div class="drop-zone-hint">
+                        <span class="col-badge required">username</span>
+                        <span class="col-badge required">email</span>
+                        <span class="col-badge required">first_name</span>
+                        <span class="col-badge required">last_name</span>
+                        <span class="col-badge optional">department</span>
+                        <span class="col-badge optional">position</span>
+                        <span class="col-badge optional">role</span>
+                        <span class="col-badge optional">phone</span>
+                        <span class="col-badge optional">hire_date</span>
+                        <span class="col-badge optional">base_salary</span>
+                    </div>
+
+                    <span id="selectedFileName" class="selected-file-name">No file selected</span>
+                </div>
+
+                <div style="display:flex;gap:12px;margin-top:16px;align-items:center;flex-wrap:wrap;">
+                    <button class="btn btn-primary" id="uploadRosterBtn" disabled>
+                        <i data-lucide="upload" style="width:16px;height:16px;"></i>
+                        <span id="uploadBtnLabel">Upload Roster</span>
+                        <div class="spinner" id="uploadSpinner"></div>
+                    </button>
+                    <button class="btn btn-ghost" id="clearFileBtn" style="display:none;">
+                        <i data-lucide="x" style="width:16px;height:16px;"></i> Clear
+                    </button>
+                    <a href="#" id="downloadTemplateLink" class="btn btn-ghost" onclick="downloadCSVTemplate(event)">
+                        <i data-lucide="download" style="width:16px;height:16px;"></i> Download Template
+                    </a>
+                </div>
+
+                <div id="bulkFeedback" style="display:none;"></div>
+            </div>
+        </div>
+
+        <!-- ─── EMPLOYEE TABLE CARD ──────────────────────────────────── -->
+        <div class="card">
+            <div class="card-header">
+                <i data-lucide="users-2" style="width:20px;height:20px;color:var(--primary);"></i>
+                <h3>Active Employees</h3>
+                <span id="employeeCount" style="font-size:13px;color:var(--text-light);font-weight:500;"></span>
+            </div>
+            <div class="table-wrap">
+                <table id="employeeTable">
+                    <thead>
+                        <tr>
+                            <th>Full Name</th>
+                            <th>Department</th>
+                            <th>Position</th>
+                            <th>Status</th>
+                            <th>Hire Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employeeTableBody">
+                        <tr class="empty-state">
+                            <td colspan="5">
+                                <i data-lucide="loader-2" style="width:20px;height:20px;animation:spin 1s linear infinite;vertical-align:middle;"></i>
+                                Loading employee directory…
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ─── CREATE EMPLOYEE MODAL ────────────────────────────────────── -->
+    <div class="modal-overlay" id="createEmployeeModal">
+        <div class="modal">
+            <div class="modal-head">
+                <div class="modal-head-left">
+                    <div class="modal-icon">
+                        <i data-lucide="user-plus" style="width:18px;height:18px;"></i>
+                    </div>
+                    <div class="modal-title">Create New Employee</div>
+                </div>
+                <button class="modal-close" id="closeCreateModalBtn">
+                    <i data-lucide="x" style="width:20px;height:20px;"></i>
+                </button>
+            </div>
+
+            <!-- Global Alert Banner -->
+            <div class="modal-body">
+                <div id="createAlert" style="display:none; padding:12px 16px; border-radius:var(--radius-sm); font-size:14px; margin-bottom:16px;"></div>
+
+                <form id="createEmployeeForm" novalidate autocomplete="off">
+
+                    <!-- Basic Information -->
+                    <div class="form-section-label">Basic Information</div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="f_first_name">First Name <span class="req">*</span></label>
+                            <input type="text" id="f_first_name" name="first_name" class="form-input" placeholder="e.g. Jane" autocomplete="given-name">
+                            <div class="field-error" id="err-first_name"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="f_last_name">Last Name <span class="req">*</span></label>
+                            <input type="text" id="f_last_name" name="last_name" class="form-input" placeholder="e.g. Doe" autocomplete="family-name">
+                            <div class="field-error" id="err-last_name"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="f_email">Email Address <span class="req">*</span></label>
+                            <input type="email" id="f_email" name="email" class="form-input" placeholder="jane@company.com">
+                            <div class="field-error" id="err-email"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="f_username">Username <span style="font-size:11px;color:var(--text-light);">(auto if blank)</span></label>
+                            <input type="text" id="f_username" name="username" class="form-input" placeholder="jane.doe">
+                            <div class="field-error" id="err-username"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="f_phone">Phone Number</label>
+                            <input type="tel" id="f_phone" name="phone" class="form-input" placeholder="+251 936756392">
+                        </div>
+                        <div class="form-group">
+                            <label for="f_hire_date">Hire Date</label>
+                            <input type="date" id="f_hire_date" name="hire_date" class="form-input">
+                        </div>
+                    </div>
+
+                    <!-- Position & Role -->
+                    <div class="form-section-label">Position &amp; Role</div>
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="f_department">Department <span class="req">*</span></label>
+                            <select id="f_department" name="department_id" class="form-input">
+                                <option value="">— Select Department —</option>
+                            </select>
+                            <div class="field-error" id="err-department_id"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="f_position">Position / Title</label>
+                            <select id="f_position" name="position_id" class="form-input">
+                                <option value="">— Select Position —</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label for="f_role">System Role <span class="req">*</span></label>
+                            <select id="f_role" name="role_id" class="form-input">
+                                <option value="">— Select Role —</option>
+                            </select>
+                            <div class="field-error" id="err-role_id"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="f_base_salary">Initial Base Salary</label>
+                            <input type="number" id="f_base_salary" name="base_salary" class="form-input" placeholder="e.g. 45000" min="0" step="0.01">
+                        </div>
+                    </div>
+
+                    <!-- Options -->
+                    <div class="form-section-label">Options</div>
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;color:var(--text-muted);margin-bottom:6px;">
+                        <input type="checkbox" id="f_send_email" name="send_email" checked style="accent-color:var(--primary);width:16px;height:16px;">
+                        Email login credentials to the employee on creation
+                    </label>
+
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelCreateBtn">Cancel</button>
+                <button class="btn btn-primary" id="submitCreateBtn">
+                    <i data-lucide="save" style="width:16px;height:16px;"></i>
+                    <span id="submitCreateLabel">Create Employee</span>
+                    <div class="spinner" id="createSpinner"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── JAVASCRIPT ───────────────────────────────────────────────── -->
+    <script>
+        // ── Lucide icons bootstrap ────────────────────────────────────
+        lucide.createIcons();
+
+        // ── CSRF helper ───────────────────────────────────────────────
+        function getCookie(name) {
+            let val = null;
+            if (document.cookie) {
+                for (const c of document.cookie.split(';')) {
+                    const trimmed = c.trim();
+                    if (trimmed.startsWith(name + '=')) {
+                        val = decodeURIComponent(trimmed.slice(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return val;
+        }
+
+        // ── Generic API call (JSON body) ──────────────────────────────
+        async function apiCall(url, method = 'GET', body = null) {
+            const opts = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || '',
+                },
+            };
+            if (body) opts.body = JSON.stringify(body);
+            try {
+                const res = await fetch(url, opts);
+                return await res.json();
+            } catch (e) {
+                console.error('API error:', e);
+                return null;
+            }
+        }
+
+        // ── Generic API call (FormData body, for file upload) ─────────
+        async function apiUpload(url, formData) {
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
+                    body: formData,
+                });
+                return await res.json();
+            } catch (e) {
+                console.error('Upload error:', e);
+                return null;
+            }
+        }
+
+        // ── Status badge helper ───────────────────────────────────────
+        function statusBadge(status) {
+            const s = (status || '').toLowerCase();
+            if (s === 'active')     return `<span class="badge badge-success">${status}</span>`;
+            if (s === 'on leave')   return `<span class="badge badge-warning">${status}</span>`;
+            if (s === 'terminated') return `<span class="badge badge-danger">${status}</span>`;
+            return `<span class="badge badge-primary">${status || 'Active'}</span>`;
+        }
+
+        // ── Avatar initial ────────────────────────────────────────────
+        function initial(name) {
+            return (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  EMPLOYEE TABLE
+        // ─────────────────────────────────────────────────────────────
+        async function loadEmployees() {
+            const tbody = document.getElementById('employeeTableBody');
+            const countEl = document.getElementById('employeeCount');
+            tbody.innerHTML = `<tr class="empty-state"><td colspan="5">Loading…</td></tr>`;
+
+            const data = await apiCall('/attendance/api/employees/');
+            if (!data || !data.success) {
+                tbody.innerHTML = `<tr class="empty-state"><td colspan="5">Failed to load employees.</td></tr>`;
+                return;
+            }
+
+            const employees = data.employees || [];
+            countEl.textContent = `${employees.length} record${employees.length !== 1 ? 's' : ''}`;
+
+            if (employees.length === 0) {
+                tbody.innerHTML = `<tr class="empty-state"><td colspan="5">No active employees found. Use <strong>Create Employee</strong> or <strong>Upload Roster</strong> to get started.</td></tr>`;
+                return;
+            }
+
+        window.activateEmployee = async function(employeeId) {
+
+            const data = await apiCall(
+                `/attendance/api/employees/status/${employeeId}/`,
+                'POST',
+                { status: 'active' }
+            );
+
+            console.log("Activate response:", data);
+            alert(JSON.stringify(data));
+        };
+       
+        window.terminateEmployee = async function(employeeId) {
+
+            const data = await apiCall(
+                `/attendance/api/employees/status/${employeeId}/`,
+                'POST',
+                { status: 'terminated' }
+            );
+
+            console.log("Terminate response:", data);
+            alert(JSON.stringify(data));
+        };
+
+        window.editEmployee = function(employeeId) {
+            alert("Edit employee " + employeeId);
+        };
+
+        window.promoteEmployee = async function(employeeId) {
+
+            const newPositionId = prompt(
+            "Enter New Position ID:"
+    );
+
+            if (!newPositionId) return;
+
+            const data = await apiCall(
+            `/attendance/api/employees/promote/${employeeId}/`,
+            'POST',
+           {
+                position_id: newPositionId
+            }
+        );
+
+            if (data && data.success) {
+            alert("Employee promoted successfully");
+            loadEmployees();
+            } else {
+            alert(data ? data.error : "Promotion failed");
+         }
+        };
+
+
+    window.transferEmployee = async function(employeeId) {
+
+        const newDepartmentId = prompt(
+        "Enter New Department ID:"
+        );
+
+        if (!newDepartmentId) return;
+
+       const data = await apiCall(
+        `/attendance/api/employees/transfer/${employeeId}/`,
+        'POST',
+        {
+            department_id: newDepartmentId
+        }
+    );
+
+        if (data && data.success) {
+        alert("Employee transferred successfully");
+        loadEmployees();
+        } else {
+        alert(data ? data.error : "Transfer failed");
+        }
+   };
+
+tbody.innerHTML = employees.map(emp => `
+     <tr>
+        <td>
+            <div class="emp-name-cell">
+                <div class="emp-avatar">${initial(emp.full_name)}</div>
+                <div>
+                    <div style="font-weight:600;">${emp.full_name}</div>
+                    <div style="font-size:12px;color:var(--text-light);">${emp.email || ''}</div>
+                </div>
+            </div>
+        </td>
+        <td>${emp.department || '—'}</td>
+        <td>${emp.position || '—'}</td>
+        <td>${statusBadge(emp.status)}</td>
+        <td>${emp.hire_date || '—'}</td>
+
+        <td>
+            <button class="btn btn-ghost"
+                onclick="editEmployee(${emp.id})">
+                Edit
+            </button>
+
+            <button class="btn btn-secondary"
+                onclick="activateEmployee(${emp.id})">
+                Activate
+            </button>
+
+            <button class="btn btn-danger"
+                onclick="terminateEmployee(${emp.id})">
+                Terminate
+            </button>
+
+            <button class="btn btn-info"
+                onclick="promoteEmployee(${emp.id})">
+                Promote
+            </button>
+
+            <button onclick="transferEmployee(${emp.id})">
+                Transfer
+            </button>
+        </td>
+    </tr>
+`).join('');
+
+            lucide.createIcons();
+        }
+
+        loadEmployees();
+
+        // ─────────────────────────────────────────────────────────────
+        //  REFERENCE DATA (departments, positions, roles)
+        // ─────────────────────────────────────────────────────────────
+        async function loadReferenceData() {
+            const data = await apiCall('/attendance/api/reference-data/');
+            if (!data || !data.success) return;
+
+            const fill = (elId, items, labelKey) => {
+                const sel = document.getElementById(elId);
+                if (!sel) return;
+                items.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = item[labelKey] || item.name || item.title;
+                    sel.appendChild(opt);
+                });
+            };
+
+            fill('f_department', data.departments || [], 'name');
+            fill('f_position',   data.positions   || [], 'title');
+            fill('f_role',       data.roles       || [], 'name');
+        }
+
+        loadReferenceData();
+
+        // ─────────────────────────────────────────────────────────────
+        //  CREATE EMPLOYEE MODAL
+        // ─────────────────────────────────────────────────────────────
+        const createModal   = document.getElementById('createEmployeeModal');
+        const createForm    = document.getElementById('createEmployeeForm');
+        const createAlert   = document.getElementById('createAlert');
+        const submitBtn     = document.getElementById('submitCreateBtn');
+        const submitLabel   = document.getElementById('submitCreateLabel');
+        const createSpinner = document.getElementById('createSpinner');
+
+        document.getElementById('openCreateModalBtn').addEventListener('click', () => {
+            createModal.classList.add('open');
+            clearCreateForm();
+            //createForm.reset();
+        });
+
+        document.getElementById('closeCreateModalBtn').addEventListener('click', () => {
+            createModal.classList.remove('open');
+        });
+
+        document.getElementById('cancelCreateBtn').addEventListener('click', () => {
+            createModal.classList.remove('open');
+        });
+
+        // Close on backdrop click
+        createModal.addEventListener('click', e => {
+            if (e.target === createModal) createModal.classList.remove('open');
+        });
+
+        function clearCreateForm(resetForm = false) {
+    if (resetForm) {
+        createForm.reset();
+    }
+
+    createAlert.style.display = 'none';
+
+    document.querySelectorAll('.field-error').forEach(el => {
+        el.textContent = '';
+        el.style.display = 'none';
+    });
+
+    document.querySelectorAll('.form-input.error').forEach(el => {
+        el.classList.remove('error');
+    });
+}
+
+        function showFieldError(field, msg) {
+            const errEl = document.getElementById(`err-${field}`);
+            const inputEl = document.querySelector(`[name="${field}"]`);
+            if (errEl) {
+                errEl.textContent = msg;
+                errEl.style.display = 'block';
+            }
+            if (inputEl) inputEl.classList.add('error');
+        }
+
+        function showCreateAlert(msg, type = 'danger') {
+            createAlert.className = `alert-${type}`;
+            createAlert.style.cssText = type === 'success'
+                ? 'display:block;background:var(--success-light);color:var(--success-dark);padding:12px 16px;border-radius:var(--radius-sm);font-size:14px;'
+                : 'display:block;background:var(--danger-light);color:var(--danger-dark);padding:12px 16px;border-radius:var(--radius-sm);font-size:14px;';
+            createAlert.textContent = msg;
+        }
+
+        document.getElementById('submitCreateBtn').addEventListener('click', async () => {
+            // Clear previous errors
+            clearCreateForm(false);
+
+            // Gather fields
+            const get = id => document.getElementById(id).value.trim();
+            const payload = {
+                first_name:   get('f_first_name'),
+                last_name:    get('f_last_name'),
+                email:        get('f_email'),
+                username:     get('f_username') || null,
+                phone:        get('f_phone'),
+                hire_date:    get('f_hire_date') || null,
+                department_id: get('f_department') || null,
+                position_id:  get('f_position') || null,
+                role_id:      get('f_role') || null,
+                base_salary:  get('f_base_salary') || null,
+                send_email:   document.getElementById('f_send_email').checked,
+            };
+
+            // Frontend validation
+            let hasErrors = false;
+            if (!payload.first_name) { showFieldError('first_name', 'First name is required.'); hasErrors = true; }
+            if (!payload.last_name)  { showFieldError('last_name',  'Last name is required.');  hasErrors = true; }
+            if (!payload.email)      { showFieldError('email', 'Email address is required.');   hasErrors = true; }
+            else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+                showFieldError('email', 'Enter a valid email address.'); hasErrors = true;
+            }
+            if (!payload.department_id) { showFieldError('department_id', 'Department is required.'); hasErrors = true; }
+            if (!payload.role_id)       { showFieldError('role_id',       'Role is required.');       hasErrors = true; }
+            if (hasErrors) return;
+
+            // Lock UI
+            submitBtn.disabled = true;
+            submitLabel.textContent = 'Creating…';
+            createSpinner.style.display = 'block';
+
+            const data = await apiCall('/attendance/api/employees/create-hr/', 'POST', payload);
+
+            submitBtn.disabled = false;
+            submitLabel.textContent = 'Create Employee';
+            createSpinner.style.display = 'none';
+
+            if (!data) {
+                showCreateAlert('Network error. Please try again.');
+                return;
+            }
+
+            if (data.success) {
+                showCreateAlert(`✓ ${data.message || 'Employee created successfully!'}`, 'success');
+                setTimeout(() => {
+                    createModal.classList.remove('open');
+                    loadEmployees(); // refresh table
+                }, 1800);
+            } else {
+                // Show field-level errors if returned
+                if (data.errors) {
+                    for (const [field, msg] of Object.entries(data.errors)) {
+                        showFieldError(field, msg);
+                    }
+                }
+                showCreateAlert(data.error || 'Failed to create employee. Check the form fields.');
+            }
+        });
+
+        // ─────────────────────────────────────────────────────────────
+        //  BULK IMPORT — Drag & Drop + File Input
+        // ─────────────────────────────────────────────────────────────
+        const dropZone      = document.getElementById('dropZone');
+        const bulkFileInput = document.getElementById('bulkFileInput');
+        const selectedName  = document.getElementById('selectedFileName');
+        const uploadBtn     = document.getElementById('uploadRosterBtn');
+        const uploadLabel   = document.getElementById('uploadBtnLabel');
+        const uploadSpinner = document.getElementById('uploadSpinner');
+        const clearFileBtn  = document.getElementById('clearFileBtn');
+        const bulkFeedback  = document.getElementById('bulkFeedback');
+
+        let selectedFile = null;
+
+        function setSelectedFile(file) {
+            if (!file) return;
+            const allowed = ['.csv', '.xlsx', '.xls'];
+            const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+            if (!allowed.includes(ext)) {
+                showBulkFeedback('danger', 'Invalid file type. Please upload a .csv or .xlsx file.');
+                return;
+            }
+            selectedFile = file;
+            selectedName.textContent = file.name;
+            uploadBtn.disabled = false;
+            clearFileBtn.style.display = 'inline-flex';
+            bulkFeedback.style.display = 'none';
+        }
+
+        // Click on drop zone → trigger file input
+        dropZone.addEventListener('click', () => bulkFileInput.click());
+
+        bulkFileInput.addEventListener('change', () => {
+            if (bulkFileInput.files[0]) setSelectedFile(bulkFileInput.files[0]);
+        });
+
+        // Drag over
+        dropZone.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) setSelectedFile(e.dataTransfer.files[0]);
+        });
+
+        clearFileBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            selectedFile = null;
+            bulkFileInput.value = '';
+            selectedName.textContent = 'No file selected';
+            uploadBtn.disabled = true;
+            clearFileBtn.style.display = 'none';
+            bulkFeedback.style.display = 'none';
+        });
+
+        function showBulkFeedback(type, html) {
+            const colors = {
+                success: 'background:var(--success-light);color:var(--success-dark);border:1px solid rgba(16,185,129,.25);',
+                danger:  'background:var(--danger-light);color:var(--danger-dark);border:1px solid rgba(239,68,68,.25);',
+                info:    'background:var(--primary-light);color:var(--primary);border:1px solid rgba(2,93,162,.2);',
+            };
+            bulkFeedback.style.cssText = `display:block;padding:14px 16px;border-radius:var(--radius-sm);font-size:13px;line-height:1.6;margin-top:16px;${colors[type] || ''}`;
+            bulkFeedback.innerHTML = html;
+        }
+
+        uploadBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            uploadBtn.disabled = true;
+            uploadLabel.textContent = 'Uploading…';
+            uploadSpinner.style.display = 'block';
+            bulkFeedback.style.display = 'none';
+
+            const fd = new FormData();
+            fd.append('csv_file', selectedFile);
+
+            const data = await apiUpload('/attendance/api/employees/upload-csv/', fd);
+
+            uploadBtn.disabled = false;
+            uploadLabel.textContent = 'Upload Roster';
+            uploadSpinner.style.display = 'none';
+
+            if (!data) {
+                showBulkFeedback('danger', '❌ Network error. Please check your connection and try again.');
+                return;
+            }
+
+            if (data.success) {
+                let html = `<strong>✅ ${data.message}</strong>`;
+                if (data.errors && data.errors.length > 0) {
+                    html += `<br><br><strong>Warnings / Skipped rows:</strong><ul style="margin:6px 0 0 16px;">`;
+                    data.errors.forEach(e => { html += `<li>${e}</li>`; });
+                    html += '</ul>';
+                }
+                showBulkFeedback('success', html);
+                loadEmployees(); // Refresh table
+            } else {
+                showBulkFeedback('danger', `❌ ${data.error || 'Upload failed.'}`);
+            }
+        });
+
+        // ─────────────────────────────────────────────────────────────
+        //  DOWNLOAD CSV TEMPLATE
+        // ─────────────────────────────────────────────────────────────
+        function downloadCSVTemplate(e) {
+            e.preventDefault();
+            const headers = 'username,email,first_name,last_name,department,position,role,phone,hire_date,base_salary';
+            const example = 'jane.doe,jane@company.com,Jane,Doe,Engineering,Software Engineer,Employee,+1 555 000 1234,2025-01-15,50000';
+            const blob = new Blob([headers + '\n' + example], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'employee_roster_template.csv';
+            a.click();
+        }
+    </script>
+</body>
+</html>

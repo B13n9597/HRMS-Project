@@ -1,31 +1,81 @@
+from django.contrib import admin
 from django.urls import path
+from hr.views import api_views
+from hr.views import page_views
 
-# Import the specific views file from your new views folder
-from hr.views import attendance_views
+# Standardized imports (adjust matching your file names if needed)
+from hr.views import attendance_views as attendanceviews
+from hr.views import employee_views
 
 urlpatterns = [
+    # ── Admin Panel ──────────────────────────────────────────────
+    path('admin/', admin.site.urls),
 
-    # ── Employee: get own QR code image ──────────────────────────
-    # GET  /attendance/my-qr/
-    # Returns a PNG image the employee screenshots or prints.
-    path('my-qr/', attendance_views.my_qr_code, name='attendance_my_qr'),
+    # ── Single Page Application Dashboard ──────────────────────────
+    path('', api_views.index_view, name='hrms_dashboard'),
 
-    # ── Scanner kiosk: receive QR scan ───────────────────────────
-    # POST /attendance/scan/
-    # Body: { "token": "<uuid_or_signed_string>" }
-    # Pointed to the new, hardened security view function: scan_qr_secure
-    path('scan/', attendance_views.scan_qr_secure, name='attendance_scan'),
+    # ── Attendance Management (Web Layout Router) ────────────────
+    path('my-qr/', attendanceviews.my_qr_code, name='attendance_my_qr'),
+    path('scan/', attendanceviews.scan_qr_secure, name='attendance_scan'),
+    path('today/', attendanceviews.today_attendance, name='attendance_today'),
+    path('my-record/', attendanceviews.my_attendance, name='attendance_my_record'),
+    path('report/<int:employee_id>/', attendanceviews.employee_attendance_report, name='attendance_report'),
 
-    # ── HR / dept head: today's full attendance list ──────────────
-    # GET  /attendance/today/
-    path('today/', attendance_views.today_attendance, name='attendance_today'),
+    # ── Named sidebar route aliases (SPA panels via page_views) ──
+    # These named routes resolve to the SPA index with a hash fragment
+    # so Django template {% url %} tags work correctly.
+    path('attendance/logs/', api_views.index_view, name='attendance_logs'),
+    path('attendance/live/', api_views.index_view, name='live_attendance'),
+    path('staff-directory/', api_views.index_view, name='staff_directory'),
+    path('payroll-center/', api_views.index_view, name='payroll_center'),
+    path('leave-approvals/', api_views.index_view, name='leave_approvals'),
+    path('performance-kpis/', api_views.index_view, name='performance_kpis'),
+    path('candidate-screen/', api_views.index_view, name='candidate_screen'),
+    path('global-settings/', api_views.index_view, name='global_settings'),
 
-    # ── Employee: own attendance history ─────────────────────────
-    # GET  /attendance/my-record/?month=5&year=2026
-    path('my-record/', attendance_views.my_attendance, name='attendance_my_record'),
+    # ── Attendance APIs ──────────────────────────────────────────
+    path('api/attendance/scan/', attendanceviews.scan_qr_secure, name='api_attendance_scan'),
+    path('api/attendance/my-qr/', attendanceviews.my_qr_code, name='api_attendance_my_qr'),
+    path('api/attendance/my-record/', attendanceviews.my_attendance, name='api_attendance_my_record'),
+    path('api/attendance/today/', attendanceviews.today_attendance, name='api_attendance_today'),
+    path('api/attendance/report/<int:employee_id>/', attendanceviews.employee_attendance_report, name='api_attendance_report'),
 
-    # ── HR: one employee's attendance report ─────────────────────
-    # GET  /attendance/report/12/?month=5&year=2026
-    path('report/<int:employee_id>/', attendance_views.employee_attendance_report, name='attendance_report'),
+    # ── Employee APIs (Lifecycle: Recruitment to Retirement) ──────
+    path('api/employees/create/', employee_views.create_employee, name='api_employee_create'),
+    path('api/employees/update/<int:employee_id>/', employee_views.update_employee, name='api_employee_update'),
+    path('api/employees/status/<int:employee_id>/', employee_views.change_employee_status, name='api_employee_status_change'),
+    path('api/employees/active/', employee_views.list_active_employees, name='api_employee_list_active'),
+    
+    # ── Bulk Import endpoint ──────────────────────────────────────
+    path('api/employees/import-bulk/', employee_views.import_employees_bulk, name='api_employee_import_bulk'),
 
+    # ── Core SPA Frontend Endpoint Engines ───────────────────────
+    path('api/me/', api_views.api_me, name='api_me'),
+    path('api/login/', api_views.api_login, name='api_login'),
+    path('api/logout/', api_views.api_logout, name='api_logout'),
+    path('api/employees/', api_views.api_employees, name='api_employees'),
+    path('api/lifecycle/', api_views.api_lifecycle, name='api_lifecycle'),
+    path('api/leaves/', api_views.api_leaves, name='api_leaves'),
+    path('api/admin/leaves/', api_views.api_admin_leaves, name='api_admin_leaves'),
+    path('api/payroll/', api_views.api_payroll, name='api_payroll'),
+    path('api/performance/', api_views.api_performance, name='api_performance'),
+    path('api/recruitment/', api_views.api_recruitment, name='api_recruitment'),
+    path('api/settings/', api_views.api_settings, name='api_settings'),
+    path('api/simulate-scan/', api_views.api_simulate_scan, name='api_simulate_scan'),
+
+    # ── Bulk CSV Mass Onboarding & Tablet Attendance APIs ────────────────
+    path('api/employees/upload-csv/', api_views.api_upload_employees_csv, name='api_employees_upload_csv'),
+    path('api/attendance/tablet/authenticate/', api_views.api_tablet_authenticate, name='api_attendance_tablet_authenticate'),
+    path('api/attendance/tablet/submit/', api_views.api_tablet_submit, name='api_attendance_tablet_submit'),
+
+    # ── HR Form APIs ──────────────────────────────────────────────────────
+    path('api/reference-data/', api_views.api_reference_data, name='api_reference_data'),
+    path('api/employees/create-hr/', api_views.api_create_employee_hr, name='api_employees_create_hr'),
+
+    # ── Tablet Kiosk View ─────────────────────────────────────────────────
+    path('tablet-kiosk/', api_views.tablet_kiosk_view, name='tablet_kiosk_attendance'),
+    
+    path('api/employees/promote/<int:employee_id>/',employee_views.promote_employee,name='api_employee_promote'),
+
+    path('api/employees/transfer/<int:employee_id>/',employee_views.transfer_employee,name='api_employee_transfer'),
 ]

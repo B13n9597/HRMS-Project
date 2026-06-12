@@ -144,6 +144,14 @@ class Employee(BaseModel):
         editable=False,     # generated once, never changed through forms
     )
 
+    # — Tablet login/signature fields
+    employee_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    pin         = models.CharField(max_length=6, null=True, blank=True)
+    attendance_pin = models.CharField(max_length=6, blank=True, default='')
+    signature_data = models.TextField(blank=True, default='')
+    photo       = models.ImageField(upload_to='employee_photos/', null=True, blank=True)
+
+
     def get_full_name(self):
         full_name = f"{self.first_name} {self.last_name}".strip()
         if full_name:
@@ -353,6 +361,8 @@ class Attendance(BaseModel):
     time_in  = models.DateTimeField(null=True, blank=True)
     time_out = models.DateTimeField(null=True, blank=True)
     status   = models.CharField(max_length=20, default='Present')
+    signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
+
 
     def calculate_status(self):
         """Reads thresholds from SystemSetting — no hardcoded values."""
@@ -379,6 +389,10 @@ class QRScanLog(BaseModel):
     scan_time     = models.DateTimeField(auto_now_add=True)
     scan_type     = models.CharField(max_length=20)   # 'time_in' | 'time_out'
     is_successful = models.BooleanField(default=True)
+    ip_address    = models.CharField(max_length=50, blank=True, default='')
+    user_agent    = models.TextField(blank=True, default='')
+    failure_reason = models.TextField(blank=True, default='')
+
 
 
 # ============================================================

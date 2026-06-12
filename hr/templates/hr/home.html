@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT HRMS - American College of Technology</title>
+    <meta name="description" content="Manage Employees, Attendance, and Performance efficiently at the American College of Technology.">
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-base: #f4faff;
+            --bg-surface: #ffffff;
+            --border-color: #d9ebff;
+            --border-hover: #9bd0ff;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-light: #64748b;
+            
+            --primary: #0284c7;
+            --primary-hover: #0369a1;
+            --primary-light: #e0f2fe;
+            
+            --success: #10b981;
+            --success-light: #d1fae5;
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.08);
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(203, 100%, 94%, 1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, hsla(201, 100%, 92%, 1) 0px, transparent 50%);
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        /* Header Navigation */
+        header {
+            width: 100%;
+            padding: 20px 8%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 22px;
+            color: #025da2;
+        }
+
+        .logo-box {
+            background: #025da2;
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        nav a {
+            text-decoration: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 15px;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        nav a:hover {
+            color: var(--primary);
+            background: rgba(2, 93, 162, 0.05);
+        }
+
+        nav a.active {
+            color: #025da2;
+            background: #e0f0ff;
+            font-weight: 600;
+        }
+
+        /* Hero Layout */
+        main {
+            margin-top: 100px;
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 60px;
+            align-items: center;
+            padding: 40px 8%;
+            max-width: 1400px;
+            align-self: center;
+            width: 100%;
+        }
+
+        .hero-text {
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero-sub {
+            color: #025da2;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            font-size: 14px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            font-family: var(--font-display);
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: 54px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.1;
+            margin-bottom: 24px;
+        }
+
+        .hero-desc {
+            font-size: 18px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 36px;
+            max-width: 520px;
+        }
+
+        .hero-btns {
+            display: flex;
+            gap: 16px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary {
+            background: #025da2;
+            color: #ffffff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #01477d;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(2, 93, 162, 0.2);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #025da2;
+            border: 2px solid #025da2;
+        }
+
+        .btn-outline:hover {
+            background: rgba(2, 93, 162, 0.05);
+            transform: translateY(-2px);
+        }
+
+        /* Widget Card (Right Side) */
+        .hero-widget {
+            display: flex;
+            justify-content: center;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .widget-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 480px;
+            padding: 32px;
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .widget-card:hover {
+            box-shadow: 0 20px 40px rgba(2, 93, 162, 0.08);
+            border-color: var(--border-hover);
+        }
+
+        .widget-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .widget-top-info span {
+            font-size: 13px;
+            color: var(--text-light);
+            display: block;
+            margin-bottom: 2px;
+            font-weight: 500;
+        }
+
+        .widget-top-info h3 {
+            font-family: var(--font-display);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .live-tag {
+            background: var(--success-light);
+            color: #047857;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 99px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.4; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .widget-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .widget-item {
+            border: 1px solid var(--border-color);
+            background: #fcfdfe;
+            border-radius: var(--radius-md);
+            padding: 20px;
+            transition: var(--transition);
+        }
+
+        .widget-item:hover {
+            border-color: var(--border-hover);
+            background: #f4faff;
+        }
+
+        .widget-icon-box {
+            width: 44px;
+            height: 44px;
+            background: #e0f2fe;
+            color: #0284c7;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .widget-item strong {
+            display: block;
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            font-family: var(--font-display);
+        }
+
+        .widget-item span {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .widget-progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .widget-progress-bg {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 99px;
+            overflow: hidden;
+        }
+
+        .widget-progress-fill {
+            height: 100%;
+            background: #025da2;
+            width: {{ performance_cycle }}%;
+            border-radius: 99px;
+            transition: width 1s ease-out;
+        }
+
+        /* Footer */
+        footer {
+            width: 100%;
+            padding: 30px 8%;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-light);
+            border-top: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.4);
+            margin-top: auto;
+        }
+
+        footer a {
+            color: #025da2;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 968px) {
+            main {
+                grid-template-columns: 1fr;
+                gap: 40px;
+                text-align: center;
+                padding: 40px 4%;
+            }
+            .hero-desc {
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .hero-btns {
+                justify-content: center;
+            }
+            .hero-widget {
+                order: -1; /* Display stats widget on top on smaller screens */
+            }
+            .hero-title {
+                font-size: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-container">
+            <span class="logo-box">ACT</span>
+            <span>HRMS</span>
+        </div>
+        <nav>
+            <a href="/" class="active">Home</a>
+            <a href="#about">About</a>
+            <a href="/login/">Login</a>
+            <a href="/kiosk/">Guest</a>
+        </nav>
+    </header>
+
+    <main>
+        <div class="hero-text">
+            <div class="hero-sub">American College of Technology</div>
+            <h1 class="hero-title">ACT HR<br>Management System</h1>
+            <p class="hero-desc">Streamline and orchestrate employees lifecycle, automated real-time attendance clock-in scans, leave allowances, payslips and KPI evaluations.</p>
+            <div class="hero-btns">
+                <a href="/login/" class="btn btn-primary" id="homeLoginBtn">
+                    <span>Login</span>
+                    <i data-lucide="arrow-right"></i>
+                </a>
+                <a href="/login/" class="btn btn-outline" id="homeGetStartedBtn">
+                    <span>Get Started</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="hero-widget">
+            <div class="widget-card">
+                <div class="widget-top">
+                    <div class="widget-top-info">
+                        <span id="widgetDate">Today</span>
+                        <h3>HR Overview</h3>
+                    </div>
+                    <div class="live-tag">
+                        <div class="live-dot"></div>
+                        <span>Live</span>
+                    </div>
+                </div>
+
+                <div class="widget-grid">
+                    <div class="widget-item">
+                        <div class="widget-icon-box" style="background:#eff6ff; color:#2563eb;">
+                            <i data-lucide="users"></i>
+                        </div>
+                        <strong id="widgetEmployeeCount">{{ employee_count }}</strong>
+                        <span>Employees</span>
+                    </div>
+                    <div class="widget-item">
+                        <div class="widget-icon-box" style="background:#ecfdf5; color:#059669;">
+                            <i data-lucide="clock"></i>
+                        </div>
+                        <strong id="widgetAttendanceCount">{{ attendance_count }}</strong>
+                        <span>Attendance Scans</span>
+                    </div>
+                </div>
+
+                <div class="widget-progress-label">
+                    <span>Performance review cycle</span>
+                    <span>{{ performance_cycle }}%</span>
+                </div>
+                <div class="widget-progress-bg">
+                    <div class="widget-progress-fill"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Simple About section linked in nav -->
+    <section id="about" style="padding: 80px 8%; background: #ffffff; border-top: 1px solid var(--border-color); text-align: center;">
+        <h2 style="font-family: var(--font-display); font-size: 32px; font-weight: 800; margin-bottom: 24px; color:#0f172a;">About ACT College</h2>
+        <p style="max-width: 800px; margin: 0 auto 32px auto; line-height: 1.7; color: var(--text-muted); font-size: 16px;">
+            The American College of Technology (ACT) is committed to educational excellence. Our integrated Human Resource Management System provides administrative staff, educators, and leaders with the state-of-the-art tools required to handle attendance via secure rotating QR tokens, process payroll efficiently, track leaves, and review KPI compliance.
+        </p>
+        <div style="display: flex; justify-content: center; gap: 40px; flex-wrap: wrap;">
+            <div style="width: 220px;">
+                <i data-lucide="shield-check" style="width: 40px; height: 40px; color: #025da2; margin-bottom: 12px;"></i>
+                <h4 style="font-family: var(--font-display); margin-bottom: 8px;">Role-Based Security</h4>
+                <p style="font-size: 14px; color: var(--text-light);">Secure, partitioned access for Employees, HR Managers, and Executive Deans.</p>
+            </div>
+            <div style="width: 220px;">
+                <i data-lucide="qr-code" style="width: 40px; height: 40px; color: #025da2; margin-bottom: 12px;"></i>
+                <h4 style="font-family: var(--font-display); margin-bottom: 8px;">Rotating Tokens</h4>
+                <p style="font-size: 14px; color: var(--text-light);">Dynamic, rotating QR badges preventing check-in spoofing and duplicate logs.</p>
+            </div>
+            <div style="width: 220px;">
+                <i data-lucide="calculator" style="width: 40px; height: 40px; color: #025da2; margin-bottom: 12px;"></i>
+                <h4 style="font-family: var(--font-display); margin-bottom: 8px;">Attendance-Linked Payroll</h4>
+                <p style="font-size: 14px; color: var(--text-light);">Automated salary calculations mapping absent deductions to slips.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2026 American College of Technology. All rights reserved. Managed by <a href="/login/">ACT HRMS</a>.</p>
+    </footer>
+
+    <script>
+        // Init Lucide
+        lucide.createIcons();
+
+        // Populate Date
+        const dateEl = document.getElementById('widgetDate');
+        if (dateEl) {
+            const today = new Date();
+            const options = { weekday: 'long', month: 'short', day: 'numeric' };
+            dateEl.textContent = today.toLocaleDateString('en-US', options);
+        }
+    </script>
+</body>
+</html>

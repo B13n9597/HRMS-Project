@@ -1,0 +1,662 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT HRMS - HR Dashboard & Kiosk Simulator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-base: #f4f7fc;
+            --bg-surface: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-light: #64748b;
+            
+            --primary: #025da2;
+            --primary-hover: #01477d;
+            --primary-light: rgba(2, 93, 162, 0.08);
+            
+            --success: #10b981;
+            --success-light: rgba(16, 185, 129, 0.1);
+            --success-dark: #065f46;
+            
+            --primary-badge: #025da2;
+            --warning-badge: #f59e0b;
+            --danger-badge: #ef4444;
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar Navigation Layout */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 22px;
+            color: var(--primary);
+            margin-bottom: 32px;
+        }
+
+        .logo-box {
+            background: var(--primary);
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-light);
+            margin: 20px 0 8px 0;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+            margin-bottom: 4px;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary);
+            background: var(--primary-light);
+            font-weight: 600;
+        }
+
+        .nav-link-logout {
+            color: #ef4444;
+            margin-top: auto;
+            border: 1px solid transparent;
+        }
+
+        .nav-link-logout:hover {
+            background: rgba(239, 68, 68, 0.08);
+            color: #ef4444;
+        }
+
+        /* Main Workspace Container */
+        .main-content {
+            margin-left: 260px;
+            flex-1: 1;
+            padding: 40px;
+            width: calc(100% - 260px);
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-header h1 {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .page-header p {
+            color: var(--text-light);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Dashboard Flex Grid Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        /* Left Side Column: Metrics and Attendance Logs Tracker Tables */
+        .tracker-main-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .metric-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .metric-icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .metric-card.present .metric-icon-box { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .metric-card.late .metric-icon-box { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .metric-card.absent .metric-icon-box { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+        .metric-info h4 {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-light);
+            letter-spacing: 0.5px;
+        }
+
+        .metric-info .metric-number {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 800;
+            margin-top: 2px;
+        }
+
+        /* Real-Time Monitor Table Structure Card */
+        .table-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-header h3 {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .data-table th {
+            background: #f8fafc;
+            padding: 14px 24px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table td {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .empty-state-row td {
+            text-align: center;
+            color: var(--text-light);
+            padding: 40px 24px;
+        }
+
+        /* Right Side Column: Embedded Kiosk Simulator View Panel */
+        .kiosk-simulator-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .kiosk-clock-sub-box {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .kiosk-time-display {
+            font-family: var(--font-display);
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .kiosk-date-display {
+            font-size: 13px;
+            color: var(--text-light);
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .simulator-title-group h3 {
+            font-family: var(--font-display);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .simulator-title-group p {
+            color: var(--text-light);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            background: #f8fafc;
+            color: var(--text-main);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            background: #ffffff;
+            border-color: var(--primary);
+        }
+
+        .btn-scan {
+            width: 100%;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: var(--primary);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-scan:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-scan:disabled {
+            background: #cbd5e1;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        /* Flash Feedback Notification Boxes Inside Dashboard Simulator */
+        .kiosk-result {
+            padding: 16px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            display: none;
+            border: 1px solid transparent;
+            margin-top: 12px;
+        }
+
+        .result-success { background: var(--success-light); color: var(--success-dark); border-color: rgba(16, 185, 129, 0.2); }
+        .result-primary { background: var(--primary-light); color: var(--primary); border-color: rgba(2, 93, 162, 0.2); }
+        .result-warning { background: rgba(217, 119, 6, 0.1); color: #78350f; border-color: rgba(217, 119, 6, 0.2); }
+        .result-danger { background: rgba(239, 68, 68, 0.1); color: #7f1d1d; border-color: rgba(239, 68, 68, 0.2); }
+
+        .result-title { font-weight: 700; font-family: var(--font-display); font-size: 14px; margin-bottom: 2px; }
+        .result-meta { font-size: 11px; opacity: 0.8; margin-bottom: 6px; }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="logo-container">
+            <span class="logo-box">ACT</span>
+            <span>HRMS</span>
+        </div>
+        
+        <div class="nav-section-title">Core Modules</div>
+        <a href="{% url 'attendance_logs' %}" class="nav-link"><i data-lucide="clock" style="width:18px; height:18px;"></i> Attendance Logs</a>
+        <a href="{% url 'dashboard_hr' %}" class="nav-link"><i data-lucide="git-branch" style="width:18px; height:18px;"></i> Employee Lifecycle</a>
+        <a href="{% url 'leave_approvals' %}" class="nav-link"><i data-lucide="calendar" style="width:18px; height:18px;"></i> Leave Manager</a>
+        <a href="{% url 'payroll_center' %}" class="nav-link"><i data-lucide="wallet" style="width:18px; height:18px;"></i> Salary &amp; Slips</a>
+
+        <div class="nav-section-title">HR &amp; Administration</div>
+        <a href="{% url 'live_attendance' %}" class="nav-link active"><i data-lucide="activity" style="width:18px; height:18px;"></i> Live Attendance</a>
+        <a href="{% url 'staff_directory' %}" class="nav-link"><i data-lucide="users" style="width:18px; height:18px;"></i> Staff Directory</a>
+        <a href="{% url 'leave_approvals' %}" class="nav-link"><i data-lucide="check-square" style="width:18px; height:18px;"></i> Leave Approvals</a>
+        <a href="{% url 'payroll_center' %}" class="nav-link"><i data-lucide="banknote" style="width:18px; height:18px;"></i> Payroll Center</a>
+        <a href="{% url 'performance_kpis' %}" class="nav-link"><i data-lucide="bar-chart-3" style="width:18px; height:18px;"></i> Performance KPIs</a>
+        <a href="{% url 'candidate_screen' %}" class="nav-link"><i data-lucide="briefcase" style="width:18px; height:18px;"></i> Candidate Screen</a>
+        <a href="{% url 'global_settings' %}" class="nav-link"><i data-lucide="sliders" style="width:18px; height:18px;"></i> Global Settings</a>
+
+        <a href="{% url 'logout' %}" class="nav-link nav-link-logout"><i data-lucide="log-out" style="width:18px; height:18px;"></i> Log Out</a>
+    </aside>
+
+    <main class="main-content">
+        <header class="page-header">
+            <h1>Live Attendance Tracker</h1>
+            <p>Real-time attendance monitors and live scanning simulation diagnostics feed.</p>
+        </header>
+
+        <div class="dashboard-grid">
+            
+            <div class="tracker-main-panel">
+                <div class="metrics-row">
+                    <div class="metric-card present">
+                        <div class="metric-icon-box"><i data-lucide="user-check"></i></div>
+                        <div class="metric-info">
+                            <h4>Present Today</h4>
+                            <div class="metric-number" id="countPresent">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card late">
+                        <div class="metric-icon-box"><i data-lucide="user-minus"></i></div>
+                        <div class="metric-info">
+                            <h4>Late Arrivals</h4>
+                            <div class="metric-number" id="countLate">0</div>
+                        </div>
+                    </div>
+                    <div class="metric-card absent">
+                        <div class="metric-icon-box"><i data-lucide="user-x"></i></div>
+                        <div class="metric-info">
+                            <h4>Absent Staff</h4>
+                            <div class="metric-number" id="countAbsent">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-card">
+                    <div class="card-header">
+                        <h3>Real-time Activities Activity Stream</h3>
+                    </div>
+                    <table class="data-table" id="liveAttendanceTable">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="empty-state-row" id="emptyStateRow">
+                                <td colspan="4">No clock-in events recorded today. Use the simulation panel to trigger scans.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <aside class="kiosk-simulator-card">
+                <div class="kiosk-clock-sub-box">
+                    <div class="kiosk-time-display" id="kioskClock">00:00:00</div>
+                    <div class="kiosk-date-display" id="kioskDate">Today</div>
+                </div>
+
+                <div class="simulator-title-group">
+                    <h3>Office Kiosk Simulator</h3>
+                    <p>Simulate production terminal verification sweeps. Select an active personnel identity directory object to send a clocking state payload to system API endpoints.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="kioskEmployeeSelector">Select Personnel Target</label>
+                    <select id="kioskEmployeeSelector" class="form-select">
+                        <option value="">Loading active directory...</option>
+                    </select>
+                </div>
+
+                <div>
+                    <button class="btn-scan" id="kioskSimulateBtn" disabled>
+                        <i data-lucide="scan" style="width:16px; height:16px;"></i>
+                        <span>Simulate Badge Scan</span>
+                    </button>
+                    
+                    <div id="kioskResultBox" class="kiosk-result"></div>
+                </div>
+            </aside>
+
+        </div>
+    </main>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Clock synchronization module
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            const dateStr = now.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+            
+            const clockEl = document.getElementById('kioskClock');
+            const dateEl = document.getElementById('kioskDate');
+            if (clockEl) clockEl.textContent = timeStr;
+            if (dateEl) dateEl.textContent = dateStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // CSRF Token Extractor Helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Standardized Async fetch utility
+        async function apiCall(url, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                }
+            };
+            if (body) options.body = JSON.stringify(body);
+            try {
+                const res = await fetch(url, options);
+                return await res.json();
+            } catch (err) {
+                console.error("API Engine Communication Fault:", err);
+                return null;
+            }
+        }
+
+        // Application state management handling DOM queries
+        const selector = document.getElementById('kioskEmployeeSelector');
+        const simulateBtn = document.getElementById('kioskSimulateBtn');
+        const resultBox = document.getElementById('kioskResultBox');
+        const tableBody = document.querySelector('#liveAttendanceTable tbody');
+        const emptyStateRow = document.getElementById('emptyStateRow');
+
+        // Dynamic context refresh targeting counter indicators
+        function appendLiveRecordToTable(record) {
+            if (emptyStateRow) emptyStateRow.style.display = 'none';
+
+            // Check if user entry row already listed to dynamically update 'Time Out' or prevent full table duplicates
+            let existingRow = document.getElementById(`emp-row-${record.employee_id}`);
+            if (existingRow) {
+                existingRow.querySelector('.time-out-cell').textContent = record.time;
+                existingRow.querySelector('.status-cell').innerHTML = `<span style="color: var(--primary); font-weight:600;">Clocked Out</span>`;
+                return;
+            }
+
+            const row = document.createElement('tr');
+            row.id = `emp-row-${record.employee_id}`;
+            
+            let statusMarkup = record.result === 'time_in' ? 
+                `<span style="color: var(--success); font-weight:600;">Active Present</span>` : 
+                `<span style="color: var(--primary); font-weight:600;">Clocked Out</span>`;
+
+            row.innerHTML = `
+                <td style="font-weight: 500;">${record.employee}</td>
+                <td>${record.result === 'time_in' ? record.time : '-'}</td>
+                <td class="time-out-cell">${record.result === 'time_out' ? record.time : '-'}</td>
+                <td class="status-cell">${statusMarkup}</td>
+            `;
+            tableBody.insertBefore(row, tableBody.firstChild);
+        }
+
+        // Async Directory Loading Execution
+        async function loadEmployees() {
+            const data = await apiCall('/kiosk/api/employees/');
+            if (data && data.success && data.employees.length > 0) {
+                selector.innerHTML = '<option value="">-- Choose Employee Profile --</option>';
+                data.employees.forEach(emp => {
+                    const opt = document.createElement('option');
+                    opt.value = emp.id;
+                    opt.textContent = `${emp.full_name} (${emp.department})`;
+                    selector.appendChild(opt);
+                });
+                simulateBtn.disabled = false;
+            } else {
+                selector.innerHTML = '<option value="">Failed to populate directory nodes.</option>';
+            }
+        }
+        loadEmployees();
+
+        // Simulate Action handler interface
+        simulateBtn.addEventListener('click', async () => {
+            const employeeId = selector.value;
+            if (!employeeId) return alert('Select an operational identity structure.');
+
+            simulateBtn.disabled = true;
+            simulateBtn.querySelector('span').textContent = 'Processing Stream...';
+            resultBox.style.display = 'none';
+            resultBox.className = 'kiosk-result';
+
+            const data = await apiCall('/kiosk/api/scan/', 'POST', { employee_id: employeeId });
+            simulateBtn.disabled = false;
+            simulateBtn.querySelector('span').textContent = 'Simulate Badge Scan';
+
+            if (data && data.success) {
+                const resData = data.data;
+                resultBox.innerHTML = `
+                    <div class="result-title">${resData.employee}</div>
+                    <div class="result-meta">Timestamp: ${resData.time}</div>
+                    <div>${resData.message}</div>
+                `;
+
+                if (resData.result === 'time_in') {
+                    resultBox.classList.add('result-success');
+                    document.getElementById('countPresent').textContent = parseInt(document.getElementById('countPresent').textContent) + 1;
+                } else if (resData.result === 'time_out') {
+                    resultBox.classList.add('result-primary');
+                } else {
+                    resultBox.classList.add('result-warning');
+                }
+                resultBox.style.display = 'block';
+
+                // Real-time UI data table update action step mapping
+                appendLiveRecordToTable({
+                    employee_id: employeeId,
+                    employee: resData.employee,
+                    time: resData.time,
+                    result: resData.result
+                });
+
+            } else {
+                resultBox.innerHTML = `
+                    <div class="result-title">Simulation Rejected</div>
+                    <div>${data ? data.error : 'Network state mapping returned null execution exception.'}</div>
+                `;
+                resultBox.classList.add('result-danger');
+                resultBox.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

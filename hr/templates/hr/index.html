@@ -1,0 +1,3015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT HRMS - Dashboard</title>
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- QRCode.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --bg-base: #f4faff;
+            --bg-surface: #ffffff;
+            --bg-surface-hover: #f8fafc;
+            --border-color: #d9ebff;
+            --border-hover: #9bd0ff;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-light: #64748b;
+            
+            --primary: #0ea5ff;
+            --primary-hover: #0284c7;
+            --primary-light: #e0f2fe;
+            
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --success-dark: #065f46;
+            
+            --warning: #f59e0b;
+            --warning-light: #fef3c7;
+            --warning-dark: #92400e;
+            
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --danger-dark: #991b1b;
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 8px;
+            
+            --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.05), 0 1px 2px -1px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.08);
+            
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-sans: 'Inter', sans-serif;
+            --font-display: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        button, input, select, textarea {
+            font-family: inherit;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Custom Utilities */
+        .glass-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-md);
+            padding: 24px;
+            transition: var(--transition);
+        }
+        .glass-card:hover {
+            box-shadow: var(--shadow-lg);
+            border-color: var(--border-hover);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* ------------------ AUTH PAGE ------------------ */
+        .auth-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f8fbff 0%, #e0f2fe 100%);
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 440px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: 40px;
+            text-align: center;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .auth-logo {
+            font-family: var(--font-display);
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .auth-subtitle {
+            color: var(--text-muted);
+            margin-bottom: 32px;
+            font-size: 15px;
+        }
+
+        .role-entry-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .role-entry-btn {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            background: #f8fbff;
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-main);
+            cursor: pointer;
+            text-align: left;
+            transition: var(--transition);
+        }
+
+        .role-entry-btn:hover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .role-entry-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary);
+            color: #ffffff;
+            flex: 0 0 auto;
+        }
+
+        .role-entry-copy strong {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .role-entry-copy span {
+            color: var(--text-light);
+            font-size: 12px;
+        }
+
+        .manual-login-divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-light);
+            font-size: 12px;
+            margin: 22px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .manual-login-divider::before,
+        .manual-login-divider::after {
+            content: "";
+            height: 1px;
+            background: var(--border-color);
+            flex: 1;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            background: #f8fafc;
+            color: var(--text-main);
+            transition: var(--transition);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--bg-surface);
+            box-shadow: 0 0 0 3px rgba(14, 165, 255, 0.18);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(14, 165, 255, 0.25);
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: var(--text-main);
+        }
+        .btn-secondary:hover {
+            background: #cbd5e1;
+            box-shadow: none;
+        }
+
+        .auth-error {
+            background: var(--danger-light);
+            color: var(--danger-dark);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ------------------ MAIN LAYOUT ------------------ */
+        .app-sidebar {
+            width: 280px;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 100;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .sidebar-brand {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 40px;
+        }
+
+        .sidebar-user {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary);
+            font-family: var(--font-display);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .user-info {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--text-light);
+            text-transform: capitalize;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-grow: 1;
+            min-height: 0;
+        }
+
+        .menu-header {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-light);
+            margin: 16px 0 8px 12px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .menu-item:hover {
+            background: #f1f5f9;
+            color: var(--text-main);
+        }
+
+        .menu-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+        }
+
+        .logout-btn {
+            background: transparent;
+            border: none;
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        .logout-btn:hover {
+            background: var(--danger-light);
+        }
+
+        .app-content {
+            flex-grow: 1;
+            margin-left: 280px;
+            padding: 40px;
+            max-width: 1200px;
+            width: calc(100% - 280px);
+        }
+
+        /* ------------------ PANELS & GRID ------------------ */
+        .panel {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .panel-header {
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-family: var(--font-display);
+            font-size: 28px;
+            font-weight: 800;
+        }
+
+        .panel-subtitle {
+            color: var(--text-light);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        /* Metrics grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .metric-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .metric-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .metric-details h4 {
+            font-size: 13px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-details .value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-top: 4px;
+            font-family: var(--font-display);
+        }
+
+        /* Tables & Lists */
+        .table-responsive {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-surface);
+            box-shadow: var(--shadow-sm);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background: #f8fafc;
+            padding: 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: #f8fafc;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success { background: var(--success-light); color: var(--success-dark); }
+        .badge-warning { background: var(--warning-light); color: var(--warning-dark); }
+        .badge-danger { background: var(--danger-light); color: var(--danger-dark); }
+        .badge-primary { background: var(--primary-light); color: var(--primary); }
+
+        /* ------------------ ROTATING QR BADGE ------------------ */
+        .qr-badge-wrapper {
+            max-width: 380px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .qr-frame {
+            background: #ffffff;
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: inline-block;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 24px;
+        }
+
+        #qrcode {
+            padding: 12px;
+            background: #ffffff;
+            display: flex;
+            justify-content: center;
+            border-radius: var(--radius-md);
+        }
+
+        .progress-bar-container {
+            height: 6px;
+            width: 100%;
+            background: #e2e8f0;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 16px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary);
+            width: 100%;
+            transition: width 1s linear;
+        }
+
+        /* ------------------ KIOSK MODE PANEL ------------------ */
+        .kiosk-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        .kiosk-clock-card {
+            background: var(--primary);
+            color: white;
+            border-radius: var(--radius-lg);
+            padding: 48px;
+            text-align: center;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .kiosk-time {
+            font-family: var(--font-display);
+            font-size: 64px;
+            font-weight: 800;
+            letter-spacing: 0;
+        }
+
+        .kiosk-date {
+            font-size: 18px;
+            opacity: 0.8;
+            margin-top: 8px;
+        }
+
+        .kiosk-result {
+            margin-top: 24px;
+            padding: 20px;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            display: none;
+            animation: popIn 0.3s ease-out;
+        }
+
+        .signature-fallback {
+            margin-top: 24px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 24px;
+        }
+
+        .kiosk-choice {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .kiosk-choice input {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            accent-color: var(--primary);
+        }
+
+        .signature-fallback-panel {
+            display: none;
+            gap: 16px;
+        }
+
+        .signature-fallback-panel.active {
+            display: grid;
+        }
+
+        .signature-canvas-shell {
+            width: 100%;
+            height: 190px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        #fallbackSignatureCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
+        }
+
+        .signature-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* ------------------ MODALS ------------------ */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 520px;
+            padding: 32px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        /* ------------------ RECRUITMENT SCORES ------------------ */
+        .screen-score-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+        
+        .screen-score-fill {
+            height: 100%;
+            background: var(--primary);
+        }
+
+        .screen-score-fill.pass { background: var(--success); }
+        .screen-score-fill.fail { background: var(--danger); }
+
+        /* ------------------ SETTINGS ROW ------------------ */
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .settings-row:last-child {
+            border-bottom: none;
+        }
+
+        .lifecycle-layout {
+            display: grid;
+            grid-template-columns: minmax(240px, 320px) 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .profile-stack {
+            display: grid;
+            gap: 12px;
+        }
+
+        .profile-line {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .profile-line:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .profile-line span {
+            color: var(--text-light);
+            font-size: 13px;
+        }
+
+        .profile-line strong {
+            font-size: 14px;
+            text-align: right;
+        }
+
+        .timeline {
+            display: grid;
+            gap: 14px;
+        }
+
+        .timeline-item {
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--primary);
+            border-radius: var(--radius-sm);
+            background: #ffffff;
+            padding: 14px 16px;
+        }
+
+        .timeline-item strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .timeline-meta {
+            color: var(--text-light);
+            font-size: 12px;
+            margin-bottom: 6px;
+        }
+
+        @media (max-width: 900px) {
+            .lifecycle-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 1. AUTHENTICATED DASHBOARD PORTAL -->
+
+    <!-- 2. SIDEBAR -->
+    <aside class="app-sidebar">
+        <div class="sidebar-brand">
+            <i data-lucide="users" style="color: var(--primary);"></i>
+            <span class="gradient-text">ACT HRMS</span>
+        </div>
+        
+        <div class="sidebar-user">
+            <div class="avatar" id="avatarLetter">A</div>
+            <div class="user-info">
+                <div class="user-name" id="profileName">Loading User...</div>
+                <div class="user-role" id="profileRole">Role</div>
+            </div>
+        </div>
+
+        <ul class="sidebar-menu">
+            <!-- Universal -->
+            <li><a class="menu-item active" data-panel="kiosk"><i data-lucide="tablet"></i> Office Kiosk</a></li>
+            
+            <!-- Employee Portal -->
+            <div class="menu-header" id="menuHeaderEmployee">Employee Portal</div>
+            <li><a class="menu-item" data-panel="qrBadge"><i data-lucide="qr-code"></i> Rotating Badge</a></li>
+            <li><a class="menu-item" data-panel="myRecords"><i data-lucide="history"></i> Attendance Logs</a></li>
+            <li><a class="menu-item" data-panel="lifecycle" id="menuItemLifecycle"><i data-lucide="route"></i> <span id="menuItemLifecycleLabel">My Lifecycle</span></a></li>
+            <li><a class="menu-item" data-panel="leaves"><i data-lucide="calendar-days"></i> Leave Manager</a></li>
+            <li><a class="menu-item" data-panel="salary"><i data-lucide="receipt"></i> Salary & Slips</a></li>
+            
+            <!-- HR Portal -->
+            <div class="menu-header" id="menuHeaderHR" style="display:none;">HR & Administration</div>
+            <li><a class="menu-item" data-panel="hrDashboard" id="menuItemHRDashboard" style="display:none;"><i data-lucide="layout-dashboard"></i> Live Attendance</a></li>
+            <li><a class="menu-item" data-panel="hrEmployees" id="menuItemHREmployees" style="display:none;"><i data-lucide="users-2"></i> Staff Directory</a></li>
+            <li><a class="menu-item" data-panel="hrLeaves" id="menuItemHRLeaves" style="display:none;"><i data-lucide="calendar-check"></i> Leave Approvals</a></li>
+            <li><a class="menu-item" data-panel="hrPayroll" id="menuItemHRPayroll" style="display:none;"><i data-lucide="coins"></i> Payroll Center</a></li>
+            <li><a class="menu-item" data-panel="hrKPI" id="menuItemHRKPI" style="display:none;"><i data-lucide="award"></i> Performance KPIs</a></li>
+            <li><a class="menu-item" data-panel="hrRecruitment" id="menuItemHRRecruitment" style="display:none;"><i data-lucide="briefcase"></i> Candidate Screen</a></li>
+            <li><a class="menu-item" data-panel="hrSettings" id="menuItemHRSettings" style="display:none;"><i data-lucide="sliders"></i> Global Settings</a></li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn"><i data-lucide="log-out"></i> Log Out</button>
+        </div>
+    </aside>
+
+    <!-- 3. MAIN CONTENT CONTAINER -->
+    <main class="app-content">
+
+        <!-- ================= PANEL: KIOSK MODE ================= -->
+        <section id="panel-kiosk" class="panel active">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Office Kiosk Simulator</h2>
+                    <p class="panel-subtitle">Mock the check-in tablet deployed at the front office</p>
+                </div>
+            </div>
+            
+            <div class="kiosk-grid">
+                <div class="kiosk-clock-card">
+                    <div class="kiosk-time" id="kioskClock">00:00:00</div>
+                    <div class="kiosk-date" id="kioskDate">Monday, May 25, 2026</div>
+                </div>
+
+                <div class="glass-card">
+                    <h3 style="margin-bottom:16px;">Simulate QR Badge Scan</h3>
+                    <p style="color:var(--text-muted); font-size:14px; margin-bottom:24px;">Select an employee below to simulate scanning their rotating security badge at the kiosk.</p>
+                    
+                    <div class="form-group">
+                        <label for="kioskEmployeeSelector">Select Employee</label>
+                        <select id="kioskEmployeeSelector" class="form-input">
+                            <option value="">-- Choose Employee --</option>
+                        </select>
+                    </div>
+
+                    <button class="btn" id="kioskSimulateBtn" style="margin-bottom:16px;">
+                        <i data-lucide="scan-line"></i> Simulate Badge Scan
+                    </button>
+
+                    <div id="kioskResultBox" class="kiosk-result"></div>
+
+                    <div class="signature-fallback">
+                        <label class="kiosk-choice" for="noPhoneSignatureToggle">
+                            <input type="checkbox" id="noPhoneSignatureToggle">
+                            <span>Employee does not have their phone and wants to verify with Employee ID, PIN, and signature.</span>
+                        </label>
+
+                        <div class="signature-fallback-panel" id="signatureFallbackPanel">
+                            <div class="form-group">
+                                <label for="fallbackEmployeeCode">Employee ID</label>
+                                <input id="fallbackEmployeeCode" class="form-input" placeholder="EMP-123456" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label for="fallbackPin">6-Digit PIN</label>
+                                <input id="fallbackPin" class="form-input" type="password" maxlength="6" inputmode="numeric" placeholder="000000" autocomplete="off">
+                            </div>
+                            <div class="form-group">
+                                <label for="fallbackSignatureCanvas">Signature</label>
+                                <div class="signature-canvas-shell">
+                                    <canvas id="fallbackSignatureCanvas"></canvas>
+                                </div>
+                            </div>
+                            <div class="signature-actions">
+                                <button type="button" class="btn btn-secondary" id="fallbackClearSignatureBtn">
+                                    <i data-lucide="eraser"></i> Clear Canvas
+                                </button>
+                                <button type="button" class="btn" id="fallbackCheckInBtn">
+                                    <i data-lucide="log-in"></i> Check In
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="fallbackCheckOutBtn">
+                                    <i data-lucide="log-out"></i> Check Out
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: ROTATING QR BADGE ================= -->
+        <section id="panel-qrBadge" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">My Rotating Badge</h2>
+                    <p class="panel-subtitle">Present this QR code to the office scanner kiosk to check in or out</p>
+                </div>
+            </div>
+            
+            <div class="glass-card qr-badge-wrapper">
+                <h3 style="font-family:var(--font-display); margin-bottom:4px;" id="badgeUserName">John Doe</h3>
+                <p style="color:var(--text-light); font-size:13px; margin-bottom:24px;" id="badgeUserDept">Engineering Department</p>
+                
+                <div class="qr-frame">
+                    <div id="qrcode"></div>
+                </div>
+                
+                <p style="font-size:14px; color:var(--text-muted); font-weight:500;">Updates automatically in <span id="badgeTimer" style="color:var(--primary); font-weight:700;">30</span> seconds</p>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="badgeProgressBar"></div>
+                </div>
+                
+                <button class="btn btn-secondary" id="badgeRefreshBtn" style="margin-top:24px; padding:10px 16px; font-size:13px;">
+                    <i data-lucide="refresh-cw" style="width:16px; height:16px;"></i> Refresh Badge Token
+                </button>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: ATTENDANCE HISTORY ================= -->
+        <section id="panel-myRecords" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">My Attendance History</h2>
+                    <p class="panel-subtitle">Your personal check-in logs for the last 30 days</p>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="myRecordsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Time In</th>
+                            <th>Time Out</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="4" style="text-align:center; color:var(--text-light);">Loading logs...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: EMPLOYEE LIFECYCLE ================= -->
+        <section id="panel-lifecycle" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Employee Lifecycle</h2>
+                    <p class="panel-subtitle">Follow the journey from hiring through role, department, status, and career events</p>
+                </div>
+            </div>
+
+            <div class="lifecycle-layout">
+                <div class="glass-card">
+                    <div class="form-group" id="lifecycleEmployeePickerWrap" style="display:none;">
+                        <label for="lifecycleEmployeePicker">View Employee</label>
+                        <select id="lifecycleEmployeePicker" class="form-input"></select>
+                    </div>
+
+                    <div class="profile-stack" id="lifecycleProfile">
+                        <div class="profile-line"><span>Name</span><strong>Loading...</strong></div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <h3 style="font-family:var(--font-display); margin-bottom:16px;">Lifecycle Timeline</h3>
+                    <div class="timeline" id="lifecycleTimeline">
+                        <div class="timeline-item">
+                            <strong>Loading lifecycle records...</strong>
+                            <div class="timeline-meta">Please wait</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: LEAVE MANAGER ================= -->
+        <section id="panel-leaves" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Leave & Time Off Manager</h2>
+                    <p class="panel-subtitle">Request leave, track approval states, and view remaining allowances</p>
+                </div>
+                <button class="btn" id="openLeaveModalBtn" style="width:auto; padding:10px 20px;"><i data-lucide="plus"></i> Request Time Off</button>
+            </div>
+
+            <!-- Allowances Cards -->
+            <div class="metrics-grid" id="leaveBalancesGrid"></div>
+
+            <h3 style="margin-bottom: 16px; font-family: var(--font-display);">My Leave Request History</h3>
+            <div class="table-responsive">
+                <table id="myLeavesTable">
+                    <thead>
+                        <tr>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Days</th>
+                            <th>Status</th>
+                            <th>Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" style="text-align:center; color:var(--text-light);">Loading leave history...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: SALARY ================= -->
+        <section id="panel-salary" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Salary & Payroll History</h2>
+                    <p class="panel-subtitle">Your earnings, attendance-linked deductions, and payslips</p>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="mySalaryTable">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Gross Salary</th>
+                            <th>Days Worked</th>
+                            <th>Deductions</th>
+                            <th>Net Paid</th>
+                            <th>Payment Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" style="text-align:center; color:var(--text-light);">Loading salaries...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: HR LIVE ATTENDANCE ================= -->
+        <section id="panel-hrDashboard" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Live Attendance Tracker</h2>
+                    <p class="panel-subtitle">Real-time attendance monitors and stats for today</p>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-icon" style="background:#d1fae5; color:#059669;"><i data-lucide="user-check"></i></div>
+                    <div class="metric-details">
+                        <h4>Present Today</h4>
+                        <div class="value" id="statsPresent">0</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon" style="background:#fef3c7; color:#d97706;"><i data-lucide="user-x"></i></div>
+                    <div class="metric-details">
+                        <h4>Late Arrivals</h4>
+                        <div class="value" id="statsLate">0</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-icon" style="background:#fee2e2; color:#dc2626;"><i data-lucide="users-2"></i></div>
+                    <div class="metric-details">
+                        <h4>Absent Staff</h4>
+                        <div class="value" id="statsAbsent">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="hrAttendanceTodayTable">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Time In</th>
+                            <th>Time Out</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="4" style="text-align:center; color:var(--text-light);">Loading today's list...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: HR STAFF DIRECTORY ================= -->
+        <section id="panel-hrEmployees" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Staff Directory</h2>
+                    <p class="panel-subtitle">Manage company employee directory profiles</p>
+                </div>
+                <button class="btn" id="openAddEmployeeModalBtn" style="width:auto; padding:10px 20px; display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="user-plus" style="width:16px;height:16px;"></i>
+                    Add Employee
+                </button>
+            </div>
+
+            <!-- Bulk CSV / Spreadsheet Onboarding Card -->
+            <div class="glass-card" style="margin-bottom: 24px; border-left: 4px solid var(--primary);">
+                <h3 style="font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--text-main); margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                    <i data-lucide="upload-cloud" style="width: 20px; height: 20px; color: var(--primary);"></i>
+                    Bulk Onboarding — Upload Roster
+                </h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height:1.6;">
+                    Upload a <strong>CSV</strong> or <strong>Excel (.xlsx)</strong> file with these required columns:
+                    <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: var(--text-main); margin: 0 2px;">username</code>
+                    <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: var(--text-main); margin: 0 2px;">email</code>
+                    <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: var(--text-main); margin: 0 2px;">first_name</code>
+                    <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: var(--text-main); margin: 0 2px;">last_name</code>
+                    &nbsp;— Optional: <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: var(--text-main); margin: 0 2px;">phone</code>
+                    <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; color: var(--text-main); margin: 0 2px;">hire_date</code>
+                </p>
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                    <input type="file" id="onboardCsvInput" accept=".csv,.xlsx,.xls" style="display: none;">
+                    <button class="btn btn-secondary" onclick="document.getElementById('onboardCsvInput').click()" style="width: auto; padding: 10px 16px; font-size: 14px; display:flex; align-items:center; gap:6px;">
+                        <i data-lucide="file-spreadsheet" style="width: 16px; height: 16px;"></i>
+                        Choose File (CSV / XLSX)
+                    </button>
+                    <span id="selectedCsvName" style="font-size: 13px; color: var(--text-muted); font-style: italic;">No file selected</span>
+                    <button class="btn" id="btnUploadCsv" onclick="uploadCSV()" style="width: auto; padding: 10px 20px; font-size: 14px; display:flex; align-items:center; gap:6px;" disabled>
+                        <i data-lucide="upload" style="width: 16px; height: 16px;"></i>
+                        Upload Roster
+                    </button>
+                </div>
+                <!-- Feedback Messages Container -->
+                <div id="csvUploadFeedback" style="margin-top: 16px; display: none; padding: 14px; border-radius: var(--radius-sm); font-size: 14px;"></div>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="hrEmployeesTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Employee Name</th>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Department</th>
+                            <th>Position</th>
+                            <th>Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="7" style="text-align:center; color:var(--text-light);">Loading profiles...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+
+        <!-- ================= PANEL: HR LEAVE APPROVALS ================= -->
+        <section id="panel-hrLeaves" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Pending Leave Requests</h2>
+                    <p class="panel-subtitle">Review, approve, or reject employee leave applications</p>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="hrLeavesTable">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Leave Type</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Days</th>
+                            <th>Comments</th>
+                            <th style="width:180px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="7" style="text-align:center; color:var(--text-light);">Loading pending requests...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: HR PAYROLL CENTER ================= -->
+        <section id="panel-hrPayroll" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Payroll Center</h2>
+                    <p class="panel-subtitle">Run monthly payroll processing with attendance deductions</p>
+                </div>
+                <button class="btn" id="openPayrollRunModalBtn" style="width:auto; padding:10px 20px;"><i data-lucide="play"></i> Run Period Payroll</button>
+            </div>
+
+            <div class="table-responsive">
+                <table id="hrPayrollTable">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Employee</th>
+                            <th>Gross</th>
+                            <th>Worked / Required</th>
+                            <th>Deduction</th>
+                            <th>Net Salary</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="7" style="text-align:center; color:var(--text-light);">Loading payroll list...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: HR PERFORMANCE KPIS ================= -->
+        <section id="panel-hrKPI" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Performance KPI Evaluations</h2>
+                    <p class="panel-subtitle">Monitor peer review parameters, record performance scores, and outcomes</p>
+                </div>
+                <button class="btn" id="openKPIModalBtn" style="width:auto; padding:10px 20px;"><i data-lucide="award"></i> Create Evaluation</button>
+            </div>
+            
+            <div class="table-responsive">
+                <table id="hrEvaluationsTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Employee</th>
+                            <th>Evaluator</th>
+                            <th>Review Type</th>
+                            <th>Weighted Score</th>
+                            <th>Outcome</th>
+                            <th>Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="7" style="text-align:center; color:var(--text-light);">Loading evaluations...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: HR RECRUITMENT ================= -->
+        <section id="panel-hrRecruitment" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Candidate Screen Pipeline</h2>
+                    <p class="panel-subtitle">Review applicants matched against job specifications with auto-screening scores</p>
+                </div>
+            </div>
+
+            <h3 style="margin-bottom:16px; font-family:var(--font-display);">Job Postings Spec Requirements</h3>
+            <div class="table-responsive" style="margin-bottom:32px;">
+                <table id="hrJobsTable">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Department</th>
+                            <th>Min Degree</th>
+                            <th>Min Experience</th>
+                            <th>Required Skills</th>
+                            <th>Closing Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" style="text-align:center; color:var(--text-light);">Loading job descriptions...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 style="margin-bottom:16px; font-family:var(--font-display);">Candidate Match Scores</h3>
+            <div class="table-responsive">
+                <table id="hrApplicationsTable">
+                    <thead>
+                        <tr>
+                            <th>Applicant</th>
+                            <th>Job Opening</th>
+                            <th>Qualifications</th>
+                            <th>Auto score</th>
+                            <th>Auto Status</th>
+                            <th>Screening notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" style="text-align:center; color:var(--text-light);">Loading applications...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: GLOBAL SETTINGS ================= -->
+        <section id="panel-hrSettings" class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="panel-title">Global HRMS Config Parameters</h2>
+                    <p class="panel-subtitle">Fine-tune grace limits, payroll requirements, and thresholds</p>
+                </div>
+            </div>
+
+            <div class="glass-card" style="padding:0; overflow:hidden;">
+                <div style="padding:20px 24px; background:#f8fafc; border-bottom:1px solid var(--border-color); font-weight:600;">System Settings</div>
+                <div id="settingsContainer" style="padding:0 24px;">
+                    <div style="text-align:center; padding:32px; color:var(--text-light);">Loading settings...</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= LEAVE MODAL ================= -->
+    <div class="modal-overlay" id="leaveModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Apply for Leave / Time Off</h3>
+                <button class="modal-close" id="closeLeaveModalBtn"><i data-lucide="x"></i></button>
+            </div>
+            <form id="leaveRequestForm">
+                <div class="form-group">
+                    <label for="leaveTypeSelector">Leave Type</label>
+                    <select id="leaveTypeSelector" class="form-input" required>
+                        <option value="">-- Choose Leave --</option>
+                    </select>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    <div class="form-group">
+                        <label for="leaveStartDate">Start Date</label>
+                        <input type="date" id="leaveStartDate" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="leaveEndDate">End Date</label>
+                        <input type="date" id="leaveEndDate" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="leaveComments">Reason / Comments</label>
+                    <textarea id="leaveComments" class="form-input" rows="3" placeholder="Explain reason for time off..."></textarea>
+                </div>
+                <button type="submit" class="btn" style="margin-top:16px;">Submit Application</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= PAYROLL MODAL ================= -->
+    <div class="modal-overlay" id="payrollModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">Run Monthly Payroll Run</h3>
+                <button class="modal-close" id="closePayrollModalBtn"><i data-lucide="x"></i></button>
+            </div>
+            <form id="payrollRunForm">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                    <div class="form-group">
+                        <label for="payrollStart">Period Start Date</label>
+                        <input type="date" id="payrollStart" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="payrollEnd">Period End Date</label>
+                        <input type="date" id="payrollEnd" class="form-input" required>
+                    </div>
+                </div>
+                <p style="color:var(--text-light); font-size:13px; margin-bottom:24px; line-height:1.5;">This will fetch active employees, check their attendance records for the duration, deduct absent rates based on system settings, and generate slips.</p>
+                <button type="submit" class="btn">Calculate Payroll Runs</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= KPI MODAL ================= -->
+    <div class="modal-overlay" id="kpiModal">
+        <div class="modal" style="max-width:600px; max-height:90vh; overflow-y:auto;">
+            <div class="modal-header">
+                <h3 class="modal-title">Record Performance Evaluation</h3>
+                <button class="modal-close" id="closeKPIModalBtn"><i data-lucide="x"></i></button>
+            </div>
+            <form id="kpiForm">
+                <div class="form-group">
+                    <label for="kpiEmployeeSelect">Evaluate Employee</label>
+                    <select id="kpiEmployeeSelect" class="form-input" required>
+                        <option value="">-- Choose Employee --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="kpiTypeSelect">Evaluation Type</label>
+                    <select id="kpiTypeSelect" class="form-input" required>
+                        <option value="peer">Peer Review</option>
+                        <option value="annual">Annual Review</option>
+                        <option value="probation_review">Probation Review</option>
+                        <option value="self">Self Review</option>
+                    </select>
+                </div>
+                
+                <h4 style="margin: 20px 0 10px 0; border-bottom:1px solid var(--border-color); padding-bottom:6px; font-family:var(--font-display);">Category Indicators (Scores: 1 to Max)</h4>
+                
+                <div id="kpiScoresContainer">
+                    <p style="color:var(--text-light); font-size:13px;">No KPI templates configured. Please setup indicators in admin console.</p>
+                </div>
+
+                <div class="form-group" style="margin-top:20px;">
+                    <label for="kpiComments">Overall Comments</label>
+                    <textarea id="kpiComments" class="form-input" rows="3" placeholder="Provide general feedback..."></textarea>
+                </div>
+                <button type="submit" class="btn" style="margin-top:16px;">Calculate and Submit Score</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= ADD EMPLOYEE MODAL ================= -->
+    <div class="modal-overlay" id="addEmployeeModal">
+        <div class="modal" style="max-width:640px; max-height:92vh; overflow-y:auto;">
+            <div class="modal-header" style="position:sticky; top:0; background:var(--bg-surface); z-index:10; border-bottom:1px solid var(--border-color); padding-bottom:16px; margin-bottom:0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0ea5ff,#38bdf8);display:flex;align-items:center;justify-content:center;">
+                        <i data-lucide="user-plus" style="width:18px;height:18px;color:#fff;"></i>
+                    </div>
+                    <h3 class="modal-title" style="margin:0;">Add New Employee</h3>
+                </div>
+                <button class="modal-close" id="closeAddEmployeeModalBtn"><i data-lucide="x"></i></button>
+            </div>
+
+            <!-- Global error/success banner -->
+            <div id="addEmployeeAlert" style="display:none; margin:16px 0 0; padding:12px 16px; border-radius:var(--radius-sm); font-size:14px; line-height:1.5;"></div>
+
+            <form id="addEmployeeForm" novalidate style="padding-top:16px;">
+
+                <!-- ── Section: Basic Info ─────────────────── -->
+                <div style="margin-bottom:10px; font-family:var(--font-display); font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-light); font-weight:600;">Basic Information</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                    <div class="form-group" style="margin:0;">
+                        <label for="empFirstName">First Name <span style="color:var(--danger);">*</span></label>
+                        <input type="text" id="empFirstName" class="form-input" placeholder="e.g. John" autocomplete="given-name">
+                        <div class="field-error" id="err-first_name" style="display:none; color:var(--danger); font-size:12px; margin-top:4px;"></div>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="empLastName">Last Name <span style="color:var(--danger);">*</span></label>
+                        <input type="text" id="empLastName" class="form-input" placeholder="e.g. Smith" autocomplete="family-name">
+                        <div class="field-error" id="err-last_name" style="display:none; color:var(--danger); font-size:12px; margin-top:4px;"></div>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                    <div class="form-group" style="margin:0;">
+                        <label for="empEmail">Email Address <span style="color:var(--danger);">*</span></label>
+                        <input type="email" id="empEmail" class="form-input" placeholder="john@company.com" autocomplete="email">
+                        <div class="field-error" id="err-email" style="display:none; color:var(--danger); font-size:12px; margin-top:4px;"></div>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="empUsername">Username <span style="color:var(--text-light); font-size:12px;">(auto if blank)</span></label>
+                        <input type="text" id="empUsername" class="form-input" placeholder="john.smith" autocomplete="username">
+                        <div class="field-error" id="err-username" style="display:none; color:var(--danger); font-size:12px; margin-top:4px;"></div>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                    <div class="form-group" style="margin:0;">
+                        <label for="empPhone">Phone Number</label>
+                        <input type="tel" id="empPhone" class="form-input" placeholder="+1 555 123 4567">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="empHireDate">Hire Date</label>
+                        <input type="date" id="empHireDate" class="form-input">
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label for="empAddress">Address</label>
+                    <textarea id="empAddress" class="form-input" rows="2" placeholder="Street, City, Country"></textarea>
+                </div>
+
+                <!-- ── Section: Role & Department ─────────── -->
+                <div style="margin-bottom:10px; font-family:var(--font-display); font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-light); font-weight:600;">Position & Role</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
+                    <div class="form-group" style="margin:0;">
+                        <label for="empDepartment">Department</label>
+                        <select id="empDepartment" class="form-input">
+                            <option value="">-- Select Department --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="empPosition">Position / Title</label>
+                        <select id="empPosition" class="form-input">
+                            <option value="">-- Select Position --</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px;">
+                    <div class="form-group" style="margin:0;">
+                        <label for="empRole">System Role</label>
+                        <select id="empRole" class="form-input">
+                            <option value="">-- Select Role --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="empStatus">Employment Status</label>
+                        <select id="empStatus" class="form-input">
+                            <option value="">-- Select Status --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- ── Section: Signature (Optional) ──────── -->
+                <div style="margin-bottom:10px; font-family:var(--font-display); font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-light); font-weight:600;">
+                    Signature <span style="font-size:11px; text-transform:none; font-weight:400;">(Optional — used as QR backup for kiosk check-in)</span>
+                </div>
+                <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:14px; margin-bottom:20px;">
+                    <p style="font-size:12px; color:var(--text-muted); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                        <i data-lucide="pen-tool" style="width:14px;height:14px;color:var(--primary);"></i>
+                        Have the employee sign below using the mouse or touch. This will be stored as their verification signature.
+                    </p>
+                    <canvas id="empSignatureCanvas"
+                        style="width:100%; height:130px; border:2px dashed var(--border-hover); border-radius:8px; background:#fff; cursor:crosshair; display:block; touch-action:none;">
+                    </canvas>
+                    <div style="display:flex; gap:10px; margin-top:10px;">
+                        <button type="button" id="clearEmpSignatureBtn" class="btn btn-secondary" style="padding:6px 14px; font-size:13px; width:auto;">
+                            <i data-lucide="eraser" style="width:14px;height:14px;margin-right:4px;"></i>Clear
+                        </button>
+                        <span id="empSigStatus" style="font-size:12px; color:var(--text-muted); align-self:center;"></span>
+                    </div>
+                </div>
+
+                <!-- ── Options ────────────────────────────── -->
+                <div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:var(--radius-sm); padding:12px 16px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+                    <input type="checkbox" id="empSendEmail" checked style="width:16px;height:16px;accent-color:var(--primary);">
+                    <label for="empSendEmail" style="font-size:13px; color:var(--text-main); cursor:pointer; margin:0;">
+                        <strong>Send welcome email</strong> — Send login credentials (username, password & PIN) to employee's email address
+                    </label>
+                </div>
+
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <button type="submit" class="btn" id="submitAddEmployeeBtn" style="flex:1;">
+                        <i data-lucide="user-check" style="width:16px;height:16px;margin-right:6px;"></i>
+                        Create Employee
+                    </button>
+                    <button type="button" id="cancelAddEmployeeBtn" class="btn btn-secondary" style="flex:0 0 auto; padding:12px 20px;">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+
+    <script>
+        // State management
+        const state = {
+            user: null,
+            employees: [],
+            leaves: [],
+            evaluations: [],
+            settings: [],
+            todayAttendance: [],
+            activeTab: 'kiosk',
+            qrTimer: 30,
+            qrInterval: null
+        };
+
+        // DOM elements
+        const logoutBtn = document.getElementById('logoutBtn');
+        const profileName = document.getElementById('profileName');
+        const profileRole = document.getElementById('profileRole');
+        const avatarLetter = document.getElementById('avatarLetter');
+        const lifecycleEmployeePicker = document.getElementById('lifecycleEmployeePicker');
+
+        // Navigation Setup
+        document.querySelectorAll('.menu-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetPanel = item.getAttribute('data-panel');
+                switchPanel(targetPanel);
+            });
+        });
+
+        function switchPanel(panelId) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+
+            const panel = document.getElementById(`panel-${panelId}`);
+            if (panel) panel.classList.add('active');
+
+            const menu = document.querySelector(`.menu-item[data-panel="${panelId}"]`);
+            if (menu) menu.classList.add('active');
+
+            state.activeTab = panelId;
+            loadPanelData(panelId);
+        }
+
+        // Clock logic
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString();
+            const dateStr = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
+            const clockEl = document.getElementById('kioskClock');
+            const dateEl = document.getElementById('kioskDate');
+            if (clockEl) clockEl.textContent = timeStr;
+            if (dateEl) dateEl.textContent = dateStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Cookie getter for CSRF
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // API Caller Utility
+        async function apiCall(url, method = 'GET', body = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                }
+            };
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+            const res = await fetch(url, options);
+            if (res.status === 401 && state.user) {
+                // Session expired
+                showLogin();
+                return null;
+            }
+            return res.json();
+        }
+
+        // ============================================================
+        // BULK CSV ONBOARDING HANDLERS
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const checkCsvInterval = setInterval(() => {
+                const onboardCsvInput = document.getElementById('onboardCsvInput');
+                if (onboardCsvInput) {
+                    clearInterval(checkCsvInterval);
+                    onboardCsvInput.addEventListener('change', (e) => {
+                        const file = e.target.files[0];
+                        const selectedCsvName = document.getElementById('selectedCsvName');
+                        const btnUploadCsv = document.getElementById('btnUploadCsv');
+                        
+                        if (file) {
+                            selectedCsvName.textContent = file.name;
+                            btnUploadCsv.disabled = false;
+                        } else {
+                            selectedCsvName.textContent = 'No file selected';
+                            btnUploadCsv.disabled = true;
+                        }
+                    });
+                }
+            }, 100);
+        });
+
+        async function uploadCSV() {
+            const onboardCsvInput = document.getElementById('onboardCsvInput');
+            const feedbackBox = document.getElementById('csvUploadFeedback');
+            const btnUploadCsv = document.getElementById('btnUploadCsv');
+
+            if (!onboardCsvInput || !onboardCsvInput.files[0]) {
+                alert('Please select a CSV file first.');
+                return;
+            }
+
+            const file = onboardCsvInput.files[0];
+            const formData = new FormData();
+            formData.append('csv_file', file);
+
+            // Hide/Clear previous feedback
+            feedbackBox.style.display = 'none';
+            feedbackBox.innerHTML = '';
+            feedbackBox.style.background = 'transparent';
+            feedbackBox.style.color = 'inherit';
+            feedbackBox.style.border = 'none';
+
+            // Loading state
+            btnUploadCsv.disabled = true;
+            btnUploadCsv.innerHTML = '<span style="display:inline-flex; align-items:center; gap:6px;"><svg style="width:14px; height:14px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation: spin 1s linear infinite;" viewBox="0 0 24 24"></svg> Uploading...</span>';
+
+            try {
+                const response = await fetch('/attendance/api/employees/upload-csv/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken') || ''
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                btnUploadCsv.disabled = false;
+                btnUploadCsv.innerHTML = '<i data-lucide="upload" style="width: 16px; height: 16px; margin-right: 6px;"></i> Upload Roster';
+                lucide.createIcons();
+
+                feedbackBox.style.display = 'block';
+
+                if (data.success) {
+                    feedbackBox.style.background = 'var(--success-light)';
+                    feedbackBox.style.color = 'var(--success-dark)';
+                    feedbackBox.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+                    
+                    let html = `<div style="font-weight: 700; margin-bottom: 4px;">${data.message}</div>`;
+                    
+                    if (data.errors && data.errors.length > 0) {
+                        html += '<div style="margin-top: 8px; font-weight: 600; font-size: 13px; opacity:0.9;">Warnings/Errors encountered:</div>';
+                        html += '<ul style="margin-left: 20px; font-size: 12px; margin-top: 4px; max-height: 120px; overflow-y: auto;">';
+                        data.errors.forEach(err => {
+                            html += `<li>${err}</li>`;
+                        });
+                        html += '</ul>';
+                    }
+                    feedbackBox.innerHTML = html;
+                    
+                    // Reset input
+                    onboardCsvInput.value = '';
+                    document.getElementById('selectedCsvName').textContent = 'No file selected';
+                    btnUploadCsv.disabled = true;
+                    
+                    // Proactively refresh employees list in directory!
+                    if (typeof loadHREmployees === 'function') {
+                        loadHREmployees();
+                    }
+                } else {
+                    feedbackBox.style.background = 'var(--danger-light)';
+                    feedbackBox.style.color = 'var(--danger-dark)';
+                    feedbackBox.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                    feedbackBox.innerHTML = `<div style="font-weight: 700;">Upload Failed</div><div>${data.error || 'Unknown error occurred.'}</div>`;
+                }
+            } catch (err) {
+                console.error(err);
+                btnUploadCsv.disabled = false;
+                btnUploadCsv.innerHTML = '<i data-lucide="upload" style="width: 16px; height: 16px; margin-right: 6px;"></i> Upload Roster';
+                lucide.createIcons();
+
+                feedbackBox.style.display = 'block';
+                feedbackBox.style.background = 'var(--danger-light)';
+                feedbackBox.style.color = 'var(--danger-dark)';
+                feedbackBox.style.border = '1px solid rgba(239, 68, 68, 0.2)';
+                feedbackBox.innerHTML = `<div style="font-weight: 700;">Connection Error</div><div>Failed to reach the server. Please check your connection.</div>`;
+            }
+        }
+
+
+        // ============================================================
+        // ADD EMPLOYEE MODAL — Full Logic
+        // ============================================================
+
+        // ── Canvas Signature Setup ───────────────────────────────────
+        let empSigCanvas, empSigCtx, empSigDrawing = false, empSigHasContent = false;
+
+        function initEmpSignaturePad() {
+            empSigCanvas = document.getElementById('empSignatureCanvas');
+            if (!empSigCanvas) return;
+            empSigCtx = empSigCanvas.getContext('2d');
+
+            // Fix canvas resolution for device pixel ratio
+            function resizeCanvas() {
+                const rect = empSigCanvas.getBoundingClientRect();
+                const dpr = window.devicePixelRatio || 1;
+                empSigCanvas.width = rect.width * dpr;
+                empSigCanvas.height = rect.height * dpr;
+                empSigCtx.scale(dpr, dpr);
+                empSigCtx.lineWidth = 2.5;
+                empSigCtx.lineCap = 'round';
+                empSigCtx.lineJoin = 'round';
+                empSigCtx.strokeStyle = '#0f172a';
+            }
+            resizeCanvas();
+
+            function getPos(e) {
+                const rect = empSigCanvas.getBoundingClientRect();
+                if (e.touches) {
+                    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+                }
+                return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            }
+
+            function startDraw(e) { e.preventDefault(); empSigDrawing = true; const p = getPos(e); empSigCtx.beginPath(); empSigCtx.moveTo(p.x, p.y); }
+            function draw(e)      { e.preventDefault(); if (!empSigDrawing) return; const p = getPos(e); empSigCtx.lineTo(p.x, p.y); empSigCtx.stroke(); empSigHasContent = true; document.getElementById('empSigStatus').textContent = '✓ Signature captured'; document.getElementById('empSigStatus').style.color = 'var(--success)'; }
+            function endDraw(e)   { e.preventDefault(); empSigDrawing = false; empSigCtx.beginPath(); }
+
+            empSigCanvas.addEventListener('mousedown',  startDraw);
+            empSigCanvas.addEventListener('mousemove',  draw);
+            empSigCanvas.addEventListener('mouseup',    endDraw);
+            empSigCanvas.addEventListener('mouseleave', endDraw);
+            empSigCanvas.addEventListener('touchstart', startDraw, { passive: false });
+            empSigCanvas.addEventListener('touchmove',  draw,      { passive: false });
+            empSigCanvas.addEventListener('touchend',   endDraw,   { passive: false });
+
+            document.getElementById('clearEmpSignatureBtn').addEventListener('click', () => {
+                empSigCtx.clearRect(0, 0, empSigCanvas.width, empSigCanvas.height);
+                empSigHasContent = false;
+                document.getElementById('empSigStatus').textContent = '';
+            });
+        }
+
+        function getEmpSignatureData() {
+            if (!empSigCanvas || !empSigHasContent) return '';
+            return empSigCanvas.toDataURL('image/png');
+        }
+
+        // ── Reference Data (Dropdown Population) ────────────────────
+        async function loadReferenceData() {
+            try {
+                const data = await apiCall('/attendance/api/reference-data/');
+                if (!data || !data.success) return;
+
+                const dept = document.getElementById('empDepartment');
+                const pos  = document.getElementById('empPosition');
+                const role = document.getElementById('empRole');
+                const stat = document.getElementById('empStatus');
+
+                data.departments.forEach(d => dept.innerHTML += `<option value="${d.id}">${d.name}</option>`);
+                data.positions.forEach(p   => pos.innerHTML  += `<option value="${p.id}">${p.title}</option>`);
+                data.roles.forEach(r       => role.innerHTML  += `<option value="${r.id}">${r.name}</option>`);
+                data.statuses.forEach(s    => stat.innerHTML  += `<option value="${s.id}">${s.name}</option>`);
+            } catch(e) { console.error('Failed to load reference data:', e); }
+        }
+
+        // ── Field-level validation helper ───────────────────────────
+        function setFieldError(fieldId, message) {
+            const errEl = document.getElementById('err-' + fieldId);
+            const input = document.getElementById('emp' + fieldId.split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(''));
+            if (errEl) { errEl.textContent = message; errEl.style.display = message ? 'block' : 'none'; }
+            if (input) { input.style.borderColor = message ? 'var(--danger)' : ''; }
+        }
+
+        function clearAllFieldErrors() {
+            ['first_name', 'last_name', 'email', 'username'].forEach(f => setFieldError(f, ''));
+        }
+
+        // ── Modal Open/Close ─────────────────────────────────────────
+        function openAddEmployeeModal() {
+            document.getElementById('addEmployeeModal').classList.add('active');
+            document.getElementById('addEmployeeForm').reset();
+            document.getElementById('addEmployeeAlert').style.display = 'none';
+            clearAllFieldErrors();
+            if (empSigCtx) { empSigCtx.clearRect(0, 0, empSigCanvas.width, empSigCanvas.height); empSigHasContent = false; }
+            document.getElementById('empSigStatus').textContent = '';
+            lucide.createIcons();
+        }
+
+        function closeAddEmployeeModal() {
+            document.getElementById('addEmployeeModal').classList.remove('active');
+        }
+
+        document.getElementById('openAddEmployeeModalBtn').addEventListener('click', async () => {
+            openAddEmployeeModal();
+            await loadReferenceData();
+            initEmpSignaturePad();
+        });
+
+        document.getElementById('closeAddEmployeeModalBtn').addEventListener('click', closeAddEmployeeModal);
+        document.getElementById('cancelAddEmployeeBtn').addEventListener('click', closeAddEmployeeModal);
+        document.getElementById('addEmployeeModal').addEventListener('click', e => {
+            if (e.target === document.getElementById('addEmployeeModal')) closeAddEmployeeModal();
+        });
+
+        // ── Form Submission ──────────────────────────────────────────
+        document.getElementById('addEmployeeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            clearAllFieldErrors();
+            const alertBox = document.getElementById('addEmployeeAlert');
+            alertBox.style.display = 'none';
+
+            const submitBtn = document.getElementById('submitAddEmployeeBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<svg style="width:16px;height:16px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin-right:8px;" viewBox="0 0 24 24"></svg>Creating...';
+
+            const payload = {
+                first_name:    document.getElementById('empFirstName').value.trim(),
+                last_name:     document.getElementById('empLastName').value.trim(),
+                email:         document.getElementById('empEmail').value.trim(),
+                username:      document.getElementById('empUsername').value.trim() || null,
+                phone:         document.getElementById('empPhone').value.trim(),
+                address:       document.getElementById('empAddress').value.trim(),
+                hire_date:     document.getElementById('empHireDate').value || null,
+                department_id: document.getElementById('empDepartment').value || null,
+                position_id:   document.getElementById('empPosition').value || null,
+                role_id:       document.getElementById('empRole').value || null,
+                status_id:     document.getElementById('empStatus').value || null,
+                send_email:    document.getElementById('empSendEmail').checked,
+                signature_data: getEmpSignatureData(),
+            };
+
+            try {
+                const res = await fetch('/attendance/api/employees/create-hr/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken') || ''
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i data-lucide="user-check" style="width:16px;height:16px;margin-right:6px;"></i>Create Employee';
+                lucide.createIcons();
+
+                if (data.success) {
+                    alertBox.style.cssText = 'display:block; background:var(--success-light); color:var(--success-dark); border:1px solid rgba(16,185,129,0.3); border-radius:var(--radius-sm); padding:12px 16px; margin-top:16px; font-size:14px;';
+                    const emp = data.employee;
+                    alertBox.innerHTML = `
+                        <div style="font-weight:700; margin-bottom:6px;">✓ ${data.message}</div>
+                        <div style="font-size:13px; display:grid; grid-template-columns:auto 1fr; gap:4px 12px;">
+                            <span style="opacity:0.7;">Employee ID:</span><strong>${emp.employee_id}</strong>
+                            <span style="opacity:0.7;">Username:</span><strong>${emp.username}</strong>
+                            <span style="opacity:0.7;">Email:</span><strong>${emp.email}</strong>
+                            <span style="opacity:0.7;">Kiosk PIN:</span><strong style="font-family:monospace; font-size:15px;">${emp.pin}</strong>
+                        </div>
+                    `;
+                    // Refresh directory table
+                    if (typeof loadHREmployees === 'function') loadHREmployees();
+                    // Reset form but keep modal open to show success
+                    document.getElementById('addEmployeeForm').reset();
+                    clearAllFieldErrors();
+                    if (empSigCtx) { empSigCtx.clearRect(0, 0, empSigCanvas.width, empSigCanvas.height); empSigHasContent = false; }
+                } else {
+                    // Show field-level errors from server
+                    if (data.errors) {
+                        Object.entries(data.errors).forEach(([field, msg]) => setFieldError(field, msg));
+                    }
+                    alertBox.style.cssText = 'display:block; background:var(--danger-light); color:var(--danger-dark); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius-sm); padding:12px 16px; margin-top:16px; font-size:14px;';
+                    alertBox.innerHTML = `<div style="font-weight:700;">⚠ ${data.error || 'Failed to create employee.'}</div>`;
+                }
+            } catch(err) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i data-lucide="user-check" style="width:16px;height:16px;margin-right:6px;"></i>Create Employee';
+                lucide.createIcons();
+                alertBox.style.cssText = 'display:block; background:var(--danger-light); color:var(--danger-dark); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius-sm); padding:12px 16px; margin-top:16px; font-size:14px;';
+                alertBox.innerHTML = `<div style="font-weight:700;">Connection Error</div><div>Could not reach server. Check your connection.</div>`;
+            }
+        });
+
+
+        // Initialize Authentication
+
+        async function initAuth() {
+            const data = await apiCall('/attendance/api/me/');
+            if (data && data.authenticated) {
+                state.user = data.user;
+                setupUIForUser();
+            } else {
+                showLogin();
+            }
+        }
+
+        function showLogin() {
+            state.user = null;
+            clearInterval(state.qrInterval);
+            window.location.href = '/login/';
+        }
+
+        function getInitialPanelFromPath() {
+            const path = window.location.pathname.replace(/\/+$/, '');
+            if (path.endsWith('/leave-approvals')) {
+                return state.user.is_hr ? 'hrLeaves' : 'leaves';
+            }
+            if (path.endsWith('/payroll-center')) return 'hrPayroll';
+            if (path.endsWith('/live-attendance')) return 'hrDashboard';
+            if (path.endsWith('/staff-directory')) return 'hrEmployees';
+            if (path.endsWith('/performance-kpis')) return 'hrKPI';
+            if (path.endsWith('/candidate-screen')) return 'hrRecruitment';
+            if (path.endsWith('/global-settings')) return 'hrSettings';
+            return state.user.is_hr ? 'hrDashboard' : 'qrBadge';
+        }
+
+        function setupUIForUser() {
+            profileName.textContent = state.user.full_name;
+            profileRole.textContent = state.user.role;
+            avatarLetter.textContent = (state.user.first_name || state.user.username)[0].toUpperCase();
+            document.getElementById('menuItemLifecycleLabel').textContent = state.user.is_hr ? 'Employee Lifecycle' : 'My Lifecycle';
+            
+            // Toggle menu sections
+            const employeeMenuHeader = document.getElementById('menuHeaderEmployee');
+            const hrMenuHeader = document.getElementById('menuHeaderHR');
+            
+            if (state.user.is_hr) {
+                hrMenuHeader.style.display = 'block';
+                document.getElementById('menuItemHRDashboard').style.display = 'flex';
+                document.getElementById('menuItemHREmployees').style.display = 'flex';
+                document.getElementById('menuItemHRLeaves').style.display = 'flex';
+                document.getElementById('menuItemHRPayroll').style.display = 'flex';
+                document.getElementById('menuItemHRKPI').style.display = 'flex';
+                document.getElementById('menuItemHRRecruitment').style.display = 'flex';
+                document.getElementById('menuItemHRSettings').style.display = 'flex';
+            } else {
+                hrMenuHeader.style.display = 'none';
+                document.getElementById('menuItemHRDashboard').style.display = 'none';
+                document.getElementById('menuItemHREmployees').style.display = 'none';
+                document.getElementById('menuItemHRLeaves').style.display = 'none';
+                document.getElementById('menuItemHRPayroll').style.display = 'none';
+                document.getElementById('menuItemHRKPI').style.display = 'none';
+                document.getElementById('menuItemHRRecruitment').style.display = 'none';
+                document.getElementById('menuItemHRSettings').style.display = 'none';
+            }
+
+            // Populate Kiosk selectors
+            loadKioskEmployees();
+            
+            switchPanel(getInitialPanelFromPath());
+        }
+
+        // Logout click
+        logoutBtn.addEventListener('click', async () => {
+            const data = await apiCall('/attendance/api/logout/', 'POST');
+            if (data && data.success) {
+                showLogin();
+            }
+        });
+
+        // Load Kiosk Employee selection
+        async function loadKioskEmployees() {
+            // We fetch the directory to populate the scanner kiosk mockup dropdown
+            const data = await apiCall('/attendance/api/employees/');
+            const select = document.getElementById('kioskEmployeeSelector');
+            if (select) {
+                select.innerHTML = '<option value="">-- Choose Employee --</option>';
+                if (data && data.success) {
+                    data.employees.forEach(emp => {
+                        const opt = document.createElement('option');
+                        opt.value = emp.id;
+                        opt.dataset.employeeCode = emp.employee_id || '';
+                        opt.textContent = `${emp.full_name} (${emp.department})`;
+                        select.appendChild(opt);
+                    });
+                }
+            }
+        }
+
+        // simulated kiosk scan click
+        const kioskSimulateBtn = document.getElementById('kioskSimulateBtn');
+        const kioskResultBox = document.getElementById('kioskResultBox');
+        if (kioskSimulateBtn) {
+            kioskSimulateBtn.addEventListener('click', async () => {
+                const employeeId = document.getElementById('kioskEmployeeSelector').value;
+                if (!employeeId) {
+                    alert('Please select an employee profile first.');
+                    return;
+                }
+                
+                kioskResultBox.style.display = 'none';
+                kioskResultBox.className = 'kiosk-result';
+                
+                const data = await apiCall('/attendance/api/simulate-scan/', 'POST', { employee_id: employeeId });
+                
+                if (data && data.success) {
+                    const result = data.data;
+                    kioskResultBox.innerHTML = `
+                        <div style="font-size: 18px; font-weight: 700; margin-bottom:4px;">${result.employee}</div>
+                        <div style="font-size: 14px; margin-bottom:8px; opacity:0.8;">Clocked: ${result.time}</div>
+                        <div>${result.message}</div>
+                    `;
+                    
+                    if (result.result === 'time_in') {
+                        kioskResultBox.classList.add('badge-success');
+                        kioskResultBox.style.color = 'var(--success-dark)';
+                        kioskResultBox.style.background = 'var(--success-light)';
+                    } else if (result.result === 'time_out') {
+                        kioskResultBox.classList.add('badge-primary');
+                        kioskResultBox.style.color = 'var(--primary)';
+                        kioskResultBox.style.background = 'var(--primary-light)';
+                    } else {
+                        kioskResultBox.classList.add('badge-warning');
+                        kioskResultBox.style.color = 'var(--warning-dark)';
+                        kioskResultBox.style.background = 'var(--warning-light)';
+                    }
+                    kioskResultBox.style.display = 'block';
+                } else {
+                    kioskResultBox.innerHTML = `<div>Error during simulation scan: ${(data && data.error) ? data.error : 'Unknown'}</div>`;
+                    kioskResultBox.classList.add('badge-danger');
+                    kioskResultBox.style.color = 'var(--danger-dark)';
+                    kioskResultBox.style.background = 'var(--danger-light)';
+                    kioskResultBox.style.display = 'block';
+                }
+            });
+        }
+
+        function initFallbackSignaturePad() {
+            const toggle = document.getElementById('noPhoneSignatureToggle');
+            const panel = document.getElementById('signatureFallbackPanel');
+            const selector = document.getElementById('kioskEmployeeSelector');
+            const employeeCodeInput = document.getElementById('fallbackEmployeeCode');
+            const pinInput = document.getElementById('fallbackPin');
+            const canvas = document.getElementById('fallbackSignatureCanvas');
+            const clearBtn = document.getElementById('fallbackClearSignatureBtn');
+            const checkInBtn = document.getElementById('fallbackCheckInBtn');
+            const checkOutBtn = document.getElementById('fallbackCheckOutBtn');
+
+            if (!toggle || !panel || !canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            let isDrawing = false;
+            let hasSignature = false;
+
+            function resizeCanvas() {
+                const rect = canvas.getBoundingClientRect();
+                const ratio = window.devicePixelRatio || 1;
+                canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+                canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+                ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+                ctx.strokeStyle = '#111827';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                hasSignature = false;
+            }
+
+            function pointFromEvent(event) {
+                const rect = canvas.getBoundingClientRect();
+                const pointer = event.touches && event.touches.length ? event.touches[0] : event;
+                return {
+                    x: pointer.clientX - rect.left,
+                    y: pointer.clientY - rect.top
+                };
+            }
+
+            function startDrawing(event) {
+                isDrawing = true;
+                const point = pointFromEvent(event);
+                ctx.beginPath();
+                ctx.moveTo(point.x, point.y);
+                event.preventDefault();
+            }
+
+            function draw(event) {
+                if (!isDrawing) return;
+                const point = pointFromEvent(event);
+                ctx.lineTo(point.x, point.y);
+                ctx.stroke();
+                hasSignature = true;
+                event.preventDefault();
+            }
+
+            function stopDrawing() {
+                isDrawing = false;
+            }
+
+            function syncSelectedEmployeeCode() {
+                if (!selector || !employeeCodeInput) return;
+                const selected = selector.options[selector.selectedIndex];
+                if (selected && selected.dataset.employeeCode) {
+                    employeeCodeInput.value = selected.dataset.employeeCode;
+                }
+            }
+
+            function clearSignature() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                hasSignature = false;
+            }
+
+            async function submitSignatureFallback(action) {
+                const employeeCode = employeeCodeInput.value.trim();
+                const pin = pinInput.value.trim();
+
+                if (!employeeCode || !pin) {
+                    alert('Please enter the employee ID and 6-digit PIN.');
+                    return;
+                }
+                if (!hasSignature) {
+                    alert('Please ask the employee to sign before submitting.');
+                    return;
+                }
+
+                checkInBtn.disabled = true;
+                checkOutBtn.disabled = true;
+                const data = await apiCall('/attendance/api/attendance/tablet/submit/', 'POST', {
+                    employee_id: employeeCode,
+                    pin: pin,
+                    signature: canvas.toDataURL('image/png'),
+                    action: action
+                });
+                checkInBtn.disabled = false;
+                checkOutBtn.disabled = false;
+
+                kioskResultBox.style.display = 'block';
+                kioskResultBox.className = 'kiosk-result';
+                if (data && data.success) {
+                    kioskResultBox.innerHTML = `<div>${data.message}</div>`;
+                    kioskResultBox.style.color = 'var(--success-dark)';
+                    kioskResultBox.style.background = 'var(--success-light)';
+                    pinInput.value = '';
+                    clearSignature();
+                } else {
+                    kioskResultBox.innerHTML = `<div>${(data && data.error) ? data.error : 'Signature verification failed.'}</div>`;
+                    kioskResultBox.style.color = 'var(--danger-dark)';
+                    kioskResultBox.style.background = 'var(--danger-light)';
+                }
+            }
+
+            toggle.addEventListener('change', () => {
+                panel.classList.toggle('active', toggle.checked);
+                if (toggle.checked) {
+                    syncSelectedEmployeeCode();
+                    setTimeout(resizeCanvas, 50);
+                }
+            });
+            if (selector) selector.addEventListener('change', syncSelectedEmployeeCode);
+            window.addEventListener('resize', resizeCanvas);
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            window.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('touchstart', startDrawing, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            window.addEventListener('touchend', stopDrawing);
+            clearBtn.addEventListener('click', clearSignature);
+            checkInBtn.addEventListener('click', () => submitSignatureFallback('check_in'));
+            checkOutBtn.addEventListener('click', () => submitSignatureFallback('check_out'));
+        }
+
+        initFallbackSignaturePad();
+
+        // ================= LOADING DATA FOR PANELS =================
+        function loadPanelData(panelId) {
+            clearInterval(state.qrInterval);
+            switch (panelId) {
+                case 'kiosk':
+                    loadKioskEmployees();
+                    break;
+                case 'qrBadge':
+                    startRotatingQRBadge();
+                    break;
+                case 'myRecords':
+                    loadMyAttendanceHistory();
+                    break;
+                case 'lifecycle':
+                    loadLifecycle();
+                    break;
+                case 'leaves':
+                    loadLeavesCenter();
+                    break;
+                case 'salary':
+                    loadSalaryCenter();
+                    break;
+                case 'hrDashboard':
+                    loadHRLiveAttendance();
+                    break;
+                case 'hrEmployees':
+                    loadHREmployees();
+                    break;
+                case 'hrLeaves':
+                    loadHRLeavesApprovals();
+                    break;
+                case 'hrPayroll':
+                    loadHRPayroll();
+                    break;
+                case 'hrKPI':
+                    loadHRPerformanceKPIs();
+                    break;
+                case 'hrRecruitment':
+                    loadHRRecruitment();
+                    break;
+                case 'hrSettings':
+                    loadHRSettings();
+                    break;
+            }
+        }
+
+        lifecycleEmployeePicker.addEventListener('change', () => {
+            loadLifecycle(lifecycleEmployeePicker.value);
+        });
+
+        async function loadLifecycle(employeeId = null) {
+            const url = employeeId ? `/attendance/api/lifecycle/?employee_id=${employeeId}` : '/attendance/api/lifecycle/';
+            const data = await apiCall(url);
+            const pickerWrap = document.getElementById('lifecycleEmployeePickerWrap');
+            const profile = document.getElementById('lifecycleProfile');
+            const timeline = document.getElementById('lifecycleTimeline');
+
+            if (!data || !data.success) {
+                profile.innerHTML = '<div class="profile-line"><span>Status</span><strong>Unable to load</strong></div>';
+                timeline.innerHTML = '<div class="timeline-item"><strong>Lifecycle unavailable</strong><div class="timeline-meta">Try another role or login again.</div></div>';
+                return;
+            }
+
+            pickerWrap.style.display = data.can_manage ? 'block' : 'none';
+            if (data.can_manage) {
+                lifecycleEmployeePicker.innerHTML = '';
+                data.employees.forEach(employee => {
+                    const option = document.createElement('option');
+                    option.value = employee.id;
+                    option.textContent = `${employee.full_name} - ${employee.role}`;
+                    if (data.selected && employee.id === data.selected.id) option.selected = true;
+                    lifecycleEmployeePicker.appendChild(option);
+                });
+            }
+
+            const selected = data.selected;
+            if (!selected) {
+                profile.innerHTML = '<div class="profile-line"><span>Employee</span><strong>No profile found</strong></div>';
+                timeline.innerHTML = '<div class="timeline-item"><strong>No lifecycle yet</strong><div class="timeline-meta">Create an employee profile first.</div></div>';
+                return;
+            }
+
+            profile.innerHTML = `
+                <div class="profile-line"><span>Name</span><strong>${selected.full_name}</strong></div>
+                <div class="profile-line"><span>Role</span><strong>${selected.role}</strong></div>
+                <div class="profile-line"><span>Status</span><strong><span class="badge badge-success">${selected.status}</span></strong></div>
+                <div class="profile-line"><span>Department</span><strong>${selected.department}</strong></div>
+                <div class="profile-line"><span>Position</span><strong>${selected.position}</strong></div>
+                <div class="profile-line"><span>Hire Date</span><strong>${selected.hire_date || 'Not set'}</strong></div>
+                <div class="profile-line"><span>Salary</span><strong>${selected.salary ? '$' + parseFloat(selected.salary).toLocaleString() : 'Not set'}</strong></div>
+            `;
+
+            if (data.history.length === 0) {
+                timeline.innerHTML = '<div class="timeline-item"><strong>No events recorded</strong><div class="timeline-meta">Lifecycle events will appear here when HR records hiring, promotion, transfer, warnings, retirement, or exit events.</div></div>';
+                return;
+            }
+
+            timeline.innerHTML = '';
+            data.history.forEach(item => {
+                const node = document.createElement('div');
+                node.className = 'timeline-item';
+                node.innerHTML = `
+                    <strong>${item.event_type}</strong>
+                    <div class="timeline-meta">${item.start_date || 'No date'}${item.recorded_by ? ' by ' + item.recorded_by : ''}</div>
+                    <div style="font-size:13px; color:var(--text-muted);">${item.new_value || item.notes || 'Lifecycle event recorded.'}</div>
+                `;
+                timeline.appendChild(node);
+            });
+        }
+
+        // 1. Rotating badge code
+        async function fetchNewBadgeToken() {
+            const data = await apiCall('/attendance/my-qr/');
+            if (data && data.success) {
+                const qrContainer = document.getElementById('qrcode');
+                qrContainer.innerHTML = '';
+                new QRCode(qrContainer, {
+                    text: data.data.qr_token,
+                    width: 180,
+                    height: 180,
+                    colorDark : "#0f172a",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.M
+                });
+                state.qrTimer = data.data.expires_in_seconds || 30;
+                updateProgressBar();
+            }
+        }
+
+        function startRotatingQRBadge() {
+            document.getElementById('badgeUserName').textContent = state.user.full_name;
+            document.getElementById('badgeUserDept').textContent = `${state.user.position || 'Employee'} • ${state.user.department || 'General'}`;
+            
+            fetchNewBadgeToken();
+            
+            state.qrInterval = setInterval(() => {
+                state.qrTimer--;
+                if (state.qrTimer <= 0) {
+                    fetchNewBadgeToken();
+                } else {
+                    document.getElementById('badgeTimer').textContent = state.qrTimer;
+                    updateProgressBar();
+                }
+            }, 1000);
+        }
+
+        function updateProgressBar() {
+            const bar = document.getElementById('badgeProgressBar');
+            const percent = (state.qrTimer / 30) * 100;
+            if (bar) bar.style.width = `${percent}%`;
+        }
+
+        document.getElementById('badgeRefreshBtn').addEventListener('click', () => {
+            fetchNewBadgeToken();
+        });
+
+        // 2. Load own logs
+        async function loadMyAttendanceHistory() {
+            const data = await apiCall('/attendance/my-record/');
+            const tbody = document.querySelector('#myRecordsTable tbody');
+            tbody.innerHTML = '';
+            
+            if (data && data.success && data.data.length > 0) {
+                data.data.forEach(log => {
+                    const row = document.createElement('tr');
+                    
+                    let statusBadge = '';
+                    if (log.status === 'Present') statusBadge = '<span class="badge badge-success">Present</span>';
+                    else if (log.status === 'Late') statusBadge = '<span class="badge badge-warning">Late</span>';
+                    else statusBadge = `<span class="badge badge-danger">${log.status}</span>`;
+
+                    row.innerHTML = `
+                        <td><strong>${log.date}</strong></td>
+                        <td>${log.time_in ? log.time_in : '--:--'}</td>
+                        <td>${log.time_out ? log.time_out : '--:--'}</td>
+                        <td>${statusBadge}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-light);">No attendance records found.</td></tr>`;
+            }
+        }
+
+        // 3. Leaves Center
+        const leaveModal = document.getElementById('leaveModal');
+        document.getElementById('openLeaveModalBtn').addEventListener('click', () => leaveModal.style.display = 'flex');
+        document.getElementById('closeLeaveModalBtn').addEventListener('click', () => leaveModal.style.display = 'none');
+
+        async function loadLeavesCenter() {
+            const data = await apiCall('/attendance/api/leaves/');
+            if (!data || !data.success) return;
+            
+            // Pop balances grid
+            const grid = document.getElementById('leaveBalancesGrid');
+            grid.innerHTML = '';
+            data.balances.forEach(b => {
+                const card = document.createElement('div');
+                card.className = 'metric-card';
+                card.innerHTML = `
+                    <div class="metric-icon" style="background:var(--primary-light); color:var(--primary);"><i data-lucide="calendar"></i></div>
+                    <div class="metric-details">
+                        <h4>${b.leave_type}</h4>
+                        <div class="value">${b.remaining_days} <span style="font-size:13px; font-weight:normal; color:var(--text-light);">/ ${b.max_days} days left</span></div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+            
+            // Dropdown types
+            const selector = document.getElementById('leaveTypeSelector');
+            selector.innerHTML = '<option value="">-- Choose Leave --</option>';
+            data.leave_types.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = `${t.name} (Max ${t.max_days} days)`;
+                selector.appendChild(opt);
+            });
+            
+            // Leaves list table
+            const tbody = document.querySelector('#myLeavesTable tbody');
+            tbody.innerHTML = '';
+            if (data.requests.length > 0) {
+                data.requests.forEach(r => {
+                    const row = document.createElement('tr');
+                    let statusBadge = '';
+                    if (r.status === 'Approved') statusBadge = '<span class="badge badge-success">Approved</span>';
+                    else if (r.status === 'Pending') statusBadge = '<span class="badge badge-primary">Pending</span>';
+                    else statusBadge = `<span class="badge badge-danger">${r.status}</span>`;
+                    
+                    row.innerHTML = `
+                        <td><strong>${r.leave_type}</strong></td>
+                        <td>${r.start_date}</td>
+                        <td>${r.end_date}</td>
+                        <td>${r.requested_days}</td>
+                        <td>${statusBadge}</td>
+                        <td><span style="font-size:13px; color:var(--text-muted);">${r.comments || ''}</span></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-light);">No time off requests found.</td></tr>`;
+            }
+        }
+
+        // Leave request submit
+        document.getElementById('leaveRequestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                leave_type_id: document.getElementById('leaveTypeSelector').value,
+                start_date: document.getElementById('leaveStartDate').value,
+                end_date: document.getElementById('leaveEndDate').value,
+                comments: document.getElementById('leaveComments').value
+            };
+            
+            const data = await apiCall('/attendance/api/leaves/', 'POST', body);
+            if (data && data.success) {
+                alert(data.message);
+                leaveModal.style.display = 'none';
+                loadLeavesCenter();
+                document.getElementById('leaveRequestForm').reset();
+            } else {
+                alert(data ? data.error : 'Failed to submit request');
+            }
+        });
+
+        // 4. Load own salaries
+        async function loadSalaryCenter() {
+            const data = await apiCall('/attendance/api/payroll/');
+            const tbody = document.querySelector('#mySalaryTable tbody');
+            tbody.innerHTML = '';
+            
+            if (data && data.success && data.records.length > 0) {
+                data.records.forEach(p => {
+                    const row = document.createElement('tr');
+                    
+                    let payBadge = '';
+                    if (p.payment_status === 'Paid') payBadge = '<span class="badge badge-success">Paid</span>';
+                    else if (p.payment_status === 'Pending') payBadge = '<span class="badge badge-primary">Pending</span>';
+                    else payBadge = `<span class="badge badge-warning">${p.payment_status}</span>`;
+
+                    row.innerHTML = `
+                        <td><strong>${p.period_start} to ${p.period_end}</strong></td>
+                        <td>$${parseFloat(p.gross_salary).toFixed(2)}</td>
+                        <td>${p.days_worked} / ${p.required_days}</td>
+                        <td style="color:var(--danger-dark)">-$${parseFloat(p.deductions).toFixed(2)}</td>
+                        <td style="font-weight:700; color:var(--success-dark)">$${parseFloat(p.net_salary).toFixed(2)}</td>
+                        <td>${payBadge}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-light);">No salary or payroll slips generated.</td></tr>`;
+            }
+        }
+
+        // ================= HR ADMINISTRATION FUNCTIONS =================
+        
+        // 1. Live Attendance Dashboard
+        async function loadHRLiveAttendance() {
+            const data = await apiCall('/attendance/today/');
+            const tbody = document.querySelector('#hrAttendanceTodayTable tbody');
+            tbody.innerHTML = '';
+            
+            let presentCount = 0;
+            let lateCount = 0;
+            let absentCount = 0; // calculated manually in mockup directory
+            
+            if (data && data.success && data.data.length > 0) {
+                data.data.forEach(log => {
+                    const row = document.createElement('tr');
+                    
+                    let statusBadge = '';
+                    if (log.status === 'Present') {
+                        statusBadge = '<span class="badge badge-success">Present</span>';
+                        presentCount++;
+                    } else if (log.status === 'Late') {
+                        statusBadge = '<span class="badge badge-warning">Late</span>';
+                        lateCount++;
+                    } else {
+                        statusBadge = `<span class="badge badge-danger">${log.status}</span>`;
+                        absentCount++;
+                    }
+
+                    row.innerHTML = `
+                        <td><strong>${log.employee__first_name} ${log.employee__last_name}</strong></td>
+                        <td>${log.time_in ? new Date(log.time_in).toLocaleTimeString() : '--:--'}</td>
+                        <td>${log.time_out ? new Date(log.time_out).toLocaleTimeString() : '--:--'}</td>
+                        <td>${statusBadge}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-light);">No clock-in events recorded today.</td></tr>`;
+            }
+            
+            document.getElementById('statsPresent').textContent = presentCount + lateCount;
+            document.getElementById('statsLate').textContent = lateCount;
+            document.getElementById('statsAbsent').textContent = absentCount;
+        }
+
+        // 2. Employees directory
+        async function loadHREmployees() {
+            const data = await apiCall('/attendance/api/employees/');
+            const tbody = document.querySelector('#hrEmployeesTable tbody');
+            tbody.innerHTML = '';
+            
+            if (data && data.success && data.employees.length > 0) {
+                data.employees.forEach(emp => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${emp.id}</td>
+                        <td><strong>${emp.full_name}</strong></td>
+                        <td><span style="font-family:monospace; font-size:13px;">${emp.username || 'N/A'}</span></td>
+                        <td>${emp.role}</td>
+                        <td>${emp.department}</td>
+                        <td>${emp.position}</td>
+                        <td>${emp.phone || 'N/A'}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-light);">Directory is empty.</td></tr>`;
+            }
+        }
+
+        // 3. HR leaves approvals
+        async function loadHRLeavesApprovals() {
+            const data = await apiCall('/attendance/api/admin/leaves/');
+            const tbody = document.querySelector('#hrLeavesTable tbody');
+            tbody.innerHTML = '';
+            
+            if (data && data.success && data.requests.length > 0) {
+                data.requests.forEach(r => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${r.employee_name}</strong></td>
+                        <td>${r.leave_type}</td>
+                        <td>${r.start_date}</td>
+                        <td>${r.end_date}</td>
+                        <td>${r.requested_days} days</td>
+                        <td><span style="font-size:13px; color:var(--text-muted);">${r.comments || ''}</span></td>
+                        <td>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-secondary" onclick="processLeave(${r.id}, 'approve')" style="padding:6px 12px; font-size:12px; color:var(--success-dark); background:var(--success-light);"><i data-lucide="check" style="width:14px; height:14px; vertical-align:middle; display:inline-block;"></i> Approve</button>
+                                <button class="btn btn-secondary" onclick="processLeave(${r.id}, 'reject')" style="padding:6px 12px; font-size:12px; color:var(--danger-dark); background:var(--danger-light);"><i data-lucide="x" style="width:14px; height:14px; vertical-align:middle; display:inline-block;"></i> Reject</button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                lucide.createIcons();
+            } else {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-light);">No leave requests pending review.</td></tr>`;
+            }
+        }
+
+        // Process leave approval request
+        window.processLeave = async function(requestId, action) {
+            const data = await apiCall('/attendance/api/admin/leaves/', 'POST', { request_id: requestId, action });
+            if (data && data.success) {
+                alert(data.message);
+                loadHRLeavesApprovals();
+            } else {
+                alert(data ? data.error : 'Action failed');
+            }
+        };
+
+        // 4. Payroll run logic
+        const payrollModal = document.getElementById('payrollModal');
+        document.getElementById('openPayrollRunModalBtn').addEventListener('click', () => payrollModal.style.display = 'flex');
+        document.getElementById('closePayrollModalBtn').addEventListener('click', () => payrollModal.style.display = 'none');
+
+        async function loadHRPayroll() {
+            const data = await apiCall('/attendance/api/payroll/');
+            const tbody = document.querySelector('#hrPayrollTable tbody');
+            tbody.innerHTML = '';
+            
+            if (data && data.success && data.records.length > 0) {
+                data.records.forEach(p => {
+                    const row = document.createElement('tr');
+                    
+                    let payBadge = '';
+                    if (p.payment_status === 'Paid') payBadge = '<span class="badge badge-success">Paid</span>';
+                    else if (p.payment_status === 'Pending') payBadge = '<span class="badge badge-primary">Pending</span>';
+                    else payBadge = `<span class="badge badge-warning">${p.payment_status}</span>`;
+
+                    row.innerHTML = `
+                        <td><strong>${p.period_start} to ${p.period_end}</strong></td>
+                        <td>${p.employee_name}</td>
+                        <td>$${parseFloat(p.gross_salary).toFixed(2)}</td>
+                        <td>${p.days_worked} / ${p.required_days} days</td>
+                        <td style="color:var(--danger-dark)">-$${parseFloat(p.deductions).toFixed(2)}</td>
+                        <td style="font-weight:700; color:var(--success-dark)">$${parseFloat(p.net_salary).toFixed(2)}</td>
+                        <td>${payBadge}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-light);">No global payroll entries. Click run payroll to calculate.</td></tr>`;
+            }
+        }
+
+        document.getElementById('payrollRunForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = {
+                period_start: document.getElementById('payrollStart').value,
+                period_end: document.getElementById('payrollEnd').value
+            };
+            
+            const data = await apiCall('/attendance/api/payroll/', 'POST', body);
+            if (data && data.success) {
+                alert(data.message);
+                payrollModal.style.display = 'none';
+                loadHRPayroll();
+                document.getElementById('payrollRunForm').reset();
+            } else {
+                alert(data ? data.error : 'Failed to calculate payroll runs');
+            }
+        });
+
+        // 5. HR Performance reviews
+        const kpiModal = document.getElementById('kpiModal');
+        document.getElementById('openKPIModalBtn').addEventListener('click', () => kpiModal.style.display = 'flex');
+        document.getElementById('closeKPIModalBtn').addEventListener('click', () => kpiModal.style.display = 'none');
+
+        async function loadHRPerformanceKPIs() {
+            const data = await apiCall('/attendance/api/performance/');
+            if (!data || !data.success) return;
+            
+            // Pop table list
+            const tbody = document.querySelector('#hrEvaluationsTable tbody');
+            tbody.innerHTML = '';
+            if (data.evaluations.length > 0) {
+                data.evaluations.forEach(ev => {
+                    const row = document.createElement('tr');
+                    
+                    let outcomeBadge = '';
+                    if (ev.outcome.includes('Raise') || ev.outcome.includes('Passed')) outcomeBadge = `<span class="badge badge-success">${ev.outcome}</span>`;
+                    else if (ev.outcome.includes('Warning')) outcomeBadge = `<span class="badge badge-danger">${ev.outcome}</span>`;
+                    else outcomeBadge = `<span class="badge badge-primary">${ev.outcome}</span>`;
+
+                    row.innerHTML = `
+                        <td>${ev.evaluation_date}</td>
+                        <td><strong>${ev.employee_name}</strong></td>
+                        <td>${ev.evaluator_name}</td>
+                        <td>${ev.evaluation_type}</td>
+                        <td style="font-weight:700;">${ev.overall_score}%</td>
+                        <td>${outcomeBadge}</td>
+                        <td><span style="font-size:13px; color:var(--text-light);">${ev.comments}</span></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-light);">No performance evaluations submitted.</td></tr>`;
+            }
+            
+            // Pop form select options
+            const empSelect = document.getElementById('kpiEmployeeSelect');
+            empSelect.innerHTML = '<option value="">-- Choose Employee --</option>';
+            data.peers.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.full_name;
+                empSelect.appendChild(opt);
+            });
+            
+            // Pop indicators dynamic form inputs
+            const scoreContainer = document.getElementById('kpiScoresContainer');
+            scoreContainer.innerHTML = '';
+            
+            if (data.kpis.length > 0) {
+                data.kpis.forEach(cat => {
+                    const catBlock = document.createElement('div');
+                    catBlock.style.marginBottom = '16px';
+                    catBlock.innerHTML = `
+                        <h5 style="margin-bottom:8px; color:var(--primary); font-weight:600; font-size:14px;">${cat.category_name} (Weight: ${parseFloat(cat.weight)}%)</h5>
+                    `;
+                    
+                    cat.indicators.forEach(ind => {
+                        const formGroup = document.createElement('div');
+                        formGroup.className = 'form-group';
+                        formGroup.style.marginLeft = '12px';
+                        formGroup.style.marginBottom = '10px';
+                        formGroup.innerHTML = `
+                            <label for="score_${ind.id}" style="font-weight:normal; font-size:13px; text-transform:none; letter-spacing:0; margin-bottom:4px;">
+                                ${ind.name} <span style="color:var(--text-light)">(${ind.description})</span>
+                            </label>
+                            <input type="number" id="score_${ind.id}" min="1" max="${ind.max_score}" value="${ind.max_score}" class="form-input kpi-score-input" data-indicator-id="${ind.id}" style="max-width:120px;" required>
+                            <span style="font-size:12px; color:var(--text-light); margin-left:8px;">Max Score: ${ind.max_score}</span>
+                        `;
+                        catBlock.appendChild(formGroup);
+                    });
+                    
+                    scoreContainer.appendChild(catBlock);
+                });
+            } else {
+                scoreContainer.innerHTML = `<p style="color:var(--text-light); font-size:13px;">No KPI categories defined in admin.</p>`;
+            }
+        }
+
+        document.getElementById('kpiForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Gather scores
+            const scores = {};
+            document.querySelectorAll('.kpi-score-input').forEach(input => {
+                const indId = input.getAttribute('data-indicator-id');
+                const val = input.value;
+                scores[indId] = parseFloat(val);
+            });
+            
+            const body = {
+                employee_id: document.getElementById('kpiEmployeeSelect').value,
+                evaluation_type: document.getElementById('kpiTypeSelect').value,
+                comments: document.getElementById('kpiComments').value,
+                scores
+            };
+            
+            const data = await apiCall('/attendance/api/performance/', 'POST', body);
+            if (data && data.success) {
+                alert(`Evaluation Submitted!\nOverall Score: ${data.score}%\nOutcome: ${data.outcome}`);
+                kpiModal.style.display = 'none';
+                loadHRPerformanceKPIs();
+                document.getElementById('kpiForm').reset();
+            } else {
+                alert(data ? data.error : 'Failed to submit performance review');
+            }
+        });
+
+        // 6. HR Recruitment Match
+        async function loadHRRecruitment() {
+            const data = await apiCall('/attendance/api/recruitment/');
+            if (!data || !data.success) return;
+            
+            // Job listings
+            const jobTbody = document.querySelector('#hrJobsTable tbody');
+            jobTbody.innerHTML = '';
+            if (data.job_postings.length > 0) {
+                data.job_postings.forEach(j => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${j.title}</strong></td>
+                        <td>${j.department}</td>
+                        <td><span class="badge badge-primary">${j.min_education}</span></td>
+                        <td>${j.min_experience_years} years</td>
+                        <td><span style="font-size:12px; font-family:monospace;">${j.required_skills}</span></td>
+                        <td>${j.closing_date}</td>
+                    `;
+                    jobTbody.appendChild(row);
+                });
+            } else {
+                jobTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-light);">No job descriptions published.</td></tr>`;
+            }
+            
+            // Candidates list
+            const appTbody = document.querySelector('#hrApplicationsTable tbody');
+            appTbody.innerHTML = '';
+            if (data.applications.length > 0) {
+                data.applications.forEach(a => {
+                    const row = document.createElement('tr');
+                    
+                    let scoreClass = 'fail';
+                    if (a.screening_score >= 70) scoreClass = 'pass';
+                    
+                    let statusBadge = '';
+                    if (a.status.includes('Qualified')) statusBadge = '<span class="badge badge-success">Qualified</span>';
+                    else if (a.status.includes('Rejected')) statusBadge = '<span class="badge badge-danger">Rejected</span>';
+                    else statusBadge = `<span class="badge badge-primary">${a.status}</span>`;
+
+                    row.innerHTML = `
+                        <td>
+                            <strong>${a.applicant_name}</strong><br>
+                            <span style="font-size:12px; color:var(--text-light);">${a.applicant_email}</span>
+                        </td>
+                        <td>${a.job_title}</td>
+                        <td>
+                            <span style="font-size:13px;">${a.education_level} Degree • ${a.experience_years} yrs exp</span><br>
+                            <span style="font-size:11px; color:var(--text-muted); font-family:monospace;">Skills: ${a.skills}</span>
+                        </td>
+                        <td>
+                            <div style="font-weight:700; font-size:14px; text-align:center;">${a.screening_score}%</div>
+                            <div class="screen-score-bar">
+                                <div class="screen-score-fill ${scoreClass}" style="width: ${a.screening_score}%"></div>
+                            </div>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td><span style="font-size:12px; color:var(--text-muted);">${a.screening_notes || ''}</span></td>
+                    `;
+                    appTbody.appendChild(row);
+                });
+            } else {
+                appTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-light);">No job applications submitted yet.</td></tr>`;
+            }
+        }
+
+        // 7. Load global system settings
+        async function loadHRSettings() {
+            const data = await apiCall('/attendance/api/settings/');
+            const container = document.getElementById('settingsContainer');
+            container.innerHTML = '';
+            
+            if (data && data.success && data.settings.length > 0) {
+                data.settings.forEach(s => {
+                    const row = document.createElement('div');
+                    row.className = 'settings-row';
+                    row.innerHTML = `
+                        <div style="max-width:70%;">
+                            <div style="font-weight:600; font-size:14px; color:var(--text-main);">${s.category.toUpperCase()} - ${s.key.replace(/_/g, ' ')}</div>
+                            <div style="font-size:13px; color:var(--text-light); margin-top:2px;">${s.description || 'No description provided'}</div>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="text" id="setting_input_${s.id}" value="${s.value}" class="form-input" style="max-width:120px; padding:8px 12px; font-size:14px; text-align:center;">
+                            <button class="btn" onclick="saveSetting(${s.id})" style="width:auto; padding:8px 16px; font-size:13px;"><i data-lucide="save" style="width:14px; height:14px;"></i> Save</button>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+                lucide.createIcons();
+            } else {
+                container.innerHTML = `<div style="text-align:center; padding:32px; color:var(--text-light);">No custom system settings found.</div>`;
+            }
+        }
+
+        window.saveSetting = async function(settingId) {
+            const val = document.getElementById(`setting_input_${settingId}`).value;
+            const data = await apiCall('/attendance/api/settings/', 'POST', { id: settingId, value: val });
+            if (data && data.success) {
+                alert(data.message);
+                loadHRSettings();
+            } else {
+                alert(data ? data.error : 'Failed to update setting');
+            }
+        };
+
+        // Initialize Authentication on load
+        initAuth();
+    </script>
+</body>
+</html>
