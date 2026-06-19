@@ -187,3 +187,84 @@ def _username_from_login_identifier(identifier: str) -> str:
 
 def _can_view_employee_directory(user) -> bool:
     return employee_service.can_manage_employees(user) or employee_service.can_view_dean_reports(user)
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
+
+
+def set_password_view(request, uidb64, token):
+    """
+    Employee clicks the link from their welcome email and sets their own password.
+    URL: /set-password/<uidb64>/<token>/
+    """
+    from django.contrib.auth.models import User
+
+    # Decode the user ID from the URL
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    # Validate the token
+    if user is None or not default_token_generator.check_token(user, token):
+        messages.error(request, "This password setup link is invalid or has already been used.")
+        return redirect("/login/")
+
+    if request.method == "POST":
+        password1 = request.POST.get("password1", "")
+        password2 = request.POST.get("password2", "")
+
+        if len(password1) < 8:
+            messages.error(request, "Password must be at least 8 characters.")
+        elif password1 != password2:
+            messages.error(request, "Passwords do not match.")
+        else:
+            user.set_password(password1)
+            user.save()
+            print(f"[AUTH] Password set for user: {user.username}")
+            messages.success(request, "Password set successfully. You can now log in.")
+            return redirect("/login/")
+
+    return render(request, "hr/set_password.html", {"uidb64": uidb64, "token": token})
+
+
+def forgot_password_view(request):
+    """
+    Employee enters their email to receive a password reset link.
+    URL: /forgot-password/
+    """
+    from django.contrib.auth.models import User
+    from django.utils.http import urlsafe_base64_encode
+    from django.utils.encoding import force_bytes
+    from django.core.mail import send_mail
+    from django.conf import settings
+
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip().lower()
+        user = User.objects.filter(email__iexact=email).first()
+
+        # Always show success even if email not found (security best practice)
+        if user:
+            uid   = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            reset_link = request.build_absolute_uri(f"/set-password/{uid}/{token}/")
+
+            send_mail(
+                subject="Reset Your HRMS Password",
+                message=(
+                    f"Hello {user.get_full_name() or user.username},\n\n"
+                    f"Click the link below to reset your password:\n{reset_link}\n\n"
+                    "This link expires after one use.\n\n"
+                    "If you did not request this, ignore this email."
+                ),
+                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@hrms.local"),
+                recipient_list=[email],
+                fail_silently=True,
+            )
+            print(f"[AUTH] Password reset link sent to: {email} → {reset_link}")
+
+        messages.success(request, "If that email exists, a reset link has been sent.")
+        return redirect("/forgot-password/")
+
+    return render(request, "hr/forgot_password.html")

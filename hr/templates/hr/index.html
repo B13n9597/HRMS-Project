@@ -888,15 +888,15 @@
             <!-- Employee Portal -->
             <div class="menu-header" id="menuHeaderEmployee">Employee Portal</div>
             <li><a class="menu-item" data-panel="qrBadge"><i data-lucide="qr-code"></i> Rotating Badge</a></li>
-            <li><a class="menu-item" data-panel="myRecords"><i data-lucide="history"></i> Attendance Logs</a></li>
+            <li><a class="menu-item" href="{% url 'attendance_logs' %}" data-panel="myRecords"><i data-lucide="history"></i> Attendance Logs</a></li>
             <li><a class="menu-item" data-panel="lifecycle" id="menuItemLifecycle"><i data-lucide="route"></i> <span id="menuItemLifecycleLabel">My Lifecycle</span></a></li>
             <li><a class="menu-item" data-panel="leaves"><i data-lucide="calendar-days"></i> Leave Manager</a></li>
             <li><a class="menu-item" data-panel="salary"><i data-lucide="receipt"></i> Salary & Slips</a></li>
             
             <!-- HR Portal -->
             <div class="menu-header" id="menuHeaderHR" style="display:none;">HR & Administration</div>
-            <li><a class="menu-item" data-panel="hrDashboard" id="menuItemHRDashboard" style="display:none;"><i data-lucide="layout-dashboard"></i> Live Attendance</a></li>
-            <li><a class="menu-item" data-panel="hrEmployees" id="menuItemHREmployees" style="display:none;"><i data-lucide="users-2"></i> Staff Directory</a></li>
+            <li><a class="menu-item" href="{% url 'live_attendance' %}" data-panel="hrDashboard" id="menuItemHRDashboard" style="display:none;"><i data-lucide="layout-dashboard"></i> Live Attendance</a></li>
+            <li><a class="menu-item" href="{% url 'staff_directory' %}" data-panel="hrEmployees" id="menuItemHREmployees" style="display:none;"><i data-lucide="users-2"></i> Staff Directory</a></li>
             <li><a class="menu-item" data-panel="hrLeaves" id="menuItemHRLeaves" style="display:none;"><i data-lucide="calendar-check"></i> Leave Approvals</a></li>
             <li><a class="menu-item" data-panel="hrPayroll" id="menuItemHRPayroll" style="display:none;"><i data-lucide="coins"></i> Payroll Center</a></li>
             <li><a class="menu-item" data-panel="hrKPI" id="menuItemHRKPI" style="display:none;"><i data-lucide="award"></i> Performance KPIs</a></li>

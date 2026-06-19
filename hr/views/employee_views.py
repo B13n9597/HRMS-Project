@@ -7,9 +7,11 @@ import json
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.shortcuts import render
 from rest_framework.decorators import api_view
 
 from hr.services import employee_service
+from hr.models import Employee
 
 
 # ─────────────────────────────────────────────
@@ -250,4 +252,15 @@ def import_employees_bulk(request):
         'errors': result['errors'],
     })
     
+
+
+@login_required
+def staff_directory_view(request):
+    """Render staff directory page with active employees (not deleted)."""
+    employees = Employee.objects.select_related('department', 'position').order_by('first_name', 'last_name')
+    context = {
+        'employees': employees,
+    }
+    return render(request, 'hr/staff_directory.html', context)
+
     

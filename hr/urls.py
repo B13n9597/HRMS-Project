@@ -12,7 +12,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # ── Single Page Application Dashboard ──────────────────────────
-    path('', api_views.index_view, name='hrms_dashboard'),
+    # Map root to the live attendance dashboard (explicit view)
+    path('', attendanceviews.live_attendance, name='hrms_dashboard'),
 
     # ── Attendance Management (Web Layout Router) ────────────────
     path('my-qr/', attendanceviews.my_qr_code, name='attendance_my_qr'),
@@ -21,12 +22,10 @@ urlpatterns = [
     path('my-record/', attendanceviews.my_attendance, name='attendance_my_record'),
     path('report/<int:employee_id>/', attendanceviews.employee_attendance_report, name='attendance_report'),
 
-    # ── Named sidebar route aliases (SPA panels via page_views) ──
-    # These named routes resolve to the SPA index with a hash fragment
-    # so Django template {% url %} tags work correctly.
-    path('attendance/logs/', api_views.index_view, name='attendance_logs'),
-    path('attendance/live/', api_views.index_view, name='live_attendance'),
-    path('staff-directory/', api_views.index_view, name='staff_directory'),
+    # ── Explicit sidebar routes (render full Django views)
+    path('attendance-logs/', attendanceviews.attendance_logs, name='attendance_logs'),
+    path('live-attendance/', attendanceviews.live_attendance, name='live_attendance'),
+    path('staff-directory/', employee_views.staff_directory_view, name='staff_directory'),
     path('payroll-center/', api_views.index_view, name='payroll_center'),
     path('leave-approvals/', api_views.index_view, name='leave_approvals'),
     path('performance-kpis/', api_views.index_view, name='performance_kpis'),
@@ -62,7 +61,10 @@ urlpatterns = [
     path('api/recruitment/', api_views.api_recruitment, name='api_recruitment'),
     path('api/settings/', api_views.api_settings, name='api_settings'),
     path('api/simulate-scan/', api_views.api_simulate_scan, name='api_simulate_scan'),
-
+    path('forgot-password/', page_views.forgot_password_view, name='forgot_password'),
+    path('forgot_password/', page_views.forgot_password_view), 
+    
+    path('set-password/<uidb64>/<token>/', page_views.set_password_view, name='set_password'),
     # ── Bulk CSV Mass Onboarding & Tablet Attendance APIs ────────────────
     path('api/employees/upload-csv/', api_views.api_upload_employees_csv, name='api_employees_upload_csv'),
     path('api/attendance/tablet/authenticate/', api_views.api_tablet_authenticate, name='api_attendance_tablet_authenticate'),
