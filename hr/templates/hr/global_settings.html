@@ -1,0 +1,47 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}Global Settings — HR{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color);">
+    <h1 style="font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px;">Global Settings</h1>
+    <p style="color: var(--text-muted); font-size: 14px;">Configure system-wide preferences and policies.</p>
+</div>
+
+<div class="card" style="max-width: 800px;">
+    <div style="padding: 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; background: #f8fafc;">
+        <i data-lucide="sliders" style="width: 20px; height: 20px; color: var(--primary);"></i>
+        <h3 style="margin: 0; font-size: 16px; font-weight: 700;">System Preferences</h3>
+    </div>
+    
+    <div style="padding: 24px;">
+        <form>
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Company Name</label>
+                <input type="text" class="form-control" value="ACT HRMS" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Default Work Hours</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <input type="time" class="form-control" value="09:00" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <input type="time" class="form-control" value="17:00" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 32px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Timezone</label>
+                <select class="form-control" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                    <option>UTC (Coordinated Universal Time)</option>
+                    <option>EST (Eastern Standard Time)</option>
+                    <option>PST (Pacific Standard Time)</option>
+                </select>
+            </div>
+            
+            <div style="text-align: right; border-top: 1px solid var(--border-color); padding-top: 24px;">
+                <button type="button" class="btn btn-primary"><i data-lucide="save" style="width:16px;height:16px;margin-right:6px;"></i> Save Settings</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

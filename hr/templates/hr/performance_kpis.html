@@ -1,0 +1,48 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}Performance KPIs — HR{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-end;">
+    <div>
+        <h1 style="font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px;">Performance KPIs</h1>
+        <p style="color: var(--text-muted); font-size: 14px;">Track and manage key performance indicators for all staff.</p>
+    </div>
+    <form method="GET" style="display: flex; gap: 8px;">
+        <input type="text" name="q" placeholder="Search employee..." value="{{ search_query }}" style="padding: 10px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); width: 300px; font-size: 14px;">
+        <button type="submit" class="btn btn-primary">Search</button>
+        {% if search_query %}<a href="{% url 'performance_kpis' %}" class="btn btn-ghost">Clear</a>{% endif %}
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee Name</th>
+                    <th>Department</th>
+                    <th>Recent Review</th>
+                    <th>Rating</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <td><strong>{{ emp.get_full_name }}</strong></td>
+                    <td>{{ emp.department.name|default:"-" }}</td>
+                    <td>Q1 2026 Review</td>
+                    <td>
+                        <span class="badge badge-success">4.5 / 5.0</span>
+                    </td>
+                    <td><button class="btn btn-ghost btn-sm">Update KPI</button></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" style="text-align:center;padding:40px;">No employees found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

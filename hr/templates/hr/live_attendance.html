@@ -1,0 +1,45 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}Live Attendance — HR{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color);">
+    <h1 style="font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px;">Live Attendance</h1>
+    <p style="color: var(--text-muted); font-size: 14px;">Monitor today's attendance in real-time.</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Today's Present Employees</h3>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in today %}
+                <tr>
+                    <td><strong>{{ record.employee.get_full_name }}</strong></td>
+                    <td>{{ record.time_in|time:"H:i"|default:"-" }}</td>
+                    <td>{{ record.time_out|time:"H:i"|default:"-" }}</td>
+                    <td><span class="badge badge-success">Present</span></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 48px;">
+                        <i data-lucide="clock" style="width: 48px; height: 48px; color: var(--text-light); margin-bottom: 16px;"></i>
+                        <p style="color: var(--text-muted);">No employees have clocked in yet today.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

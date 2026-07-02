@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
-from hrms.models import LeaveRequest, LeaveBalance, LeaveType, Employee
+from hr.models import LeaveRequest, LeaveBalance, LeaveType, Employee
 
 
 def get_all_leave_types():
@@ -52,10 +52,9 @@ def submit_leave_request(employee_id: int, data: dict) -> LeaveRequest:
 
     requested_days = (end - start).days + 1
 
-    # Check balance
-    year    = start.year
+    # Check balance if a record exists
     balance = LeaveBalance.objects.filter(
-        employee=employee, leave_type=leave_type, year=year
+        employee=employee, leave_type=leave_type
     ).first()
 
     if balance and balance.remaining_days < requested_days:
@@ -70,9 +69,10 @@ def submit_leave_request(employee_id: int, data: dict) -> LeaveRequest:
         start_date     = start,
         end_date       = end,
         requested_days = requested_days,
-        reason         = data.get('reason', ''),
+        comments       = data.get('reason', ''),
         status         = 'Pending',
     )
+
 
 
 def approve_request(request_id: int, approver: Employee) -> LeaveRequest:
@@ -88,17 +88,18 @@ def approve_request(request_id: int, approver: Employee) -> LeaveRequest:
     req.approved_date = timezone.localdate()
     req.save()
 
-    # Deduct from balance
-    balance, _ = LeaveBalance.objects.get_or_create(
-        employee   = req.employee,
-        leave_type = req.leave_type,
-        year       = req.start_date.year,
-        defaults   = {'total_days': req.leave_type.max_days, 'used_days': 0},
-    )
-    balance.used_days += req.requested_days
-    balance.save()
+    # Deduct from balance if a balance record exists
+    balance = LeaveBalance.objects.filter(
+        employee=req.employee,
+        leave_type=req.leave_type,
+    ).first()
+    if balance and req.requested_days:
+        balance.remaining_days = max(0, balance.remaining_days - req.requested_days)
+        balance.last_updated   = timezone.localdate()
+        balance.save()
 
     return req
+
 
 
 def reject_request(request_id: int, approver: Employee, note: str = '') -> LeaveRequest:
@@ -106,17 +107,18 @@ def reject_request(request_id: int, approver: Employee, note: str = '') -> Leave
     if req.status != 'Pending':
         raise ValidationError("Only pending requests can be rejected.")
 
-    req.status         = 'Rejected'
-    req.approved_by    = approver
-    req.approved_date  = timezone.localdate()
-    req.rejection_note = note
+    req.status        = 'Rejected'
+    req.approved_by   = approver
+    req.approved_date = timezone.localdate()
+    if note:
+        req.comments = note
     req.save()
     return req
+
 
 
 def get_leave_balance(employee_id: int) -> list:
     employee = get_object_or_404(Employee, pk=employee_id)
     return LeaveBalance.objects.filter(
         employee=employee,
-        year=timezone.localdate().year,
-    ).select_related('leave_type')
+    ).select_related('leave_type')

@@ -1,0 +1,127 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}Employee Lifecycle — HR{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page-header {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color);
+    }
+    .page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .page-header p { color: var(--text-muted); font-size: 14px; }
+    
+    .search-bar { display: flex; gap: 8px; }
+    .search-input {
+        padding: 10px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        width: 300px;
+        font-size: 14px;
+        background: #fff;
+    }
+    
+    .timeline-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 24px;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+    }
+    
+    .timeline-avatar {
+        width: 48px; height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #025da2, #0ea5e9);
+        color: #fff;
+        font-family: var(--font-display); font-size: 18px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .timeline-info { flex-grow: 1; }
+    .timeline-name { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
+    .timeline-meta { font-size: 13px; color: var(--text-muted); }
+    
+    .timeline-steps {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-left: auto;
+    }
+    
+    .t-step {
+        display: flex; flex-direction: column; align-items: center; gap: 4px;
+        width: 80px; position: relative;
+    }
+    .t-dot {
+        width: 14px; height: 14px; border-radius: 50%;
+        background: var(--border-color);
+        z-index: 2;
+    }
+    .t-step.active .t-dot { background: var(--success); box-shadow: 0 0 0 4px var(--success-light); }
+    .t-step.past .t-dot { background: var(--primary); }
+    
+    .t-line {
+        position: absolute; top: 7px; left: 50%; width: 100%; height: 2px;
+        background: var(--border-color); z-index: 1;
+    }
+    .t-step.past .t-line { background: var(--primary); }
+    .t-step:last-child .t-line { display: none; }
+    
+    .t-lbl { font-size: 11px; font-weight: 600; color: var(--text-light); text-transform: uppercase; }
+    .t-step.active .t-lbl { color: var(--success-dark); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Employee Lifecycle</h1>
+        <p>Track the journey of every employee from recruitment to exit.</p>
+    </div>
+    <form method="GET" class="search-bar">
+        <input type="text" name="q" class="search-input" placeholder="Search by name..." value="{{ search_query }}">
+        <button type="submit" class="btn btn-primary"><i data-lucide="search" style="width:16px;height:16px;"></i></button>
+        {% if search_query %}
+            <a href="{% url 'dashboard_hr' %}" class="btn btn-ghost">Clear</a>
+        {% endif %}
+    </form>
+</div>
+
+{% for emp in employees %}
+<a href="{% url 'employee_details' emp.id %}" style="text-decoration: none; display: block;">
+    <div class="timeline-card" style="transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;">
+        <div class="timeline-avatar">{{ emp.first_name|first }}{{ emp.last_name|first }}</div>
+        <div class="timeline-info">
+            <div class="timeline-name">{{ emp.get_full_name }}</div>
+            <div class="timeline-meta">{{ emp.department.name|default:"No Department" }} &bull; Hired: {{ emp.hire_date|date:"Y-m-d"|default:"N/A" }}</div>
+        </div>
+        
+        <div class="timeline-steps">
+            <div class="t-step past">
+                <div class="t-dot"></div><div class="t-line"></div>
+                <div class="t-lbl">Recruited</div>
+            </div>
+            <div class="t-step {% if emp.status.name == 'Active' %}active{% elif emp.status.name != 'Active' %}past{% endif %}">
+                <div class="t-dot"></div><div class="t-line"></div>
+                <div class="t-lbl">Active</div>
+            </div>
+            <div class="t-step {% if emp.status.name == 'Terminated' or emp.status.name == 'Resigned' %}active{% endif %}">
+                <div class="t-dot"></div>
+                <div class="t-lbl">Exit</div>
+            </div>
+        </div>
+    </div>
+</a>
+{% empty %}
+<div class="card empty-state" style="text-align:center; padding: 60px 20px;">
+    <i data-lucide="users" style="width:40px;height:40px; color:var(--text-light); margin-bottom: 16px;"></i>
+    <h3>No employees found</h3>
+    <p style="color:var(--text-muted); margin-top:8px;">Try adjusting your search criteria.</p>
+</div>
+{% endfor %}
+{% endblock %}

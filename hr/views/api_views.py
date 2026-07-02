@@ -11,7 +11,7 @@ from hr.models import (
     Employee, Department, Position, LeaveRequest, LeaveBalance, LeaveType,
     Payroll, PerformanceEvaluation, KPICategory, KPIIndicator, EvaluationScore,
     JobPosting, Application, Applicant, SystemSetting, Role, EmployeeStatus,
-    EmployeeHistory, Salary
+    EmployeeHistory, Salary,Attendance
 )
 
 # Helper: check if user is HR/Admin
@@ -176,7 +176,7 @@ def api_kiosk_scan(request):
 @login_required(login_url='/login/')
 @ensure_csrf_cookie
 def index_view(request):
-    return render(request, 'hr/index.html')
+    return render(request, 'hr/hr_base.html')
 
 # API: Current User Profile
 def api_me(request):

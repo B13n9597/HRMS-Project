@@ -1,54 +1,186 @@
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Attendance Logs - ACT HRMS</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background: #f6f9fc; }
-        .topbar { background: #025da2; }
-        .panel { border: 1px solid #dbeafe; border-radius: .5rem; background: #fff; }
-    </style>
-</head>
-<body>
-<nav class="navbar navbar-expand-lg topbar navbar-dark">
-    <div class="container">
-        <a class="navbar-brand fw-bold" href="/dashboard/hr/">ACT HRMS</a>
-        <div class="d-flex gap-2">
-            <a class="btn btn-outline-light btn-sm" href="/employees/">Employees</a>
-            <a class="btn btn-light btn-sm" href="/logout/">Logout</a>
-        </div>
-    </div>
-</nav>
+{% extends 'hr/hr_base.html' %}
 
-<main class="container py-4">
-    <div class="mb-4">
-        <p class="text-uppercase text-primary small fw-bold mb-1">HR Manager</p>
-        <h1 class="h3 mb-0">Attendance Logs</h1>
-    </div>
+{% block title %}Attendance Logs{% endblock %}
 
-    <section class="panel p-3">
-        <div class="table-responsive">
-            <table class="table align-middle mb-0">
-                <thead><tr><th>Date</th><th>Employee</th><th>Department</th><th>Time In</th><th>Time Out</th><th>Status</th></tr></thead>
-                <tbody>
-                {% for log in attendance_logs %}
-                    <tr>
-                        <td>{{ log.date }}</td>
-                        <td>{{ log.employee.get_full_name }}</td>
-                        <td>{{ log.employee.department.name|default:"-" }}</td>
-                        <td>{{ log.time_in|date:"H:i"|default:"-" }}</td>
-                        <td>{{ log.time_out|date:"H:i"|default:"-" }}</td>
-                        <td><span class="badge text-bg-primary">{{ log.status }}</span></td>
-                    </tr>
+{% block extra_styles %}
+<style>
+    .filter-bar {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 16px 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+        margin-bottom: 24px;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-light); }
+    .filter-group select,
+    .filter-group input {
+        padding: 9px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        background: #f8fafc;
+        color: var(--text-main);
+        min-width: 130px;
+    }
+    .filter-group select:focus { outline: none; border-color: var(--primary); }
+
+    .summary-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .stat-mini {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 16px 20px;
+        text-align: center;
+    }
+    .stat-mini .num {
+        font-family: var(--font-display);
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+    .stat-mini .lbl { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    .status-present  { background: var(--success-light); color: var(--success-dark); }
+    .status-late     { background: var(--warning-light);  color: #78350f; }
+    .status-absent   { background: var(--danger-light);   color: var(--danger-dark); }
+    .status-on-leave { background: var(--primary-light);  color: var(--primary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Attendance Logs</h1>
+        <p>Filter and review employee attendance records.</p>
+    </div>
+</div>
+
+<!-- Filters -->
+<form method="GET" class="filter-bar">
+    <div class="filter-group">
+        <label>Employee Name</label>
+        <input type="text" name="q" value="{{ search_query|default:'' }}" placeholder="Search name...">
+    </div>
+    <div class="filter-group">
+        <label>Month</label>
+
+        <select name="month">
+            {% for num, name in months %}
+                <option value="{{ num }}" {% if num == month %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Year</label>
+        <select name="year">
+            {% for y in years %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Department</label>
+        <select name="department_id">
+            <option value="">All Departments</option>
+            {% for dept in departments %}
+                <option value="{{ dept.id }}" {% if dept.id|stringformat:"s" == dept_id %}selected{% endif %}>{{ dept.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Status</label>
+        <select name="status">
+            <option value="">All Statuses</option>
+            {% for s in statuses %}
+                <option value="{{ s }}" {% if s == status_f %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">
+        <i data-lucide="filter" style="width:15px;height:15px;"></i> Filter
+    </button>
+    <a href="{% url 'attendance_logs' %}" class="btn btn-ghost">Reset</a>
+</form>
+
+<!-- Summary row -->
+<div class="summary-row">
+    <div class="stat-mini">
+        <div class="num">{{ records|length }}</div>
+        <div class="lbl">Total Records</div>
+    </div>
+    <div class="stat-mini">
+        <div class="num" style="color:var(--success);">{{ records|length }}</div>
+        <div class="lbl">Filtered Results</div>
+    </div>
+    <div class="stat-mini">
+        <div class="num">{{ month }}/{{ year }}</div>
+        <div class="lbl">Period</div>
+    </div>
+    <div class="stat-mini">
+        <div class="num">{{ departments|length }}</div>
+        <div class="lbl">Departments</div>
+    </div>
+</div>
+
+<!-- Records Table -->
+<div class="card">
+    <div class="card-header">
+        <i data-lucide="clock" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>Records</h3>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Date</th>
+                    <th>Clock In</th>
+                    <th>Clock Out</th>
+                    <th>Status</th>
+                    <th>Signature</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in records %}
+                <tr>
+                    <td>
+                        <div class="emp-name-cell">
+                            <span class="emp-avatar">{{ r.employee.first_name|first }}{{ r.employee.last_name|first }}</span>
+                            {{ r.employee.get_full_name }}
+                        </div>
+                    </td>
+                    <td>{{ r.employee.department.name|default:"—" }}</td>
+                    <td>{{ r.date }}</td>
+                    <td>{{ r.time_in|date:"H:i"|default:"—" }}</td>
+                    <td>{{ r.time_out|date:"H:i"|default:"—" }}</td>
+                    <td>
+                        <span class="badge {% if r.status == 'Present' %}badge-success{% elif r.status == 'Late' %}badge-warning{% elif r.status == 'Absent' %}badge-danger{% else %}badge-primary{% endif %}">
+                            {{ r.status }}
+                        </span>
+                    </td>
+                    <td>{{ r.signature_text|default:"—" }}</td>
+                </tr>
                 {% empty %}
-                    <tr><td colspan="6" class="text-secondary">No attendance logs found.</td></tr>
+                <tr class="empty-state">
+                    <td colspan="7">
+                        <i data-lucide="inbox" style="width:32px;height:32px;opacity:0.3;"></i><br>
+                        No attendance records found for the selected filters.
+                    </td>
+                </tr>
                 {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </section>
-</main>
-</body>
-</html>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

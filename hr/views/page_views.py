@@ -6,6 +6,8 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
 
+from hr.forms import BulkEmployeeUploadForm, EmployeeCreateForm
+from hr.models import Attendance, LeaveRequest
 from hr.services import attendance_service, employee_service
 
 
@@ -54,8 +56,13 @@ def hr_dashboard(request):
         request,
         "hr/dashboard_hr.html",
         {
+            "active_page": "dashboard_hr",
             "employees": employee_service.get_all_employees()[:8],
             "attendance_logs": employee_service.get_all_attendance_logs()[:8],
+            "employee_count": employee_service.get_all_employees().count(),
+            "active_count": employee_service.get_all_employees().filter(status__name__iexact="Active").count(),
+            "present_today": Attendance.objects.filter(date__exact=__import__("django").utils.timezone.localdate()).count(),
+            "pending_leaves": LeaveRequest.objects.filter(status="Pending").count(),
         },
     )
 
@@ -77,6 +84,7 @@ def employee_list(request):
         {
             "employees": employee_service.get_all_employees(),
             "can_manage": employee_service.can_manage_employees(request.user),
+            "active_page": "staff_directory",
         },
     )
 
@@ -86,11 +94,12 @@ def employee_create(request):
     if not employee_service.can_manage_employees(request.user):
         return redirect(employee_service.get_dashboard_redirect(request.user))
 
-    if request.method == "POST":
+    form = EmployeeCreateForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
         try:
-            employee_service.create_employee(request.POST)
+            employee_service.create_employee(form.service_payload())
             messages.success(request, "Employee created successfully.")
-            return redirect("/employees/")
+            return redirect("staff_directory")
         except ValidationError as exc:
             messages.error(request, exc.message if hasattr(exc, "message") else str(exc))
 
@@ -98,9 +107,35 @@ def employee_create(request):
         request,
         "hr/employee_form.html",
         {
-            **employee_service.get_reference_data(),
+            "form": form,
             "mode": "Create",
             "employee": None,
+            "active_page": "staff_directory",
+        },
+    )
+
+
+@login_required(login_url="/login/")
+def employee_bulk_upload(request):
+    if not employee_service.can_manage_employees(request.user):
+        return redirect(employee_service.get_dashboard_redirect(request.user))
+
+    result = None
+    form = BulkEmployeeUploadForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            result = employee_service.bulk_create_employees_from_file(form.cleaned_data["csv_file"])
+            messages.success(request, f"Successfully onboarded {result['created_count']} employee(s).")
+        except ValidationError as exc:
+            messages.error(request, exc.message if hasattr(exc, "message") else str(exc))
+
+    return render(
+        request,
+        "hr/bulk_upload.html",
+        {
+            "form": form,
+            "result": result,
+            "active_page": "staff_directory",
         },
     )
 
@@ -126,6 +161,7 @@ def employee_update(request, employee_id):
             **employee_service.get_reference_data(),
             "mode": "Update",
             "employee": employee,
+            "active_page": "staff_directory",
         },
     )
 
@@ -168,14 +204,27 @@ def staff_directory_view(request):
     """Dedicated Staff Directory page with Create Employee modal and Bulk Import."""
     if not employee_service.can_manage_employees(request.user):
         return redirect(employee_service.get_dashboard_redirect(request.user))
-    return render(request, "hr/staff_directory.html")
+    return render(request, "hr/staff_directory.html", {"active_page": "staff_directory"})
 
 
 @login_required(login_url="/login/")
 def attendance_logs(request):
     if not employee_service.can_manage_employees(request.user):
         return redirect(employee_service.get_dashboard_redirect(request.user))
-    return render(request, "hr/attendance_logs.html", {"attendance_logs": employee_service.get_all_attendance_logs()})
+    return render(request, "hr/attendance_logs.html", {
+        "attendance_logs": employee_service.get_all_attendance_logs(),
+        "active_page": "attendance_logs",
+    })
+
+
+@login_required(login_url="/login/")
+def leave_management(request):
+    if not employee_service.can_manage_employees(request.user):
+        return redirect(employee_service.get_dashboard_redirect(request.user))
+    return render(request, "hr/leave_management.html", {
+        "leave_requests": LeaveRequest.objects.select_related("employee", "leave_type").filter(status="Pending"),
+        "active_page": "leave_management",
+    })
 
 
 def _username_from_login_identifier(identifier: str) -> str:

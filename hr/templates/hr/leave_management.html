@@ -1,0 +1,224 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}Leave &amp; Time Off Manager{% endblock %}
+
+{% block content %}
+<!-- ====================== PAGE HEADER ====================== -->
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Leave &amp; Time Off Manager</h1>
+        <p>Request time off, track your approval status logs, and view remaining allowances.</p>
+    </div>
+    <div class="action-row">
+        <button class="btn btn-primary" id="openLeaveModalBtn">
+            <i data-lucide="plus" style="width:16px;height:16px;"></i> Request Time Off
+        </button>
+    </div>
+</div>
+
+<!-- ====================== ALLOWANCES METRICS ====================== -->
+<div class="metrics-grid" id="leaveBalancesGrid">
+    {% for b in leave_balances %}
+    <div class="stat-card">
+        <p>{{ b.type }}</p>
+        <strong>{{ b.remaining }}</strong>
+    </div>
+    {% empty %}
+    <p class="text-muted">No balances available</p>
+    {% endfor %}
+</div>
+
+<!-- ====================== LEAVE HISTORY TABLE ====================== -->
+<section class="card table-card">
+    <div class="card-header">
+        <h3>My Leave Request History</h3>
+    </div>
+
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Leave Type</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Status</th>
+                    <th>Comments</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in leaves %}
+                <tr>
+                    <td>{{ r.leave_type }}</td>
+                    <td>{{ r.start_date }}</td>
+                    <td>{{ r.end_date }}</td>
+                    <td>
+                        <span class="badge badge-primary">{{ r.status }}</span>
+                    </td>
+                    <td>{{ r.comments }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-muted">No leave requests found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ====================== REQUEST LEAVE MODAL ====================== -->
+<div class="modal-overlay" id="leaveModal">
+    <div class="modal">
+        <div class="modal-head">
+            <div class="modal-head-left">
+                <div class="modal-icon"><i data-lucide="plus" style="width:18px;height:18px;"></i></div>
+                <div class="modal-title">Request Time Off</div>
+            </div>
+            <button class="modal-close" id="closeLeaveModalBtn"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+        </div>
+
+        <div class="modal-body">
+            <div id="leaveFormAlert" style="display:none;"></div>
+
+            <form id="leaveForm" method="POST" action="{% url 'request_leave' %}" novalidate>
+                {% csrf_token %}
+
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Leave Type</label>
+                        <select name="leave_type" required class="form-input">
+                            <option value="">Select Type</option>
+                            {% for lt in leave_types %}
+                                <option value="{{ lt.slug }}">{{ lt.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Start Date</label>
+                        <input type="date" name="start_date" required class="form-input" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>End Date</label>
+                        <input type="date" name="end_date" required class="form-input" />
+                    </div>
+
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Comments</label>
+                        <textarea name="comments" rows="3" class="form-input"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2; text-align:right;">
+                    <button type="submit" class="btn btn-primary" id="submitLeaveBtn">
+                        <i data-lucide="send" style="width:16px;height:16px;"></i> Submit Request
+                        <div class="spinner" id="leaveSpinner" style="display:none;"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // ----- UI helpers -----
+    const modal = document.getElementById("leaveModal");
+    const openBtn = document.getElementById("openLeaveModalBtn");
+    const closeBtn = document.getElementById("closeLeaveModalBtn");
+    const alertBox = document.getElementById("leaveFormAlert");
+    const submitBtn = document.getElementById("submitLeaveBtn");
+    const submitLabel = submitBtn.textContent.trim();
+    const spinner = document.getElementById("leaveSpinner");
+    const form = document.getElementById("leaveForm");
+
+    const getCookie = (name) => {
+        const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+        return match ? decodeURIComponent(match[2]) : null;
+    };
+
+    const showAlert = (msg, type = "danger") => {
+        alertBox.className = `alert-${type}`;
+        alertBox.style.display = "block";
+        alertBox.innerHTML = msg;
+    };
+
+    // ----- Modal open/close -----
+    openBtn.addEventListener("click", () => modal.classList.add("open"));
+    closeBtn.addEventListener("click", () => modal.classList.remove("open"));
+    // close when clicking outside modal content
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) modal.classList.remove("open");
+    });
+
+    // ----- Form submit (AJAX) -----
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        alertBox.style.display = "none";
+
+        // Simple front‑end validation
+        const leaveType = form.leave_type.value.trim();
+        const start = form.start_date.value;
+        const end = form.end_date.value;
+
+        if (!leaveType || !start || !end) {
+            showAlert("Please fill in all required fields.", "danger");
+            return;
+        }
+
+        submitBtn.disabled = true;
+        spinner.style.display = "inline-block";
+
+        const payload = {
+            leave_type: leaveType,
+            start_date: start,
+            end_date: end,
+            comments: form.comments.value.trim()
+        };
+
+        try {
+            const res = await fetch("{% url 'request_leave' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken") || ""
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (data.success) {
+                showAlert(`✓ ${data.message || "Leave request submitted!"}`, "success");
+                setTimeout(() => {
+                    modal.classList.remove("open");
+                    location.reload(); // refresh to show new entry / balance
+                }, 1500);
+            } else {
+                // Show field‑level errors if the backend supplied them
+                if (data.errors) {
+                    Object.entries(data.errors).forEach(([field, msg]) => {
+                        const errEl = document.getElementById(`err-${field}`);
+                        if (errEl) errEl.textContent = msg;
+                    });
+                }
+                showAlert(data.error || "Failed to submit request.", "danger");
+            }
+        } catch (err) {
+            console.error(err);
+            showAlert("Network error – please try again.", "danger");
+        } finally {
+            submitBtn.disabled = false;
+            spinner.style.display = "none";
+        }
+    });
+
+    // ----- Icon init (lucide) -----
+    if (window.lucide) lucide.createIcons();
+});
+</script>
+{% endblock %}

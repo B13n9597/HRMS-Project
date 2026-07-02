@@ -1,0 +1,107 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}ACT HRMS - Bulk Upload{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Bulk Upload</h1>
+        <p>Upload a CSV or Excel roster and review created employees plus failed rows.</p>
+    </div>
+    <div class="action-row">
+        <a class="btn btn-ghost" href="#" onclick="downloadCSVTemplate(event)">
+            <i data-lucide="download" style="width:16px;height:16px;"></i>
+            Template
+        </a>
+    </div>
+</div>
+
+<section class="card import-card">
+    <div class="card-header">
+        <i data-lucide="upload-cloud" style="width:20px;height:20px;color:var(--primary);"></i>
+        <h3>Upload Roster</h3>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="drop-zone" onclick="document.getElementById('{{ form.csv_file.id_for_label }}').click()">
+                {{ form.csv_file }}
+                <div class="drop-zone-icon">
+                    <i data-lucide="file-spreadsheet" style="width:28px;height:28px;"></i>
+                </div>
+                <h4>Choose a .csv or .xlsx employee roster</h4>
+                <p>Required columns: username, email, first_name, last_name, department, role</p>
+                <div class="drop-zone-hint">
+                    <span class="col-badge required">username</span>
+                    <span class="col-badge required">email</span>
+                    <span class="col-badge required">first_name</span>
+                    <span class="col-badge required">last_name</span>
+                    <span class="col-badge required">department</span>
+                    <span class="col-badge required">role</span>
+                    <span class="col-badge optional">position</span>
+                    <span class="col-badge optional">phone</span>
+                    <span class="col-badge optional">hire_date</span>
+                    <span class="col-badge optional">base_salary</span>
+                </div>
+            </div>
+            {% for error in form.csv_file.errors %}<div class="alert alert-danger">{{ error }}</div>{% endfor %}
+            <div class="form-actions" style="margin-top:16px;">
+                <button class="btn btn-primary" type="submit">
+                    <i data-lucide="upload" style="width:16px;height:16px;"></i>
+                    Upload Roster
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+{% if result %}
+<section class="card" style="margin-top:24px;">
+    <div class="card-header">
+        <i data-lucide="clipboard-check" style="width:20px;height:20px;color:var(--primary);"></i>
+        <h3>Upload Results</h3>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-success">Success count: {{ result.created_count }}</div>
+        {% if result.created %}
+            <div class="table-wrap" style="margin-top:16px;">
+                <table>
+                    <thead><tr><th>Employee ID</th><th>Name</th><th>Email</th><th>PIN</th></tr></thead>
+                    <tbody>
+                    {% for employee in result.created %}
+                        <tr>
+                            <td>{{ employee.employee_id }}</td>
+                            <td>{{ employee.name }}</td>
+                            <td>{{ employee.email }}</td>
+                            <td>{{ employee.pin }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+        {% if result.errors %}
+            <div class="alert alert-danger">Failed rows: {{ result.errors|length }}</div>
+            <ul style="margin:12px 0 0 18px;color:var(--danger-dark);font-size:14px;line-height:1.7;">
+                {% for error in result.errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function downloadCSVTemplate(e) {
+    e.preventDefault();
+    const headers = 'username,email,first_name,last_name,department,position,role,phone,hire_date,base_salary';
+    const example = 'jane.doe,jane@company.com,Jane,Doe,Engineering,Software Engineer,Employee,+1 555 000 1234,2026-01-15,50000';
+    const blob = new Blob([headers + '\n' + example], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'employee_roster_template.csv';
+    a.click();
+}
+</script>
+{% endblock %}

@@ -69,7 +69,7 @@ def create_employee(data: dict) -> Employee:
     attendance_pin   = str(data.get("attendance_pin") or data.get("pin") or _generate_pin()).strip()
     signature_data   = (data.get("signature_data") or data.get("signature") or "").strip()
     phone            = (data.get("phone") or "").strip()
-    send_email_flag  = True
+    send_email_flag  = _truthy(data.get("send_email", True))
  
     if not attendance_pin.isdigit() or len(attendance_pin) != 6:
         raise ValidationError("attendance_pin must be exactly 6 numeric digits.")
@@ -154,32 +154,9 @@ def create_employee(data: dict) -> Employee:
  
     # ── AUTOMATED EMAIL ONBOARDING LINK ──────────────────────────────────────
     if send_email_flag:
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
-        
-        # Build the URL route string matching your configuration
-        activation_url = f"http://127.0.0.1:8000/set-password/{uid}/{token}/"
-        
-        subject = "Activate Your ACT HRMS Portal Account"
-        message = (
-            f"Welcome to the team, {first_name}!\n\n"
-            f"An HR Administrator has successfully created your profile on the ACT HRMS system.\n"
-            f"To secure your account, set up your password, and activate your dashboard, please click the link below:\n"
-            f"{activation_url}\n\n"
-            f"Please note: Your attendance pin for terminal tracking is: {attendance_pin}\n\n"
-            f"Regards,\n"
-            f"ACT HR Operations Team"
-        )
-        
-        # Transmit via your active SMTP Gmail credentials
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-            fail_silently=False,
-        )
-        return employee
+        send_employee_credentials(employee, email, attendance_pin)
+
+    return employee
  
  
 # removed stray debug block (debug prints accidentally placed at module scope were removed)
@@ -440,12 +417,11 @@ def send_employee_credentials(
         return
  
     # Build the one-time setup link using Django's built-in token generator
-    token_generator = PasswordResetTokenGenerator()
     uid   = urlsafe_base64_encode(force_bytes(user.pk))
-    token = token_generator.make_token(user)
+    token = default_token_generator.make_token(user)
  
     base_url = getattr(settings, "SITE_BASE_URL", "http://localhost:8000")
-    setup_link = f"{base_url}/accounts/reset/{uid}/{token}/"
+    setup_link = f"{base_url}/set-password/{uid}/{token}/"
  
     send_mail(
         subject = "Welcome to ACT HRMS — Set up your password",
@@ -465,6 +441,14 @@ def send_employee_credentials(
         recipient_list = [recipient_email],
         fail_silently  = getattr(settings, "EMAIL_FAIL_SILENTLY", False),
     )
+
+
+def _truthy(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return True
+    return str(value).strip().lower() not in {"0", "false", "no", "off"}
  
  
  

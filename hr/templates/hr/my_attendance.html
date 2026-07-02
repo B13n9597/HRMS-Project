@@ -1,0 +1,60 @@
+{% extends 'hr/employee_base.html' %}
+
+{% block title %}My Attendance{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page-header {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color);
+    }
+    .page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .page-header p { color: var(--text-muted); font-size: 14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>My Attendance Logs</h1>
+        <p>Review your personal attendance history.</p>
+    </div>
+    {# Manual attendance removed from My Attendance page; kiosk/QR is used instead #}
+</div>
+
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td><strong>{{ record.date|date:"M d, Y" }}</strong></td>
+                    <td>{{ record.time_in|time:"H:i"|default:"-" }}</td>
+                    <td>{{ record.time_out|time:"H:i"|default:"-" }}</td>
+                    <td>
+                        <span class="badge {% if record.status == 'Present' %}badge-success{% elif record.status == 'Late' %}badge-warning{% else %}badge-danger{% endif %}">
+                            {{ record.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 48px;">
+                        <i data-lucide="calendar" style="width: 48px; height: 48px; color: var(--text-light); margin-bottom: 16px;"></i>
+                        <p style="color: var(--text-muted);">No attendance records found.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
