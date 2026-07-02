@@ -74,8 +74,15 @@ WSGI_APPLICATION = 'humanresource.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',
+        'USER': 'postgres.wsphdggpbospllnyqevv',  
+        'PASSWORD': '@ADMINtsi21$', # Cleaned password with & Included!            
+        'HOST': 'aws-0-eu-west-1.pooler.supabase.com',
+        'PORT': '6543',
+        'OPTIONS': {
+            'sslmode': 'prefer', # Tells Supabase to allow her connection safely
+        }
     }
 }
 
