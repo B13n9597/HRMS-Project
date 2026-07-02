@@ -1,0 +1,216 @@
+# hrms/views/leave_views.py
+#
+# EMPLOYEE:  employee_leave_manager  — request leave, view own history & balances
+# HR:        hr_leave_manager        — read-only view of ALL employees' leaves
+#            hr_leave_approvals      — approve / reject PENDING leaves only
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+
+from hr.views.attendance_views import is_hr
+from hr.services import leave_service
+from hr.models import Employee, LeaveRequest, LeaveType, LeaveBalance
+
+
+# ─────────────────────────────────────────────────────────────
+# EMPLOYEE SIDE
+# ─────────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def employee_leave_manager(request):
+    """
+    Employee-only page:
+     - Submit a leave request
+     - View own leave history with status (Pending / Approved / Rejected)
+     - View own leave balances (unused days per type)
+    """
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        # If the logged-in user does not have an Employee profile, show
+        # a friendly message but render the page so the employee portal
+        # remains usable (prevents hard redirects from the dashboard).
+        messages.error(request, "No employee profile found for your account. Contact HR to create one.")
+        employee = None
+
+    error_msg = None
+
+    if request.method == 'POST':
+        leave_type_id = request.POST.get('leave_type_id')
+        start_date    = request.POST.get('start_date')
+        end_date      = request.POST.get('end_date')
+        comments      = request.POST.get('comments', '')
+
+        if not leave_type_id or not start_date or not end_date:
+            error_msg = "All fields are required."
+        else:
+            from datetime import date as date_cls
+            try:
+                s = date_cls.fromisoformat(start_date)
+                e = date_cls.fromisoformat(end_date)
+                if e < s:
+                    error_msg = "End date cannot be before start date."
+                else:
+                    leave_service.submit_leave_request(employee.pk, {
+                        'leave_type_id': int(leave_type_id),
+                        'start_date':    s,
+                        'end_date':      e,
+                        'reason':        comments,
+                    })
+                    messages.success(request, "Leave request submitted successfully.")
+                    return redirect('employee_leave_manager')
+            except ValidationError as exc:
+                error_msg = exc.message
+            except Exception as exc:
+                error_msg = str(exc)
+
+    leave_types  = leave_service.get_all_leave_types()
+    my_requests  = []
+    my_balances  = []
+    if employee:
+        my_requests = leave_service.get_employee_requests(employee.pk)
+        my_balances = leave_service.get_leave_balance(employee.pk)
+
+    # Build status-coloured badge map
+    status_badge = {
+        'Pending':  'badge-warning',
+        'Approved': 'badge-success',
+        'Rejected': 'badge-danger',
+    }
+
+    context = {
+        'employee':     employee,
+        'leave_types':  leave_types,
+        'my_requests':  my_requests,
+        'my_balances':  my_balances,
+        'status_badge': status_badge,
+        'error_msg':    error_msg,
+        'active_page':  'employee_leave_manager',
+        'today':        timezone.localdate().isoformat(),
+    }
+    return render(request, 'hr/employee_leave_manager.html', context)
+
+
+# ─────────────────────────────────────────────────────────────
+# HR SIDE — Leave Manager (read-only overview)
+# ─────────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def hr_leave_manager(request):
+    """
+    HR-only page: read-only summary of ALL employee leave records.
+    Filter by status, department, leave type.
+    """
+    if not is_hr(request.user):
+        messages.error(request, "Access denied.")
+        return redirect('/')
+
+    from hr.models import Department
+
+    status_f    = request.GET.get('status', '')
+    dept_id     = request.GET.get('department_id', '')
+    leave_type_f = request.GET.get('leave_type_id', '')
+    query       = request.GET.get('q', '').strip()
+
+    records = leave_service.get_all_requests()
+    if status_f:
+        records = records.filter(status=status_f)
+    if dept_id:
+        records = records.filter(employee__department_id=dept_id)
+    if leave_type_f:
+        records = records.filter(leave_type_id=leave_type_f)
+    if query:
+        records = records.filter(employee__first_name__icontains=query) | records.filter(employee__last_name__icontains=query)
+
+    departments = Department.objects.all()
+    leave_types = leave_service.get_all_leave_types()
+
+    # Summary counts
+    total    = records.count()
+    pending  = records.filter(status='Pending').count()
+    approved = records.filter(status='Approved').count()
+    rejected = records.filter(status='Rejected').count()
+
+    context = {
+        'records':      records,
+        'departments':  departments,
+        'leave_types':  leave_types,
+        'status_f':     status_f,
+        'dept_id':      dept_id,
+        'leave_type_f': leave_type_f,
+        'search_query': query,
+        'total':        total,
+        'pending':      pending,
+        'approved':     approved,
+        'rejected':     rejected,
+        'active_page':  'hr_leave_manager',
+    }
+    return render(request, 'hr/hr_leave_manager.html', context)
+
+
+# ─────────────────────────────────────────────────────────────
+# HR SIDE — Leave Approvals (pending only + approve/reject)
+# ─────────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def hr_leave_approvals(request):
+    """
+    HR-only page: shows ONLY pending leave requests.
+    HR can approve or reject each with an optional note.
+    """
+    if not is_hr(request.user):
+        messages.error(request, "Access denied.")
+        return redirect('/')
+
+    try:
+        hr_employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        hr_employee = None
+
+    if request.method == 'POST':
+        action     = request.POST.get('action')   # 'approve' | 'reject'
+        request_id = request.POST.get('request_id')
+        note       = request.POST.get('note', '')
+
+        if hr_employee and request_id:
+            try:
+                if action == 'approve':
+                    leave_service.approve_request(int(request_id), hr_employee)
+                    messages.success(request, "Leave request approved.")
+                elif action == 'reject':
+                    leave_service.reject_request(int(request_id), hr_employee, note)
+                    messages.warning(request, "Leave request rejected.")
+            except ValidationError as exc:
+                messages.error(request, exc.message)
+            except Exception as exc:
+                messages.error(request, str(exc))
+
+        return redirect('hr_leave_approvals')
+
+    pending_requests = leave_service.get_pending_requests()
+    context = {
+        'leave_requests': pending_requests,
+        'hr_employee':    hr_employee,
+        'active_page':    'hr_leave_approvals',
+        'current_year':   timezone.localdate().year,
+    }
+    return render(request, 'hr/hr_leave_approvals.html', context)
+
+
+# ─────────────────────────────────────────────────────────────
+# LEGACY COMPATIBILITY — keep old URL names working
+# ─────────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def leave_approvals_view(request):
+    """Redirect old 'leave_approvals' URL to the correct HR approvals page."""
+    return redirect('hr_leave_approvals')
+
+
+@login_required(login_url='/login/')
+def request_leave(request):
+    """Redirect old request-leave URL to the employee leave manager."""
+    return redirect('employee_leave_manager')

@@ -1,0 +1,320 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}Live Attendance — ACT HRMS{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page-header {
+        margin-bottom: 28px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+    .page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; }
+    .page-header p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+
+    .summary-strip {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+    .stat-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 20px 22px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    .stat-icon {
+        width: 46px; height: 46px;
+        border-radius: var(--radius-sm);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .stat-info .num { font-family: var(--font-display); font-size: 28px; font-weight: 800; line-height: 1; }
+    .stat-info .lbl { font-size: 12px; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 4px; }
+
+    .live-dot {
+        width: 10px; height: 10px;
+        background: #10b981;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
+        box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
+        animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 3px rgba(16,185,129,0.2); }
+        50% { box-shadow: 0 0 0 6px rgba(16,185,129,0.05); }
+    }
+
+    .toolbar {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .toolbar input {
+        flex: 1;
+        min-width: 200px;
+        padding: 9px 14px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        background: #f8fafc;
+    }
+    .toolbar input:focus { outline: none; border-color: var(--primary); background: #fff; }
+    .toolbar select {
+        padding: 9px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        background: #f8fafc;
+        min-width: 140px;
+    }
+
+    .emp-name-cell { display: flex; align-items: center; gap: 12px; }
+    .emp-avatar {
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), #0ea5e9);
+        color: #fff;
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 13px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .emp-name-cell .emp-name { font-weight: 600; font-size: 14px; }
+    .emp-name-cell .emp-id { font-size: 12px; color: var(--text-light); }
+
+    .refresh-btn {
+        display: flex; align-items: center; gap: 6px;
+        padding: 9px 16px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        background: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--text-muted);
+        transition: var(--transition);
+    }
+    .refresh-btn:hover { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
+    .refresh-btn.spinning i { animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state td { text-align: center; padding: 60px; color: var(--text-light); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>
+            <span class="live-dot"></span>
+            Live Attendance
+        </h1>
+        <p id="todayLabel">Loading today's attendance…</p>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAttendance()">
+        <i data-lucide="refresh-cw" style="width:15px;height:15px;" id="refreshIcon"></i>
+        Refresh
+    </button>
+</div>
+
+<!-- Summary strip -->
+<div class="summary-strip">
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--primary-light);color:var(--primary);">
+            <i data-lucide="users" style="width:22px;height:22px;"></i>
+        </div>
+        <div class="stat-info">
+            <div class="num" id="statTotal">—</div>
+            <div class="lbl">Total Staff</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--success-light);color:var(--success-dark);">
+            <i data-lucide="user-check" style="width:22px;height:22px;"></i>
+        </div>
+        <div class="stat-info">
+            <div class="num" id="statPresent" style="color:var(--success);">—</div>
+            <div class="lbl">Present</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--warning-light);color:#92400e;">
+            <i data-lucide="clock" style="width:22px;height:22px;"></i>
+        </div>
+        <div class="stat-info">
+            <div class="num" id="statLate" style="color:var(--warning);">—</div>
+            <div class="lbl">Late</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background:var(--danger-light);color:var(--danger-dark);">
+            <i data-lucide="user-x" style="width:22px;height:22px;"></i>
+        </div>
+        <div class="stat-info">
+            <div class="num" id="statAbsent" style="color:var(--danger);">—</div>
+            <div class="lbl">Absent</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="toolbar">
+    <input type="text" id="searchInput" placeholder="Search name or department…" oninput="filterTable()">
+    <select id="statusFilter" onchange="filterTable()">
+        <option value="">All Statuses</option>
+        <option value="Present">Present</option>
+        <option value="Late">Late</option>
+        <option value="Absent">Absent</option>
+    </select>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-header">
+        <i data-lucide="clipboard-list" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>Today's Attendance</h3>
+        <span id="recordCount" style="font-size:12px;color:var(--text-light);margin-left:auto;"></span>
+    </div>
+    <div class="table-wrap">
+        <table id="attendanceTable">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>Status</th>
+                    <th>Hours</th>
+                </tr>
+            </thead>
+            <tbody id="attendanceBody">
+                <tr class="empty-state">
+                    <td colspan="6">
+                        <i data-lucide="loader-2" style="width:20px;height:20px;animation:spin 1s linear infinite;vertical-align:middle;"></i>
+                        Loading…
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let _allRecords = [];
+
+function statusBadge(status) {
+    const s = (status || '').toLowerCase();
+    if (s === 'present') return `<span class="badge badge-success">Present</span>`;
+    if (s === 'late')    return `<span class="badge badge-warning">Late</span>`;
+    return `<span class="badge badge-danger">${status || 'Absent'}</span>`;
+}
+
+function initial(name) {
+    return (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function fmtTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderTable(records) {
+    const tbody = document.getElementById('attendanceBody');
+    const countEl = document.getElementById('recordCount');
+    if (countEl) countEl.textContent = `${records.length} record${records.length !== 1 ? 's' : ''}`;
+
+    if (records.length === 0) {
+        tbody.innerHTML = `<tr class="empty-state"><td colspan="6">No attendance records found for today.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = records.map(r => {
+        const hoursIn = r.time_in && r.time_out
+            ? ((new Date(r.time_out) - new Date(r.time_in)) / 3600000).toFixed(1) + 'h'
+            : r.time_in ? 'In progress' : '—';
+        return `
+        <tr data-status="${r.status || ''}" data-name="${r.employee_name || ''}" data-dept="${r.department || ''}">
+            <td>
+                <div class="emp-name-cell">
+                    <div class="emp-avatar">${initial(r.employee_name)}</div>
+                    <div>
+                        <div class="emp-name">${r.employee_name || '—'}</div>
+                        <div class="emp-id">${r.employee_id || ''}</div>
+                    </div>
+                </div>
+            </td>
+            <td>${r.department || '—'}</td>
+            <td>${fmtTime(r.time_in)}</td>
+            <td>${fmtTime(r.time_out)}</td>
+            <td>${statusBadge(r.status)}</td>
+            <td>${hoursIn}</td>
+        </tr>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+function filterTable() {
+    const q      = document.getElementById('searchInput').value.toLowerCase();
+    const status = document.getElementById('statusFilter').value;
+    const filtered = _allRecords.filter(r => {
+        const matchQ = !q ||
+            (r.employee_name || '').toLowerCase().includes(q) ||
+            (r.department || '').toLowerCase().includes(q);
+        const matchS = !status || r.status === status;
+        return matchQ && matchS;
+    });
+    renderTable(filtered);
+}
+
+async function loadAttendance() {
+    const btn  = document.getElementById('refreshBtn');
+    const icon = document.getElementById('refreshIcon');
+    btn.classList.add('spinning');
+
+    try {
+        const res  = await fetch('/api/attendance/today/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'Failed');
+
+        const data = json.data || {};
+        _allRecords = data.records || [];
+
+        // Update stats
+        document.getElementById('statTotal').textContent   = data.total_employees  ?? _allRecords.length;
+        document.getElementById('statPresent').textContent = data.present_count ?? _allRecords.filter(r => r.status === 'Present').length;
+        document.getElementById('statLate').textContent    = data.late_count    ?? _allRecords.filter(r => r.status === 'Late').length;
+        document.getElementById('statAbsent').textContent  = data.absent_count  ?? (data.total_employees - _allRecords.length) || 0;
+
+        // Date label
+        const now = new Date();
+        document.getElementById('todayLabel').textContent =
+            `${now.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' })} · Auto-refreshes every 60s`;
+
+        renderTable(_allRecords);
+    } catch (err) {
+        document.getElementById('attendanceBody').innerHTML =
+            `<tr class="empty-state"><td colspan="6" style="color:var(--danger);">Failed to load data: ${err.message}. <button onclick="loadAttendance()" style="text-decoration:underline;background:none;border:none;cursor:pointer;color:var(--primary);">Retry</button></td></tr>`;
+    } finally {
+        btn.classList.remove('spinning');
+    }
+}
+
+// Auto-refresh every 60 seconds
+loadAttendance();
+setInterval(loadAttendance, 60000);
+</script>
+{% endblock %}

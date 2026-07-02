@@ -6,10 +6,10 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
-from hrms.models import (
+from hr.models import (
     KPICategory, KPIIndicator,
     PerformanceEvaluation, EvaluationScore,
-    Employee, SystemSetting, EmployeeHistory,
+    Employee, SystemSetting,EmployeeHistory,
 )
 
 

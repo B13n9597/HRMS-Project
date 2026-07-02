@@ -1,0 +1,172 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}All Leave Records — HR{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .leave-hero {
+        padding: 0 0 24px 0;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+    .leave-hero h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; color: var(--text-main); }
+    .leave-hero p  { color: var(--text-muted); font-size: 14px; }
+
+
+    .summary-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .stat-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 18px 20px;
+        text-align: center;
+    }
+    .stat-card .num { font-family: var(--font-display); font-size: 30px; font-weight: 800; }
+    .stat-card .lbl { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+    .num-total    { color: var(--text-main); }
+    .num-pending  { color: var(--warning); }
+    .num-approved { color: var(--success); }
+    .num-rejected { color: var(--danger); }
+
+    .filter-bar {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 14px 18px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+        margin-bottom: 20px;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-light); }
+    .filter-group select {
+        padding: 9px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        background: #f8fafc;
+        min-width: 150px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="leave-hero">
+    <h1>All Leave Records</h1>
+    <p>Read-only overview of every employee's leave requests across the organisation.</p>
+</div>
+
+<!-- Summary -->
+<div class="summary-row">
+    <div class="stat-card"><div class="num num-total">{{ total }}</div><div class="lbl">Total</div></div>
+    <div class="stat-card"><div class="num num-pending">{{ pending }}</div><div class="lbl">Pending</div></div>
+    <div class="stat-card"><div class="num num-approved">{{ approved }}</div><div class="lbl">Approved</div></div>
+    <div class="stat-card"><div class="num num-rejected">{{ rejected }}</div><div class="lbl">Rejected</div></div>
+</div>
+
+<!-- Filters -->
+<form method="GET" class="filter-bar">
+    <div class="filter-group">
+        <label>Employee Name</label>
+        <input type="text" name="q" value="{{ search_query|default:'' }}" placeholder="Search name...">
+    </div>
+    <div class="filter-group">
+        <label>Status</label>
+        <select name="status">
+            <option value="">All</option>
+            <option value="Pending"  {% if status_f == 'Pending' %}selected{% endif %}>Pending</option>
+            <option value="Approved" {% if status_f == 'Approved' %}selected{% endif %}>Approved</option>
+            <option value="Rejected" {% if status_f == 'Rejected' %}selected{% endif %}>Rejected</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Department</label>
+        <select name="department_id">
+            <option value="">All Departments</option>
+            {% for dept in departments %}
+                <option value="{{ dept.id }}" {% if dept.id|stringformat:"s" == dept_id %}selected{% endif %}>{{ dept.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Leave Type</label>
+        <select name="leave_type_id">
+            <option value="">All Types</option>
+            {% for lt in leave_types %}
+                <option value="{{ lt.id }}" {% if lt.id|stringformat:"s" == leave_type_f %}selected{% endif %}>{{ lt.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">
+        <i data-lucide="filter" style="width:15px;height:15px;"></i> Filter
+    </button>
+    <a href="{% url 'hr_leave_manager' %}" class="btn btn-ghost">Reset</a>
+</form>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-header">
+        <i data-lucide="layout-list" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>Leave Records</h3>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Leave Type</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Days</th>
+                    <th>Status</th>
+                    <th>Approved By</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in records %}
+                <tr>
+                    <td>
+                        <div class="emp-name-cell">
+                            <span class="emp-avatar">{{ r.employee.first_name|first }}{{ r.employee.last_name|first }}</span>
+                            {{ r.employee.get_full_name }}
+                        </div>
+                    </td>
+                    <td>{{ r.employee.department.name|default:"—" }}</td>
+                    <td>{{ r.leave_type.name }}</td>
+                    <td>{{ r.start_date }}</td>
+                    <td>{{ r.end_date }}</td>
+                    <td>{{ r.requested_days|default:"—" }}</td>
+                    <td>
+                        <span class="badge
+                            {% if r.status == 'Approved' %}badge-success
+                            {% elif r.status == 'Rejected' %}badge-danger
+                            {% else %}badge-warning{% endif %}">
+                            {{ r.status }}
+                        </span>
+                    </td>
+                    <td>{{ r.approved_by.get_full_name|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr class="empty-state">
+                    <td colspan="8">
+                        <i data-lucide="inbox" style="width:28px;height:28px;opacity:0.3;"></i><br>
+                        No leave records found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

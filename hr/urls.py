@@ -1,81 +1,104 @@
 from django.contrib import admin
 from django.urls import path
-from hr.views import api_views
+from hr import views
+from hr.views import api_views, leave_views
 from hr.views import page_views
 
-# Standardized imports (adjust matching your file names if needed)
 from hr.views import attendance_views as attendanceviews
 from hr.views import employee_views
+from hr.views import lifecycle_views
+from hr.views import hr_modules_views
+
+
 
 urlpatterns = [
     # ── Admin Panel ──────────────────────────────────────────────
     path('admin/', admin.site.urls),
 
-    # ── Single Page Application Dashboard ──────────────────────────
-    path('', api_views.index_view, name='hrms_dashboard'),
+    # ── Root → Live attendance dashboard ──────────────────────────
+    path('', attendanceviews.live_attendance, name='hrms_dashboard'),
 
-    # ── Attendance Management (Web Layout Router) ────────────────
-    path('my-qr/', attendanceviews.my_qr_code, name='attendance_my_qr'),
-    path('scan/', attendanceviews.scan_qr_secure, name='attendance_scan'),
-    path('today/', attendanceviews.today_attendance, name='attendance_today'),
-    path('my-record/', attendanceviews.my_attendance, name='attendance_my_record'),
+    # ── Attendance — HR pages ─────────────────────────────────────
+    path('attendance-logs/',      attendanceviews.attendance_logs, name='attendance_logs'),
+    path('live-attendance/',      attendanceviews.live_attendance,  name='live_attendance'),
+
+    # ── Attendance — Employee pages ───────────────────────────────
+    path('my-attendance/',        attendanceviews.my_attendance,   name='my_attendance_record'),
+    path('manual-attendance/',    attendanceviews.manual_attendance, name='manual_attendance'),
+
+    # ── Attendance — misc ─────────────────────────────────────────
+    path('my-qr/',                attendanceviews.my_qr_code,               name='attendance_my_qr'),
+    path('scan/',                 attendanceviews.scan_qr_secure,            name='attendance_scan'),
+    path('today/',                attendanceviews.today_attendance,          name='attendance_today'),
     path('report/<int:employee_id>/', attendanceviews.employee_attendance_report, name='attendance_report'),
 
-    # ── Named sidebar route aliases (SPA panels via page_views) ──
-    # These named routes resolve to the SPA index with a hash fragment
-    # so Django template {% url %} tags work correctly.
-    path('attendance/logs/', api_views.index_view, name='attendance_logs'),
-    path('attendance/live/', api_views.index_view, name='live_attendance'),
-    path('staff-directory/', api_views.index_view, name='staff_directory'),
-    path('payroll-center/', api_views.index_view, name='payroll_center'),
-    path('leave-approvals/', api_views.index_view, name='leave_approvals'),
-    path('performance-kpis/', api_views.index_view, name='performance_kpis'),
-    path('candidate-screen/', api_views.index_view, name='candidate_screen'),
-    path('global-settings/', api_views.index_view, name='global_settings'),
+    # ── Leave — Employee side ─────────────────────────────────────
+    path('leave/my/',             leave_views.employee_leave_manager, name='employee_leave_manager'),
 
-    # ── Attendance APIs ──────────────────────────────────────────
-    path('api/attendance/scan/', attendanceviews.scan_qr_secure, name='api_attendance_scan'),
-    path('api/attendance/my-qr/', attendanceviews.my_qr_code, name='api_attendance_my_qr'),
-    path('api/attendance/my-record/', attendanceviews.my_attendance, name='api_attendance_my_record'),
-    path('api/attendance/today/', attendanceviews.today_attendance, name='api_attendance_today'),
-    path('api/attendance/report/<int:employee_id>/', attendanceviews.employee_attendance_report, name='api_attendance_report'),
+    # ── Leave — HR side ───────────────────────────────────────────
+    path('leave/all/',            leave_views.hr_leave_manager,    name='hr_leave_manager'),
+    path('leave/approvals/',      leave_views.hr_leave_approvals,  name='hr_leave_approvals'),
 
-    # ── Employee APIs (Lifecycle: Recruitment to Retirement) ──────
-    path('api/employees/create/', employee_views.create_employee, name='api_employee_create'),
-    path('api/employees/update/<int:employee_id>/', employee_views.update_employee, name='api_employee_update'),
-    path('api/employees/status/<int:employee_id>/', employee_views.change_employee_status, name='api_employee_status_change'),
-    path('api/employees/active/', employee_views.list_active_employees, name='api_employee_list_active'),
-    
-    # ── Bulk Import endpoint ──────────────────────────────────────
-    path('api/employees/import-bulk/', employee_views.import_employees_bulk, name='api_employee_import_bulk'),
+    # ── Legacy leave URLs (kept so old bookmarks/templates still work) ──
+    path('dashboard/hr/leaves/',         leave_views.leave_approvals_view, name='leave_approvals'),
+    path('dashboard/hr/request-leave/',  leave_views.request_leave,        name='request_leave'),
 
-    # ── Core SPA Frontend Endpoint Engines ───────────────────────
-    path('api/me/', api_views.api_me, name='api_me'),
-    path('api/login/', api_views.api_login, name='api_login'),
-    path('api/logout/', api_views.api_logout, name='api_logout'),
-    path('api/employees/', api_views.api_employees, name='api_employees'),
-    path('api/lifecycle/', api_views.api_lifecycle, name='api_lifecycle'),
-    path('api/leaves/', api_views.api_leaves, name='api_leaves'),
-    path('api/admin/leaves/', api_views.api_admin_leaves, name='api_admin_leaves'),
-    path('api/payroll/', api_views.api_payroll, name='api_payroll'),
-    path('api/performance/', api_views.api_performance, name='api_performance'),
-    path('api/recruitment/', api_views.api_recruitment, name='api_recruitment'),
-    path('api/settings/', api_views.api_settings, name='api_settings'),
-    path('api/simulate-scan/', api_views.api_simulate_scan, name='api_simulate_scan'),
+    # ── Other HR modules ──────────────────────────────────────────
+    path('staff-directory/',      employee_views.staff_directory_view, name='staff_directory'),
+    path('employee-lifecycle/',   lifecycle_views.hr_lifecycle,       name='dashboard_hr'),
+    path('employee-details/<int:id>/', lifecycle_views.employee_details,  name='employee_details'),
+    path('my-lifecycle/',         lifecycle_views.my_lifecycle,       name='my_lifecycle'),
+    path('payroll-center/',       hr_modules_views.payroll_center,    name='payroll_center'),
+    path('my-salary-slips/',      hr_modules_views.my_salary_slips,   name='my_salary_slips'),
+    path('performance-kpis/',     hr_modules_views.performance_kpis,  name='performance_kpis'),
+    path('candidate-screen/',     hr_modules_views.candidate_screen,  name='candidate_screen'),
+    path('global-settings/',      hr_modules_views.global_settings,   name='global_settings'),
 
-    # ── Bulk CSV Mass Onboarding & Tablet Attendance APIs ────────────────
-    path('api/employees/upload-csv/', api_views.api_upload_employees_csv, name='api_employees_upload_csv'),
-    path('api/attendance/tablet/authenticate/', api_views.api_tablet_authenticate, name='api_attendance_tablet_authenticate'),
-    path('api/attendance/tablet/submit/', api_views.api_tablet_submit, name='api_attendance_tablet_submit'),
 
-    # ── HR Form APIs ──────────────────────────────────────────────────────
-    path('api/reference-data/', api_views.api_reference_data, name='api_reference_data'),
-    path('api/employees/create-hr/', api_views.api_create_employee_hr, name='api_employees_create_hr'),
+    # ── Attendance APIs ───────────────────────────────────────────
+    path('api/attendance/scan/',                              attendanceviews.scan_qr_secure,           name='api_attendance_scan'),
+    path('api/attendance/my-qr/',                            attendanceviews.my_qr_code,               name='api_attendance_my_qr'),
+    path('api/attendance/my-record/',                        attendanceviews.my_attendance,            name='api_attendance_my_record'),
+    path('api/attendance/today/',                            attendanceviews.today_attendance,         name='api_attendance_today'),
+    path('api/attendance/report/<int:employee_id>/',         attendanceviews.employee_attendance_report, name='api_attendance_report'),
 
-    # ── Tablet Kiosk View ─────────────────────────────────────────────────
+    # ── Employee APIs ─────────────────────────────────────────────
+    path('api/employees/create/',                            employee_views.create_employee,           name='api_employee_create'),
+    path('api/employees/update/<int:employee_id>/',          employee_views.update_employee,           name='api_employee_update'),
+    path('api/employees/status/<int:employee_id>/',          employee_views.change_employee_status,    name='api_employee_status_change'),
+    path('api/employees/active/',                            employee_views.list_active_employees,     name='api_employee_list_active'),
+    path('api/employees/import-bulk/',                       employee_views.import_employees_bulk,     name='api_employee_import_bulk'),
+    path('api/employees/promote/<int:employee_id>/',         employee_views.promote_employee,          name='api_employee_promote'),
+    path('api/employees/transfer/<int:employee_id>/',        employee_views.transfer_employee,         name='api_employee_transfer'),
+
+    # ── Core SPA APIs ─────────────────────────────────────────────
+    path('api/me/',              api_views.api_me,             name='api_me'),
+    path('api/login/',           api_views.api_login,          name='api_login'),
+    path('api/logout/',          api_views.api_logout,         name='api_logout'),
+    path('api/employees/',       api_views.api_employees,      name='api_employees'),
+    path('api/lifecycle/',       api_views.api_lifecycle,      name='api_lifecycle'),
+    path('api/leaves/',          api_views.api_leaves,         name='api_leaves'),
+    path('api/admin/leaves/',    api_views.api_admin_leaves,   name='api_admin_leaves'),
+    path('api/payroll/',         api_views.api_payroll,        name='api_payroll'),
+    path('api/performance/',     api_views.api_performance,    name='api_performance'),
+    path('api/recruitment/',     api_views.api_recruitment,    name='api_recruitment'),
+    path('api/settings/',        api_views.api_settings,       name='api_settings'),
+    path('api/simulate-scan/',   api_views.api_simulate_scan,  name='api_simulate_scan'),
+
+    # ── Auth pages ────────────────────────────────────────────────
+    path('forgot-password/',                      page_views.forgot_password_view,  name='forgot_password'),
+    path('forgot_password/',                      page_views.forgot_password_view),
+    path('set-password/<uidb64>/<token>/',        page_views.set_password_view,     name='set_password'),
+
+    # ── Bulk CSV / Tablet ─────────────────────────────────────────
+    path('api/employees/upload-csv/',                       api_views.api_upload_employees_csv,        name='api_employees_upload_csv'),
+    path('api/attendance/tablet/authenticate/',             api_views.api_tablet_authenticate,         name='api_attendance_tablet_authenticate'),
+    path('api/attendance/tablet/submit/',                   api_views.api_tablet_submit,               name='api_attendance_tablet_submit'),
+
+    # ── HR Form APIs ──────────────────────────────────────────────
+    path('api/reference-data/',                             api_views.api_reference_data,              name='api_reference_data'),
+    path('api/employees/create-hr/',                        api_views.api_create_employee_hr,          name='api_employees_create_hr'),
+
+    # ── Tablet Kiosk ──────────────────────────────────────────────
     path('tablet-kiosk/', api_views.tablet_kiosk_view, name='tablet_kiosk_attendance'),
-    
-    path('api/employees/promote/<int:employee_id>/',employee_views.promote_employee,name='api_employee_promote'),
-
-    path('api/employees/transfer/<int:employee_id>/',employee_views.transfer_employee,name='api_employee_transfer'),
 ]

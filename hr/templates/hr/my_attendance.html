@@ -1,0 +1,178 @@
+{% extends 'hr/employee_base.html' %}
+
+{% block title %}My Attendance — ACT HRMS{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page-header {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);
+    }
+    .page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .page-header p { color: var(--text-muted); font-size: 14px; }
+
+    .filter-bar {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 14px 18px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+        margin-bottom: 20px;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-light); letter-spacing: 0.4px; }
+    .filter-group select {
+        padding: 9px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        background: #f8fafc;
+        min-width: 130px;
+    }
+    .filter-group select:focus { outline: none; border-color: var(--primary); }
+
+    .stat-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .stat-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 18px 20px;
+        text-align: center;
+    }
+    .stat-card .num { font-family: var(--font-display); font-size: 30px; font-weight: 800; }
+    .stat-card .lbl { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+
+    .table-wrap { overflow-x: auto; }
+    .empty-state td { text-align: center; padding: 48px; color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>My Attendance</h1>
+        <p>Review your personal attendance history.</p>
+    </div>
+    <a href="{% url 'manual_attendance' %}" class="btn btn-primary">
+        <i data-lucide="pen-line" style="width:15px;height:15px;"></i>
+        Manual Check-in
+    </a>
+</div>
+
+<!-- Summary stats -->
+<div class="stat-row">
+    <div class="stat-card">
+        <div class="num" style="color:var(--success);">{{ records|length }}</div>
+        <div class="lbl">Records This Period</div>
+    </div>
+    <div class="stat-card">
+        {% with present=records|length %}
+        <div class="num" style="color:var(--primary);">
+            {% for r in records %}{% if r.status == 'Present' or r.status == 'Late' %}{% with x=1 %}{% endwith %}{% endif %}{% endfor %}
+            {{ records|length }}
+        </div>
+        {% endwith %}
+        <div class="lbl">Days Recorded</div>
+    </div>
+    <div class="stat-card">
+        <div class="num" style="color:var(--warning);">
+            {% for r in records %}{% if r.status == 'Late' %}<span></span>{% endif %}{% endfor %}
+            —
+        </div>
+        <div class="lbl">Late Arrivals</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<form method="GET" class="filter-bar">
+    <div class="filter-group">
+        <label>Month</label>
+        <select name="month">
+            <option value="">All Months</option>
+            {% for num, name in months %}
+                <option value="{{ num }}" {% if month|stringformat:"s" == num|stringformat:"s" %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Year</label>
+        <select name="year">
+            <option value="">All Years</option>
+            {% for y in years %}
+                <option value="{{ y }}" {% if year|stringformat:"s" == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Status</label>
+        <select name="status">
+            <option value="">All</option>
+            <option value="Present" {% if status_f == 'Present' %}selected{% endif %}>Present</option>
+            <option value="Late"    {% if status_f == 'Late'    %}selected{% endif %}>Late</option>
+            <option value="Absent"  {% if status_f == 'Absent'  %}selected{% endif %}>Absent</option>
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary" style="align-self:flex-end;">
+        <i data-lucide="filter" style="width:14px;height:14px;"></i> Filter
+    </button>
+    <a href="{% url 'my_attendance_record' %}" class="btn btn-ghost" style="align-self:flex-end;">Reset</a>
+</form>
+
+<!-- Table -->
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Day</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>Hours</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td><strong>{{ record.date|date:"M d, Y" }}</strong></td>
+                    <td style="color:var(--text-muted);">{{ record.date|date:"l" }}</td>
+                    <td>{{ record.time_in|time:"H:i"|default:"—" }}</td>
+                    <td>{{ record.time_out|time:"H:i"|default:"—" }}</td>
+                    <td>
+                        {% if record.time_in and record.time_out %}
+                            {{ record.get_worked_hours }}h
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge
+                            {% if record.status == 'Present' %}badge-success
+                            {% elif record.status == 'Late' %}badge-warning
+                            {% else %}badge-danger{% endif %}">
+                            {{ record.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <i data-lucide="calendar-x" style="width:40px;height:40px;margin-bottom:12px;opacity:0.3;display:block;margin-left:auto;margin-right:auto;"></i>
+                        <p>No attendance records found for the selected filters.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

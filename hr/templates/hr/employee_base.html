@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ACT HRMS - Employee Portal{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            /* Light Theme Configuration */
+            --bg-base: #f8fafc;
+            --bg-surface: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-light: #64748b;
+            
+            --primary: #025da2;
+            --primary-hover: #01477d;
+            --primary-light: rgba(2, 93, 162, 0.08);
+            
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --success-dark: #047857;
+            
+            --warning: #f59e0b;
+            --warning-light: #fef3c7;
+            
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --danger-dark: #b91c1c;
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+            
+            --font-sans: 'Inter', sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(2, 93, 162, 0.03) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(226, 232, 240, 0.4) 0px, transparent 50%);
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        /* Portal Layout Structure */
+        .portal-container {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Wrapper */
+        .portal-sidebar {
+            width: 280px;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 32px 24px;
+            flex-shrink: 0;
+        }
+
+        .brand-title {
+            font-family: var(--font-display);
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 32px;
+            letter-spacing: -0.5px;
+        }
+
+        .user-profile-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background-color: #f1f5f9;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 32px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .user-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+            font-family: var(--font-display);
+            font-size: 16px;
+        }
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            flex-grow: 1;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 12px;
+            color: var(--text-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        /* Sidebar Menu Navigation */
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-grow: 1;
+        }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.75px;
+            margin-bottom: 8px;
+            padding-left: 12px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .nav-item:hover {
+            background-color: #f1f5f9;
+            color: var(--text-main);
+        }
+
+        .nav-item.active {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+            margin-top: auto;
+        }
+
+        .btn-logout {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            color: #ef4444;
+            font-weight: 500;
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+
+        .btn-logout:hover {
+            background-color: rgba(239, 68, 68, 0.05);
+        }
+
+        /* Workspace Core Container */
+        .workspace {
+            flex-grow: 1;
+            padding: 48px;
+            overflow-y: auto;
+        }
+
+        /* Common UI elements to match HR base */
+        .card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        
+        .card-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .card-header h3 { font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 18px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600;
+            cursor: pointer; transition: var(--transition); border: 1px solid transparent; text-decoration: none;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--border-color); }
+        .btn-ghost:hover { background: #f1f5f9; color: var(--text-main); }
+        
+        .badge {
+            padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; display: inline-block;
+        }
+        .badge-success { background: var(--success-light); color: var(--success-dark); }
+        .badge-warning { background: var(--warning-light); color: #92400e; }
+        .badge-danger { background: var(--danger-light); color: var(--danger-dark); }
+        .badge-primary { background: var(--primary-light); color: var(--primary); }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 14px 24px; font-size: 12px; font-weight: 700; color: var(--text-light); text-transform: uppercase; background: #f8fafc; border-bottom: 1px solid var(--border-color); }
+        td { padding: 16px 24px; font-size: 14px; color: var(--text-main); border-bottom: 1px solid var(--border-color); }
+        tr:last-child td { border-bottom: none; }
+        
+        @media (max-width: 1024px) { .portal-sidebar { width: 240px; } }
+        @media (max-width: 768px) {
+            .portal-container { flex-direction: column; }
+            .portal-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); padding: 24px; }
+            .workspace { padding: 24px; }
+        }
+    </style>
+    {% block extra_styles %}{% endblock %}
+</head>
+<body>
+
+    <div class="portal-container">
+        
+        <aside class="portal-sidebar">
+            <div class="brand-title">ACT HRMS</div>
+
+            <div class="user-profile-card">
+                <div class="user-avatar">
+                    {% if employee %}
+                        {{ employee.first_name|slice:":1"|upper }}
+                    {% else %}
+                        {{ user.username|slice:":1"|upper }}
+                    {% endif %}
+                </div>
+                <div class="user-details">
+                    <span class="user-name">
+                        {% if employee %}{{ employee.get_full_name }}{% else %}{{ user.get_username }}{% endif %}
+                    </span>
+                    <span class="user-role">
+                        {{ employee.position.title|default:"Office Assistant" }}
+                    </span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">Employee Portal</div>
+                <a href="{% url 'dashboard_employee' %}" class="nav-item {% if active_page == 'dashboard_employee' or not active_page %}active{% endif %}">
+                    <i data-lucide="qr-code" style="width: 18px; height: 18px;"></i>
+                    <span>Rotating Badge</span>
+                </a>
+                <a href="{% url 'manual_attendance' %}" class="nav-item {% if active_page == 'manual_attendance' %}active{% endif %}">
+                    <i data-lucide="pen-line" style="width: 18px; height: 18px;"></i>
+                    <span>Manual Check-in</span>
+                </a>
+                <a href="{% url 'my_attendance_record' %}" class="nav-item {% if active_page == 'my_attendance' %}active{% endif %}">
+                    <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
+                    <span>Attendance Logs</span>
+                </a>
+                <a href="{% url 'my_lifecycle' %}" class="nav-item {% if active_page == 'my_lifecycle' %}active{% endif %}">
+                    <i data-lucide="user-check" style="width: 18px; height: 18px;"></i>
+                    <span>My Lifecycle</span>
+                </a>
+                <a href="{% url 'employee_leave_manager' %}" class="nav-item {% if active_page == 'employee_leave_manager' %}active{% endif %}">
+                    <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
+                    <span>Leave Manager</span>
+                </a>
+                <a href="{% url 'my_salary_slips' %}" class="nav-item {% if active_page == 'my_salary_slips' %}active{% endif %}">
+                    <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i>
+                    <span>Salary & Slips</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="/logout/" class="btn-logout">
+                    <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
+                    <span>Log Out</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="workspace">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags|default:'info' }}" style="padding: 12px 16px; border-radius: var(--radius-sm); margin-bottom: 24px; background: var(--primary-light); color: var(--primary);">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

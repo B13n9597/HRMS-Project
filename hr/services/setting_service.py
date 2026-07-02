@@ -1,9 +1,9 @@
-# hrms/services/settings_service.py
+# hr/services/settings_service.py
 #
 # Global settings read/write.
 # All thresholds HR admins can change without touching code.
 
-from hrms.models import SystemSetting
+from hr.models import SystemSetting
 
 
 # ── defaults (used if key missing from DB) ────────────────────────────────────

@@ -1,0 +1,65 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}Employee Details — {{ employee.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-end;">
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 24px; font-weight: 700; display: flex; align-items: center; justify-content: center;">
+            {{ employee.first_name|first }}{{ employee.last_name|first }}
+        </div>
+        <div>
+            <h1 style="font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px;">{{ employee.get_full_name }}</h1>
+            <p style="color: var(--text-muted); font-size: 14px;">{{ employee.position.title }} &bull; {{ employee.department.name }}</p>
+        </div>
+    </div>
+    <div>
+        <a href="{% url 'dashboard_hr' %}" class="btn btn-ghost">Back to Lifecycle</a>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+    <!-- Personal Info -->
+    <div class="card" style="padding: 24px;">
+        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">Personal Information</h3>
+        <div style="margin-bottom: 12px;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Employee ID</label>
+            <div style="font-size: 14px; font-weight: 500;">EMP-{{ employee.id|stringformat:"04d" }}</div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Email Address</label>
+            <div style="font-size: 14px; font-weight: 500;">{{ employee.user.email|default:"No Email Provided" }}</div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Phone Number</label>
+            <div style="font-size: 14px; font-weight: 500;">{{ employee.phone|default:"N/A" }}</div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Date of Hire</label>
+            <div style="font-size: 14px; font-weight: 500;">{{ employee.hire_date|date:"F j, Y"|default:"N/A" }}</div>
+        </div>
+        <div style="margin-bottom: 12px;">
+            <label style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Status</label>
+            <div style="font-size: 14px; font-weight: 500;">
+                <span class="badge {% if employee.status.name == 'Active' %}badge-success{% else %}badge-warning{% endif %}">{{ employee.status.name }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Panels -->
+    <div>
+        <div class="card" style="padding: 24px; margin-bottom: 24px;">
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">Recent Attendance</h3>
+            <div style="padding: 24px; text-align: center; color: var(--text-muted); background: #f8fafc; border-radius: var(--radius-sm);">
+                Detailed attendance log goes here.
+            </div>
+        </div>
+        <div class="card" style="padding: 24px;">
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">Leave Balance</h3>
+            <div style="padding: 24px; text-align: center; color: var(--text-muted); background: #f8fafc; border-radius: var(--radius-sm);">
+                Leave quota and balance goes here.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

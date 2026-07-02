@@ -1,0 +1,225 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}Leave Approvals — HR{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .approvals-hero {
+        background: linear-gradient(135deg, #065f46 0%, #10b981 100%);
+        border-radius: var(--radius-lg);
+        padding: 32px 40px;
+        color: #fff;
+        margin-bottom: 28px;
+        position: relative;
+        overflow: hidden;
+    }
+    .approvals-hero::after {
+        content: '';
+        position: absolute;
+        top: -50px; right: -50px;
+        width: 180px; height: 180px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 50%;
+    }
+    .approvals-hero h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .approvals-hero p  { opacity: 0.85; font-size: 14px; }
+    .approvals-hero .badge-count {
+        display: inline-block;
+        background: rgba(255,255,255,0.2);
+        border-radius: 9999px;
+        padding: 3px 12px;
+        font-size: 14px;
+        font-weight: 700;
+        margin-top: 10px;
+    }
+
+    .approval-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 16px;
+        overflow: hidden;
+        transition: var(--transition);
+    }
+    .approval-card:hover { box-shadow: var(--shadow-md); }
+
+    .approval-card-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 18px 24px;
+        border-bottom: 1px solid var(--border-color);
+        background: #f8fafc;
+    }
+    .approval-avatar {
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #065f46, #10b981);
+        color: #fff;
+        font-family: var(--font-display);
+        font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+    .approval-emp-name {
+        font-family: var(--font-display);
+        font-size: 16px;
+        font-weight: 700;
+    }
+    .approval-emp-dept { font-size: 13px; color: var(--text-muted); }
+
+    .approval-body {
+        padding: 20px 24px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr) 1.5fr;
+        gap: 16px;
+        align-items: center;
+    }
+    .approval-detail .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-light); margin-bottom: 2px; }
+    .approval-detail .val { font-size: 14px; font-weight: 600; }
+
+    .approval-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .note-input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        background: #f8fafc;
+        margin-bottom: 8px;
+        resize: none;
+    }
+    .note-input:focus { outline: none; border-color: var(--primary); }
+
+    .btn-approve {
+        background: var(--success);
+        color: #fff;
+    }
+    .btn-approve:hover { background: #059669; }
+    .btn-reject {
+        background: var(--danger-light);
+        color: var(--danger-dark);
+        border: 1px solid rgba(239,68,68,0.3);
+    }
+    .btn-reject:hover { background: var(--danger); color: #fff; }
+
+    .empty-hero {
+        text-align: center;
+        padding: 80px 20px;
+        color: var(--text-light);
+    }
+    .empty-hero .icon-wrap {
+        width: 80px; height: 80px;
+        background: var(--success-light);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 20px;
+        color: var(--success);
+    }
+    .empty-hero h2 { font-family: var(--font-display); font-size: 22px; font-weight: 700; margin-bottom: 8px; color: var(--text-main); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="approvals-hero">
+    <h1>Leave Approvals</h1>
+    <p>Review and action pending employee leave requests.</p>
+    <div class="badge-count">{{ leave_requests|length }} pending request{{ leave_requests|length|pluralize }}</div>
+</div>
+
+{% if messages %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags|default:'info' }}" style="display:block;margin-bottom:16px;">{{ msg }}</div>
+    {% endfor %}
+{% endif %}
+
+{% if leave_requests %}
+    {% for req in leave_requests %}
+    <div class="approval-card">
+        <!-- Card Header -->
+        <div class="approval-card-header">
+            <div class="approval-avatar">
+                {{ req.employee.first_name|first }}{{ req.employee.last_name|first }}
+            </div>
+            <div>
+                <div class="approval-emp-name">{{ req.employee.get_full_name }}</div>
+                <div class="approval-emp-dept">{{ req.employee.department.name|default:"No Department" }} &middot; Submitted #{{ req.pk }}</div>
+            </div>
+            <span class="badge badge-warning" style="margin-left:auto;">Pending</span>
+        </div>
+
+        <!-- Card Body -->
+        <div class="approval-body">
+            <div class="approval-detail">
+                <div class="lbl">Leave Type</div>
+                <div class="val">{{ req.leave_type.name }}</div>
+            </div>
+            <div class="approval-detail">
+                <div class="lbl">Start Date</div>
+                <div class="val">{{ req.start_date }}</div>
+            </div>
+            <div class="approval-detail">
+                <div class="lbl">End Date</div>
+                <div class="val">{{ req.end_date }}</div>
+            </div>
+            <div class="approval-detail">
+                <div class="lbl">Days</div>
+                <div class="val">{{ req.requested_days|default:"—" }}</div>
+            </div>
+
+            <!-- Actions -->
+            <div class="approval-actions">
+                <!-- Approve -->
+                <form method="POST" action="{% url 'hr_leave_approvals' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_id" value="{{ req.pk }}">
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit" class="btn btn-approve" style="width:100%;">
+                        <i data-lucide="check" style="width:15px;height:15px;"></i> Approve
+                    </button>
+                </form>
+
+                <!-- Reject with note -->
+                <form method="POST" action="{% url 'hr_leave_approvals' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="request_id" value="{{ req.pk }}">
+                    <input type="hidden" name="action" value="reject">
+                    <textarea class="note-input" name="note" rows="1"
+                              placeholder="Rejection reason (optional)"></textarea>
+                    <button type="submit" class="btn btn-reject" style="width:100%;">
+                        <i data-lucide="x" style="width:15px;height:15px;"></i> Reject
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Comments row if present -->
+        {% if req.comments %}
+        <div style="padding:12px 24px;border-top:1px solid var(--border-color);font-size:13px;color:var(--text-muted);background:#fafbfc;">
+            <strong>Employee note:</strong> {{ req.comments }}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+{% else %}
+    <div class="card">
+        <div class="empty-hero">
+            <div class="icon-wrap">
+                <i data-lucide="check-circle" style="width:36px;height:36px;"></i>
+            </div>
+            <h2>All caught up!</h2>
+            <p>There are no pending leave requests to review right now.</p>
+            <a href="{% url 'hr_leave_manager' %}" class="btn btn-ghost" style="margin-top:20px;">
+                View All Leave Records
+            </a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
