@@ -1,0 +1,211 @@
+{% extends 'hr/employee_base.html' %}
+
+{% block title %}Leave Manager — My Leaves{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .leave-hero {
+        background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 60%, #a78bfa 100%);
+        border-radius: var(--radius-lg);
+        padding: 32px 40px;
+        color: #fff;
+        margin-bottom: 28px;
+        position: relative;
+        overflow: hidden;
+    }
+    .leave-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -40px; right: -40px;
+        width: 160px; height: 160px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 50%;
+    }
+    .leave-hero h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .leave-hero p  { opacity: 0.85; font-size: 14px; }
+
+    .balance-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 14px;
+        margin-bottom: 28px;
+    }
+    .balance-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 18px;
+        text-align: center;
+        border-top: 4px solid var(--primary);
+    }
+    .balance-card .days {
+        font-family: var(--font-display);
+        font-size: 32px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+    .balance-card .type-name { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; align-items: start; }
+    @media(max-width:900px){ .two-col { grid-template-columns: 1fr; } }
+
+    .leave-form-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+    .leave-form-card .card-header {
+        background: linear-gradient(135deg,rgba(91,33,182,0.07),rgba(124,58,237,0.05));
+    }
+    .form-field { margin-bottom: 16px; }
+    .form-field label {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+    }
+    .form-field label .req { color: var(--danger); }
+    .form-control {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1.5px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        background: #f8fafc;
+        transition: var(--transition);
+    }
+    .form-control:focus {
+        outline: none;
+        border-color: #7c3aed;
+        box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+        background: #fff;
+    }
+    .err-banner {
+        background: var(--danger-light);
+        color: var(--danger-dark);
+        border: 1px solid rgba(239,68,68,0.25);
+        border-radius: var(--radius-sm);
+        padding: 10px 14px;
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+
+    .status-pending  { background: var(--warning-light); color: #78350f; }
+    .status-approved { background: var(--success-light); color: var(--success-dark); }
+    .status-rejected { background: var(--danger-light);  color: var(--danger-dark); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<div class="leave-hero">
+    <h1>Leave Manager</h1>
+    <p>Request time off, track your approval status, and view your remaining leave balances.</p>
+</div>
+
+<!-- Leave Balances -->
+{% if my_balances %}
+<div class="balance-grid">
+    {% for b in my_balances %}
+    <div class="balance-card">
+        <div class="days">{{ b.remaining_days }}</div>
+        <div class="type-name">{{ b.leave_type.name }} days left</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="two-col">
+    <!-- Request Form -->
+    <div class="leave-form-card">
+        <div class="card-header">
+            <i data-lucide="plus-circle" style="width:18px;height:18px;color:#7c3aed;"></i>
+            <h3>Request Time Off</h3>
+        </div>
+        <div class="card-body">
+            {% if error_msg %}
+            <div class="err-banner">{{ error_msg }}</div>
+            {% endif %}
+
+            <form method="POST" novalidate>
+                {% csrf_token %}
+                <div class="form-field">
+                    <label>Leave Type <span class="req">*</span></label>
+                    <select name="leave_type_id" class="form-control" required>
+                        <option value="">Select a type…</option>
+                        {% for lt in leave_types %}
+                            <option value="{{ lt.id }}">{{ lt.name }} (max {{ lt.max_days }} days)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Start Date <span class="req">*</span></label>
+                    <input type="date" name="start_date" class="form-control" min="{{ today }}" required>
+                </div>
+                <div class="form-field">
+                    <label>End Date <span class="req">*</span></label>
+                    <input type="date" name="end_date" class="form-control" min="{{ today }}" required>
+                </div>
+                <div class="form-field">
+                    <label>Reason / Comments</label>
+                    <textarea name="comments" class="form-control" rows="3" placeholder="Optional reason for leave…"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;">
+                    <i data-lucide="send" style="width:15px;height:15px;"></i> Submit Request
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Leave History -->
+    <div class="card">
+        <div class="card-header">
+            <i data-lucide="list" style="width:18px;height:18px;color:var(--primary);"></i>
+            <h3>My Leave History</h3>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Days</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in my_requests %}
+                    <tr>
+                        <td>{{ r.leave_type.name }}</td>
+                        <td>{{ r.start_date }}</td>
+                        <td>{{ r.end_date }}</td>
+                        <td>{{ r.requested_days|default:"—" }}</td>
+                        <td>
+                            <span class="badge
+                                {% if r.status == 'Approved' %}badge-success
+                                {% elif r.status == 'Rejected' %}badge-danger
+                                {% else %}badge-warning{% endif %}">
+                                {{ r.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="empty-state">
+                        <td colspan="5">
+                            <i data-lucide="calendar-x" style="width:28px;height:28px;opacity:0.3;"></i><br>
+                            You have no leave requests yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

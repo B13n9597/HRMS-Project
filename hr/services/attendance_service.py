@@ -56,7 +56,7 @@ def get_employee_qr_token(user) -> dict:
     token = generate_daily_token(employee)
 
     return {
-        'qr_token': token,
+        'token': token,
         'expires_in_seconds': TOKEN_TTL_SECONDS,
     }
 

@@ -53,6 +53,11 @@ urlpatterns = [
     path('performance-kpis/', api_views.index_view, name='performance_kpis'),
     path('candidate-screen/', api_views.index_view, name='candidate_screen'),
     path('global-settings/', api_views.index_view, name='global_settings'),
+
+    path('forgot-password/', page_views.forgot_password_view, name='forgot_password'),
+    path('set-password/<uidb64>/<token>/', page_views.set_password_view, name='set_password'),
+    
+    path('', include('hr.urls')),
 ]
 
 # Serve media files in development

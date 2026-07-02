@@ -1,0 +1,63 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}Payroll Center — HR{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .page-header {
+        display: flex; justify-content: space-between; align-items: flex-end;
+        margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color);
+    }
+    .page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .page-header p { color: var(--text-muted); font-size: 14px; }
+    
+    .search-bar { display: flex; gap: 8px; }
+    .search-input {
+        padding: 10px 16px; border: 1px solid var(--border-color);
+        border-radius: var(--radius-md); width: 300px; font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Payroll Center</h1>
+        <p>Manage employee salaries and generate slips.</p>
+    </div>
+    <form method="GET" class="search-bar">
+        <input type="text" name="q" class="search-input" placeholder="Search employee..." value="{{ search_query }}">
+        <button type="submit" class="btn btn-primary">Search</button>
+        {% if search_query %}<a href="{% url 'payroll_center' %}" class="btn btn-ghost">Clear</a>{% endif %}
+    </form>
+</div>
+
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee Name</th>
+                    <th>Department</th>
+                    <th>Position</th>
+                    <th>Base Salary</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <td><strong>{{ emp.get_full_name }}</strong></td>
+                    <td>{{ emp.department.name|default:"-" }}</td>
+                    <td>{{ emp.position.title|default:"-" }}</td>
+                    <td>$4,500.00 <span style="font-size:11px;color:gray;">(Est.)</span></td>
+                    <td><button class="btn btn-ghost btn-sm">View Slips</button></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" style="text-align:center;padding:40px;">No employees found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

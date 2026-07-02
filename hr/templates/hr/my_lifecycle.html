@@ -1,0 +1,83 @@
+{% extends 'hr/employee_base.html' %}
+
+{% block title %}My Lifecycle{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .hero-banner {
+        background: linear-gradient(135deg, #025da2 0%, #0ea5e9 100%);
+        border-radius: var(--radius-lg);
+        padding: 36px 40px;
+        color: #fff;
+        margin-bottom: 32px;
+    }
+    .hero-banner h1 { font-family: var(--font-display); font-size: 30px; font-weight: 800; margin-bottom: 6px; }
+    .hero-banner p { opacity: 0.85; font-size: 15px; }
+
+    .journey-card {
+        background: #fff; border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg); padding: 40px;
+    }
+    
+    .timeline { position: relative; max-width: 600px; margin: 0 auto; }
+    .timeline::before {
+        content: ''; position: absolute; left: 24px; top: 0; bottom: 0;
+        width: 2px; background: var(--border-color);
+    }
+    
+    .t-item { position: relative; padding-left: 60px; margin-bottom: 40px; }
+    .t-item:last-child { margin-bottom: 0; }
+    
+    .t-dot {
+        position: absolute; left: 16px; top: 0;
+        width: 18px; height: 18px; border-radius: 50%;
+        background: var(--border-color); z-index: 2;
+    }
+    .t-item.done .t-dot { background: var(--primary); }
+    .t-item.active .t-dot { background: var(--success); box-shadow: 0 0 0 6px var(--success-light); }
+    
+    .t-content h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: var(--text-main); }
+    .t-content p { font-size: 14px; color: var(--text-muted); }
+    .t-date { font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 8px; display: inline-block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-banner">
+    <h1>My Journey</h1>
+    <p>Your career timeline at ACT HRMS.</p>
+</div>
+
+<div class="journey-card">
+    <div class="timeline">
+        <div class="t-item done">
+            <div class="t-dot"></div>
+            <div class="t-content">
+                <span class="t-date">{{ employee.hire_date|date:"F j, Y"|default:"Past" }}</span>
+                <h3>Joined the Company</h3>
+                <p>Welcome aboard! You started your journey as {{ employee.position.title|default:"an employee" }}.</p>
+            </div>
+        </div>
+        
+        <div class="t-item {% if employee.status.name == 'Active' %}active{% else %}done{% endif %}">
+            <div class="t-dot"></div>
+            <div class="t-content">
+                <span class="t-date">Present</span>
+                <h3>Active Role</h3>
+                <p>Currently working in the {{ employee.department.name|default:"General" }} department.</p>
+            </div>
+        </div>
+        
+        {% if employee.status.name == 'Terminated' or employee.status.name == 'Resigned' %}
+        <div class="t-item active">
+            <div class="t-dot"></div>
+            <div class="t-content">
+                <span class="t-date">Exit</span>
+                <h3>Journey Concluded</h3>
+                <p>You have transitioned out of your active role.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,8 +1,9 @@
 # hrms/views/attendance_views.py
 #
-# Attendance Logs + Live Attendance dashboard views.
-# All logic delegated to attendance_service.
+# Attendance Logs + Live Attendance dashboard views + Manual Attendance.
+# All logic delegated to attendance_service where applicable.
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
@@ -17,7 +18,7 @@ from hr.services.attendance_service import (
     log_scan,
     get_employee_qr_token,
 )
-from hr.models import Employee
+from hr.models import Employee, Attendance
 
 
 def is_hr(user):
@@ -35,22 +36,23 @@ def is_hr(user):
 
 @login_required(login_url='/login/')
 def attendance_logs(request):
-    if not is_hr(request.user):
-        return redirect('/login/')
     """
     HR sees filterable attendance logs for all employees.
     Filters: department, status, month, year via GET params.
     """
-    from hr.models import Attendance, Department
-    from django.utils import timezone
+    if not is_hr(request.user):
+        return redirect('/login/')
 
-    month      = int(request.GET.get('month', timezone.localdate().month))
-    year       = int(request.GET.get('year',  timezone.localdate().year))
-    dept_id    = request.GET.get('department_id')
-    status_f   = request.GET.get('status', '')
+    from hr.models import Department
+
+    month    = int(request.GET.get('month', timezone.localdate().month))
+    year     = int(request.GET.get('year',  timezone.localdate().year))
+    dept_id  = request.GET.get('department_id')
+    status_f = request.GET.get('status', '')
+    query    = request.GET.get('q', '').strip()
 
     records = (
-        __import__('hr.models', fromlist=['Attendance']).Attendance.objects
+        Attendance.objects
         .filter(date__month=month, date__year=year)
         .select_related('employee', 'employee__department')
         .order_by('-date', 'employee__last_name')
@@ -60,6 +62,8 @@ def attendance_logs(request):
         records = records.filter(employee__department_id=dept_id)
     if status_f:
         records = records.filter(status=status_f)
+    if query:
+        records = records.filter(employee__first_name__icontains=query) | records.filter(employee__last_name__icontains=query)
 
     departments = Department.objects.all()
 
@@ -70,15 +74,122 @@ def attendance_logs(request):
         'year':        year,
         'dept_id':     dept_id or '',
         'status_f':    status_f,
-        'months':      [
+        'search_query': query,
+        'months': [
             (1,'January'),(2,'February'),(3,'March'),(4,'April'),
             (5,'May'),(6,'June'),(7,'July'),(8,'August'),
             (9,'September'),(10,'October'),(11,'November'),(12,'December')
         ],
-        'years':  [2024, 2025, 2026],
-        'statuses':['Present','Late','Absent','On Leave'],
+        'years':    [2024, 2025, 2026],
+        'statuses': ['Present','Late','Absent','On Leave'],
+        'active_page': 'attendance_logs',
     }
-    return render(request, 'attendance/attendance_logs.html', context)
+    return render(request, 'hr/attendance_logs.html', context)
+
+
+@login_required(login_url='/login/')
+def manual_attendance(request):
+    """
+    Employee manually submits attendance (date, time in, time out, signature).
+    Saves to DB and redirects to own attendance logs page.
+    """
+    from hr.forms import ManualAttendanceForm, EmployeeKioskForm
+
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, "No employee profile linked to your account.")
+        return redirect('/')
+
+    # HR users keep the full manual form (date/time). Employees get a simplified
+    # kiosk-style form: enter PIN + signature (name shown/read-only), submit now.
+    simple_mode = not is_hr(request.user)
+
+    if request.method == 'POST':
+        if simple_mode:
+            form = EmployeeKioskForm(request.POST)
+            if form.is_valid():
+                pin_entered = form.cleaned_data['pin']
+                if pin_entered != employee.attendance_pin:
+                    messages.error(request, "Invalid Attendance PIN.")
+                    context = {'form': form, 'employee': employee, 'active_page': 'manual_attendance', 'simple_mode': True}
+                    return render(request, 'hr/manual_attendance.html', context)
+
+                sig_text = form.cleaned_data.get('signature', '')
+                from datetime import datetime
+                now = timezone.now()
+                today = timezone.localdate()
+
+                # Create or update today's attendance: if no record → time_in, else set time_out
+                obj, created = Attendance.objects.get_or_create(
+                    employee=employee,
+                    date=today,
+                    defaults={'time_in': now, 'status': 'Present', 'signature_text': sig_text},
+                )
+                if not created:
+                    if obj.time_out is None:
+                        obj.time_out = now
+                        if not obj.signature_text:
+                            obj.signature_text = sig_text
+                        obj.save()
+                        messages.success(request, f"Clock-out recorded at {now.strftime('%H:%M')}.")
+                    else:
+                        messages.info(request, "Attendance already completed for today.")
+                else:
+                    messages.success(request, f"Clock-in recorded at {now.strftime('%H:%M')}.")
+                return redirect('my_attendance_record')
+        else:
+            form = ManualAttendanceForm(request.POST)
+            if form.is_valid():
+                pin_entered = form.cleaned_data['pin']
+                if pin_entered != employee.attendance_pin:
+                    messages.error(request, "Invalid Attendance PIN.")
+                    context = {
+                        'form':        form,
+                        'employee':    employee,
+                        'active_page': 'manual_attendance',
+                        'simple_mode': False,
+                    }
+                    return render(request, 'hr/manual_attendance.html', context)
+
+                date     = form.cleaned_data['date']
+                time_in  = form.cleaned_data['time_in']
+                time_out = form.cleaned_data['time_out']
+                sig_text = form.cleaned_data.get('signature', '')
+
+                # Combine date + time into datetime objects (naive → aware)
+                from datetime import datetime
+                tz = timezone.get_current_timezone()
+                dt_in  = tz.localize(datetime.combine(date, time_in))
+                dt_out = tz.localize(datetime.combine(date, time_out))
+
+                # update_or_create so an existing QR-scanned record is not duplicated
+                obj, created = Attendance.objects.update_or_create(
+                    employee=employee,
+                    date=date,
+                    defaults={
+                        'time_in':        dt_in,
+                        'time_out':       dt_out,
+                        'status':         'Present',
+                        'signature_text': sig_text,
+                    },
+                )
+                action = 'submitted' if created else 'updated'
+                messages.success(request, f"Attendance {action} for {date}.")
+                return redirect('my_attendance_record')
+    else:
+        if simple_mode:
+            form = EmployeeKioskForm(initial={'name': employee.get_full_name()})
+        else:
+            form = ManualAttendanceForm(initial={'date': timezone.localdate()})
+
+    context = {
+        'form':        form,
+        'employee':    employee,
+        'active_page': 'manual_attendance',
+        'simple_mode': simple_mode,
+    }
+    return render(request, 'hr/manual_attendance.html', context)
 
 
 @login_required(login_url='/login/')
@@ -90,10 +201,11 @@ def live_attendance(request):
     today_data = get_todays_attendance()
     employees  = Emp.objects.select_related('department').order_by('first_name')
     context = {
-        'today':     today_data,
-        'employees': employees,
+        'today':       today_data,
+        'employees':   employees,
+        'active_page': 'live_attendance',
     }
-    return render(request, 'attendance/live_attendance.html', context)
+    return render(request, 'hr/live_attendance.html', context)
 
 
 @csrf_exempt
@@ -112,12 +224,11 @@ def api_scan(request):
     except Exception:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-    # Mock request-like object for process_qr_scan
     class MockRequest:
         def __init__(self):
             self.META = request.META
             self.data = {'token': token}
-    
+
     try:
         result = process_qr_scan(MockRequest())
         return JsonResponse(result, status=200)
@@ -131,9 +242,9 @@ def my_attendance(request):
     history = get_my_attendance(request.user)
 
     context = {
-        'records': history,
+        'records':     history,
+        'active_page': 'my_attendance',
     }
-
     return render(request, 'hr/my_attendance.html', context)
 
 
@@ -143,7 +254,7 @@ def employee_attendance_report(request, employee_id):
     if not is_hr(request.user):
         return redirect('/login/')
     history = get_employee_attendance_report(employee_id)
-    return render(request, 'attendance/employee_report.html', history)
+    return render(request, 'hr/employee_report.html', history)
 
 
 # ─────────────────────────────────────────────
@@ -180,12 +291,11 @@ def scan_qr_secure(request):
 
     import json
     try:
-        body = json.loads(request.body)
+        body  = json.loads(request.body)
         token = body.get('token', '')
     except Exception:
         return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
 
-    # Mock a request-like object for process_qr_scan
     class MockRequest:
         def __init__(self, http_request):
             self.META = http_request.META

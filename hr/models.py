@@ -7,6 +7,8 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+
 
 
 # ============================================================
@@ -356,28 +358,23 @@ class Interview(BaseModel):
 # ============================================================
 
 class Attendance(BaseModel):
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
-    date     = models.DateField()
-    time_in  = models.DateTimeField(null=True, blank=True)
-    time_out = models.DateTimeField(null=True, blank=True)
-    status   = models.CharField(max_length=20, default='Present')
+    employee  = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    date      = models.DateField()
+    time_in   = models.DateTimeField(null=True, blank=True)
+    time_out  = models.DateTimeField(null=True, blank=True)
+    status    = models.CharField(max_length=20, default='Present')
     signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
+    # Text signature stored separately so manual attendance always has one
+    signature_text = models.CharField(max_length=255, blank=True, default='')
 
-
-    def calculate_status(self):
-        """Reads thresholds from SystemSetting — no hardcoded values."""
-        if not self.time_in:
-            return
-        start_hour    = int(SystemSetting.get('attendance', 'work_start_hour', 8))
-        grace_minutes = int(SystemSetting.get('attendance', 'late_grace_minutes', 15))
-        local_in      = timezone.localtime(self.time_in)
-        if (local_in.hour, local_in.minute) > (start_hour, grace_minutes):
-            self.status = 'Late'
-        else:
-            self.status = 'Present'
+    def clean(self):
+        super().clean()
+        if self.time_in and self.time_out and self.time_out < self.time_in:
+            raise ValidationError('Clock-out time cannot be earlier than clock-in time.')
 
     class Meta:
         unique_together = ('employee', 'date')
+
 
 
 # ============================================================
