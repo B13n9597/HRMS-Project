@@ -720,29 +720,41 @@
 
         /* ------------------ MODALS ------------------ */
         .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(15, 23, 42, 0.4);
-            backdrop-filter: blur(4px);
-            z-index: 500;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+
+    z-index: 500;
+    display: none;
+
+    justify-content: center;
+
+    align-items: flex-start;
+    overflow-y: auto;
+    padding: 20px;
+}
 
         .modal {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
-            width: 100%;
-            max-width: 520px;
-            padding: 32px;
-            animation: slideIn 0.3s ease-out;
-        }
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+
+    width: 100%;
+    max-width: 520px;
+
+    padding: 32px;
+
+    animation: slideIn 0.3s ease-out;
+
+    max-height: 90vh;
+    overflow-y: auto;
+}
 
         .modal-header {
             display: flex;
@@ -1095,6 +1107,7 @@
                             <th>Days</th>
                             <th>Status</th>
                             <th>Comments</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1390,12 +1403,14 @@
                             <th>Qualifications</th>
                             <th>Auto score</th>
                             <th>Auto Status</th>
+                            <th>Action</th>
                             <th>Screening notes</th>
+                            
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="6" style="text-align:center; color:var(--text-light);">Loading applications...</td>
+                            <td colspan="7" style="text-align:center; color:var(--text-light);">Loading applications...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1448,7 +1463,45 @@
                 <div class="form-group">
                     <label for="leaveComments">Reason / Comments</label>
                     <textarea id="leaveComments" class="form-input" rows="3" placeholder="Explain reason for time off..."></textarea>
-                </div>
+                </div> 
+                <div class="form-group">
+    <label for="leaveContactPhone">
+        Contact Phone During Leave
+    </label>
+    <input
+        type="text"
+        id="leaveContactPhone"
+        class="form-input"
+        placeholder="09XXXXXXXX"
+    >
+</div>
+
+<div class="form-group">
+    <label for="leaveContactAddress">
+        Address During Leave
+    </label>
+    <textarea
+        id="leaveContactAddress"
+        class="form-input"
+        rows="2"
+        placeholder="Where can we reach you during leave?"
+    ></textarea>
+</div>
+
+<div class="form-group">
+    <label for="leaveAttachment">
+        Supporting Document
+    </label>
+    <input
+        type="file"
+        id="leaveAttachment"
+        class="form-input"
+        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+    >
+    <small>
+        Required for Sick Leave, Study Leave and Maternity Leave
+    </small>
+</div>
                 <button type="submit" class="btn" style="margin-top:16px;">Submit Application</button>
             </form>
         </div>
@@ -1729,24 +1782,45 @@
 
         // API Caller Utility
         async function apiCall(url, method = 'GET', body = null) {
+
             const options = {
                 method,
                 headers: {
-                    'Content-Type': 'application/json',
                     'X-CSRFToken': getCookie('csrftoken') || ''
                 }
             };
+
             if (body) {
-                options.body = JSON.stringify(body);
+
+                if (body instanceof FormData) {
+
+                    options.body = body;
+
+                } else {
+
+                    options.headers['Content-Type'] =
+                        'application/json';
+
+                    options.body =
+                        JSON.stringify(body);
+                    }
+                }
+
+                const res = await fetch(
+                    url,
+                    options
+                );
+
+                if (
+                    res.status === 401 &&
+                    state.user
+                ) {
+                    showLogin();
+                    return null;
+                }
+
+                return res.json();
             }
-            const res = await fetch(url, options);
-            if (res.status === 401 && state.user) {
-                // Session expired
-                showLogin();
-                return null;
-            }
-            return res.json();
-        }
 
         // ============================================================
         // BULK CSV ONBOARDING HANDLERS
@@ -2375,6 +2449,22 @@
                 case 'hrSettings':
                     loadHRSettings();
                     break;
+
+                case 'attendance-logs':
+                    loadAttendanceLogs();
+                    break;
+
+                case 'employee-lifecycle':
+                    loadLifecycle();
+                    break;
+
+                case 'leave-manager':
+                    loadLeaves();
+                    break;
+
+                case 'salary-slips':
+                    loadPayroll();
+                    break;
             }
         }
 
@@ -2564,13 +2654,30 @@
                     else statusBadge = `<span class="badge badge-danger">${r.status}</span>`;
                     
                     row.innerHTML = `
-                        <td><strong>${r.leave_type}</strong></td>
-                        <td>${r.start_date}</td>
-                        <td>${r.end_date}</td>
-                        <td>${r.requested_days}</td>
-                        <td>${statusBadge}</td>
-                        <td><span style="font-size:13px; color:var(--text-muted);">${r.comments || ''}</span></td>
-                    `;
+    <td><strong>${r.leave_type}</strong></td>
+    <td>${r.start_date}</td>
+    <td>${r.end_date}</td>
+    <td>${r.requested_days}</td>
+    <td>${statusBadge}</td>
+    <td>
+        <span style="font-size:13px; color:var(--text-muted);">
+            ${r.comments || ''}
+        </span>
+    </td>
+    <td>
+        ${
+            r.status === 'Pending'
+            ? `<button
+                    class="btn btn-secondary"
+                    onclick="cancelLeave(${r.id})"
+                    style="padding:6px 12px;font-size:12px;color:var(--danger-dark);background:var(--danger-light);"
+               >
+                    Cancel
+               </button>`
+            : '-'
+        }
+    </td>
+`;
                     tbody.appendChild(row);
                 });
             } else {
@@ -2580,15 +2687,62 @@
 
         // Leave request submit
         document.getElementById('leaveRequestForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const body = {
-                leave_type_id: document.getElementById('leaveTypeSelector').value,
-                start_date: document.getElementById('leaveStartDate').value,
-                end_date: document.getElementById('leaveEndDate').value,
-                comments: document.getElementById('leaveComments').value
-            };
+            e.preventDefault(); 
+
+            const attachment =
+                document.getElementById('leaveAttachment').files[0];
+
+            const contactPhone =
+                document.getElementById('leaveContactPhone').value;
+
+            const contactAddress =
+                document.getElementById('leaveContactAddress').value;
+
+            const formData = new FormData();
+
+            formData.append(
+                'leave_type_id',
+                document.getElementById('leaveTypeSelector').value
+            );
+
+            formData.append(
+                'start_date',
+                document.getElementById('leaveStartDate').value
+            );
+
+            formData.append(
+                'end_date',
+                document.getElementById('leaveEndDate').value
+            );
+
+            formData.append(
+                'comments',
+                document.getElementById('leaveComments').value
+            );
+
+            formData.append(
+                'contact_phone',
+                contactPhone
+            );
+
+            formData.append(
+                'contact_address',
+                contactAddress
+            );
+
+            if (attachment) {
+                formData.append(
+                    'attachment',
+                    attachment
+                );
+            }
             
-            const data = await apiCall('/attendance/api/leaves/', 'POST', body);
+            const data = await apiCall(
+                '/attendance/api/leaves/',
+                'POST',
+                formData
+            );
+
             if (data && data.success) {
                 alert(data.message);
                 leaveModal.style.display = 'none';
@@ -2597,6 +2751,8 @@
             } else {
                 alert(data ? data.error : 'Failed to submit request');
             }
+
+            
         });
 
         // 4. Load own salaries
@@ -2960,7 +3116,23 @@
                             </div>
                         </td>
                         <td>${statusBadge}</td>
-                        <td><span style="font-size:12px; color:var(--text-muted);">${a.screening_notes || ''}</span></td>
+
+                        <td>
+                            ${
+                                a.status.includes('Qualified')
+                                ? `<button class="btn btn-success"
+                                        onclick="hireCandidate(${a.id})">
+                                        Hire
+                                    </button>`
+                                : '-'
+                            }
+                        </td>
+
+                        <td>
+                            <span style="font-size:12px; color:var(--text-muted);">
+                                ${a.screening_notes || ''}
+                            </span>
+                        </td>
                     `;
                     appTbody.appendChild(row);
                 });

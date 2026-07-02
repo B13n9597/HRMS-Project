@@ -423,23 +423,23 @@
 
             <nav class="sidebar-nav">
                 <div class="nav-section-title">Employee Portal</div>
-                <a href="{% url 'dashboard_employee' %}" class="nav-item active">
+                <a href="#" onclick="switchPanel('qrBadge')" class="nav-item">
                     <i data-lucide="qr-code" style="width: 18px; height: 18px;"></i>
                     <span>Rotating Badge</span>
                 </a>
-                <a href="{% url 'attendance_my_record' %}" class="nav-item">
+                <a href="#" onclick="switchPanel('attendance-logs')" class="nav-item">
                     <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
                     <span>Attendance Logs</span>
                 </a>
-                <a href="{% url 'hrms_dashboard' %}" class="nav-item">
+                <a href="#" onclick="switchPanel('employee-lifecycle')" class="nav-item">
                     <i data-lucide="user-check" style="width: 18px; height: 18px;"></i>
                     <span>Employee Lifecycle</span>
                 </a>
-                <a href="{% url 'leave_approvals' %}" class="nav-item">
+                <a href="#" onclick="switchPanel('leave-manager')" class="nav-item">
                     <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
                     <span>Leave Manager</span>
                 </a>
-                <a href="{% url 'payroll_center' %}" class="nav-item">
+                <a href="#" onclick="switchPanel('salary-slips')" class="nav-item">
                     <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i>
                     <span>Salary & Slips</span>
                 </a>

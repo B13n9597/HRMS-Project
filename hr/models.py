@@ -413,6 +413,8 @@ class LeaveType(BaseModel):
     name        = models.CharField(max_length=50)
     max_days    = models.IntegerField()
     description = models.TextField(blank=True)
+    def __str__(self):
+        return self.name
 
 
 class LeaveRequest(BaseModel):
@@ -420,6 +422,7 @@ class LeaveRequest(BaseModel):
         ('Pending',  'Pending'),
         ('Approved', 'Approved'),
         ('Rejected', 'Rejected'),
+        ('Cancelled', 'Cancelled'),
     ]
 
     employee       = models.ForeignKey(Employee, on_delete=models.CASCADE)
@@ -434,15 +437,25 @@ class LeaveRequest(BaseModel):
     )
     approved_date  = models.DateField(null=True, blank=True)
     comments       = models.TextField(blank=True)
-
+    attachment = models.FileField(
+    upload_to='leave_documents/',
+    null=True,
+    blank=True
+    
+    )
+    def __str__(self):
+        return f"{self.employee} - {self.leave_type}"   
 
 class LeaveBalance(BaseModel):
-    employee       = models.ForeignKey(Employee, on_delete=models.CASCADE)
-    leave_type     = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
     remaining_days = models.IntegerField()
-    last_updated   = models.DateField()
 
-
+    class Meta:
+        unique_together = ('employee', 'leave_type')
+        
+    def __str__(self):
+        return f"{self.employee} - {self.leave_type}"
 # ============================================================
 #  SALARY  —  (good design)
 # ============================================================

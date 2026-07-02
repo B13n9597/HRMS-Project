@@ -11,6 +11,10 @@ from rest_framework.decorators import api_view
 
 from hr.services import employee_service
 
+from django.http import JsonResponse
+from django.utils import timezone
+from hr.models import Application, Employee, EmployeeHistory
+
 
 # ─────────────────────────────────────────────
 # RESPONSE HELPERS
@@ -250,4 +254,48 @@ def import_employees_bulk(request):
         'errors': result['errors'],
     })
     
+@login_required
+def hire_candidate(request, application_id):
+    if request.method != "POST":
+        return JsonResponse({
+            "success": False,
+            "error": "POST request required"
+        }, status=400)
+
+    try:
+        application = Application.objects.select_related(
+            "applicant",
+            "job"
+        ).get(id=application_id)
+
+        applicant = application.applicant
+
+        employee = Employee.objects.create(
+            first_name=applicant.first_name,
+            last_name=applicant.last_name,
+            hire_date=timezone.localdate()
+        )
+
+        application.status = "Selected"
+        application.save()
+
+        EmployeeHistory.objects.create(
+            employee=employee,
+            department=None,
+            position=None,
+            event_type="hired",
+            notes=f"Hired from application #{application.id}",
+            start_date=timezone.localdate()
+        )
+
+        return JsonResponse({
+            "success": True,
+            "employee_id": employee.id
+        })
+
+    except Application.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "error": "Application not found"
+        }, status=404)
     

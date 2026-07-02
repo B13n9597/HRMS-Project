@@ -344,14 +344,19 @@ def api_leaves(request):
         
     elif request.method == 'POST':
         try:
-            data = json.loads(request.body)
-            leave_type_id = data.get('leave_type_id')
-            start_date_str = data.get('start_date')
-            end_date_str = data.get('end_date')
-            comments = data.get('comments', '')
+            leave_type_id = request.POST.get('leave_type_id')
+            start_date_str = request.POST.get('start_date')
+            end_date_str = request.POST.get('end_date')
+            comments = request.POST.get('comments', '')
+
+            contact_phone = request.POST.get('contact_phone', '')
+            contact_address = request.POST.get('contact_address', '')
+
+            attachment = request.FILES.get('attachment')
             
             start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
             end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            
         except Exception as e:
             return JsonResponse({'success': False, 'error': 'Invalid form data'}, status=400)
             
@@ -380,7 +385,10 @@ def api_leaves(request):
             end_date=end_date,
             requested_days=requested_days,
             status='Pending',
-            comments=comments
+            comments=comments,
+            contact_phone=contact_phone,
+            contact_address=contact_address,
+            attachment=attachment
         )
         
         return JsonResponse({
@@ -395,6 +403,37 @@ def api_leaves(request):
                 'status': req.status
             }
         })
+        
+@login_required
+def api_cancel_leave(request, request_id):
+
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Employee profile missing'
+        }, status=404)
+
+    leave_request = get_object_or_404(
+        LeaveRequest,
+        id=request_id,
+        employee=employee
+    )
+
+    if leave_request.status != 'Pending':
+        return JsonResponse({
+            'success': False,
+            'error': 'Only pending requests can be cancelled'
+        })
+
+    leave_request.status = 'Cancelled'
+    leave_request.save()
+
+    return JsonResponse({
+        'success': True,
+        'message': 'Leave request cancelled'
+    })
 
 # API: Admin Leaves - List all pending, and Approve/Reject (HR Only)
 @login_required
@@ -440,10 +479,18 @@ def api_admin_leaves(request):
             balance, _ = LeaveBalance.objects.get_or_create(
                 employee=req.employee,
                 leave_type=req.leave_type,
-                defaults={'remaining_days': req.leave_type.max_days, 'last_updated': timezone.localdate()}
-            )
+                defaults={
+                'remaining_days': req.leave_type.max_days
+                }
+           )
+            
+            if balance.remaining_days < req.requested_days:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Insufficient leave balance. Remaining: {balance.remaining_days} days'
+                }, status=400)
+
             balance.remaining_days -= req.requested_days
-            balance.last_updated = timezone.localdate()
             balance.save()
             
             req.status = 'Approved'
@@ -681,7 +728,7 @@ def api_recruitment(request):
     for a in apps:
         apps_data.append({
             'id': a.id,
-            'applicant_name': a.applicant.get_full_name(),
+            'applicant_name': f"{a.applicant.first_name} {a.applicant.last_name}",
             'applicant_email': a.applicant.email,
             'job_title': a.job.title,
             'status': a.get_status_display(),

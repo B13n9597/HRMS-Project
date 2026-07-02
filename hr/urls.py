@@ -29,6 +29,7 @@ urlpatterns = [
     path('staff-directory/', api_views.index_view, name='staff_directory'),
     path('payroll-center/', api_views.index_view, name='payroll_center'),
     path('leave-approvals/', api_views.index_view, name='leave_approvals'),
+    path('api/leaves/cancel/<int:request_id>/',api_views.api_cancel_leave,name='api_cancel_leave'),
     path('performance-kpis/', api_views.index_view, name='performance_kpis'),
     path('candidate-screen/', api_views.index_view, name='candidate_screen'),
     path('global-settings/', api_views.index_view, name='global_settings'),
@@ -78,4 +79,6 @@ urlpatterns = [
     path('api/employees/promote/<int:employee_id>/',employee_views.promote_employee,name='api_employee_promote'),
 
     path('api/employees/transfer/<int:employee_id>/',employee_views.transfer_employee,name='api_employee_transfer'),
+    
+    path('api/recruitment/hire/<int:application_id>/',employee_views.hire_candidate,name='api_hire_candidate'),
 ]

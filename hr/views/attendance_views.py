@@ -129,10 +129,12 @@ def api_scan(request):
 def my_attendance(request):
     """Employee's own attendance history."""
     history = get_my_attendance(request.user)
+
     context = {
         'records': history,
     }
-    return render(request, 'attendance/my_attendance.html', context)
+
+    return render(request, 'hr/my_attendance.html', context)
 
 
 @login_required(login_url='/login/')

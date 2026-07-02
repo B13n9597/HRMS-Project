@@ -1041,7 +1041,53 @@
         } else {
         alert(data ? data.error : "Transfer failed");
         }
-   };
+    };
+
+    
+    window.hireCandidate = async function(applicationId) {
+
+        if (!confirm("Hire this candidate?")) {
+            return;
+        }
+
+        const response = await fetch(
+            `/attendance/api/recruitment/hire/${applicationId}/`,
+            {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            }
+        );
+
+        const data = await response.json();
+
+        if (data.success) {
+            alert("Candidate hired successfully!");
+            loadRecruitmentData();
+        } else {
+        alert(data.error || "Failed to hire candidate.");
+        }
+    };
+
+    window.cancelLeave = async function(requestId) {
+
+        if (!confirm('Cancel this leave request?')) {
+            return;
+        }
+
+        const data = await apiCall(
+            `/attendance/api/leaves/cancel/${requestId}/`,
+            'POST'
+        );
+
+        if (data && data.success) {
+            alert(data.message);
+            loadLeavesCenter();
+        } else {
+            alert(data ? data.error : 'Failed to cancel request');
+        }
+    };
 
 tbody.innerHTML = employees.map(emp => `
      <tr>
@@ -1060,29 +1106,55 @@ tbody.innerHTML = employees.map(emp => `
         <td>${emp.hire_date || '—'}</td>
 
         <td>
-            <button class="btn btn-ghost"
-                onclick="editEmployee(${emp.id})">
-                Edit
-            </button>
+            <div class="btn-group">
 
-            <button class="btn btn-secondary"
-                onclick="activateEmployee(${emp.id})">
-                Activate
-            </button>
+    <button class="btn btn-ghost"
+        onclick="editEmployee(${emp.id})">
+        Edit
+    </button>
 
-            <button class="btn btn-danger"
-                onclick="terminateEmployee(${emp.id})">
-                Terminate
-            </button>
+    <button class="btn btn-info"
+        onclick="promoteEmployee(${emp.id})">
+        Promote
+    </button>
 
-            <button class="btn btn-info"
-                onclick="promoteEmployee(${emp.id})">
-                Promote
-            </button>
+    <div class="dropdown">
+        <button class="btn btn-secondary dropdown-toggle"
+            type="button"
+            data-bs-toggle="dropdown">
+            Actions
+        </button>
 
-            <button onclick="transferEmployee(${emp.id})">
-                Transfer
-            </button>
+        <ul class="dropdown-menu">
+
+            <li>
+                <a class="dropdown-item"
+                   href="#"
+                   onclick="transferEmployee(${emp.id})">
+                    Transfer
+                </a>
+            </li>
+
+            <li>
+                <a class="dropdown-item text-success"
+                   href="#"
+                   onclick="activateEmployee(${emp.id})">
+                    Activate
+                </a>
+            </li>
+
+            <li>
+                <a class="dropdown-item text-danger"
+                   href="#"
+                   onclick="terminateEmployee(${emp.id})">
+                    Terminate
+                </a>
+            </li>
+
+        </ul>
+    </div>
+
+</div>
         </td>
     </tr>
 `).join('');
