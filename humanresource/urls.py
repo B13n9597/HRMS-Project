@@ -41,7 +41,6 @@ urlpatterns = [
     path('employees/<int:employee_id>/update/', page_views.employee_update, name='employee_update'),
     path('employees/<int:employee_id>/delete/', page_views.employee_delete, name='employee_delete'),
     path('employees/<int:employee_id>/<str:action>/', page_views.employee_lifecycle, name='employee_lifecycle'),
-    path('attendance-logs/', page_views.attendance_logs, name='attendance_logs'),
 
     # Staff directory in project-level urls (delegates to hr/urls.py for the rest)
     path('staff-directory/', page_views.staff_directory_view, name='staff_directory'),
