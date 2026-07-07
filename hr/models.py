@@ -252,7 +252,7 @@ class Applicant(BaseModel):
 #          so the system can automatically reject unqualified applicants
 # ============================================================
 
-class Application(BaseModel):
+class Application(BaseModel): 
     STATUS_CHOICES = [
         ('Applied',              'Applied'),
         ('Screening',            'Screening'),
