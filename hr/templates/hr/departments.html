@@ -1,0 +1,42 @@
+{% extends 'hr/hr_base.html' %}
+{% block title %}Departments — ACT HRMS{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Departments</h1>
+        <p>Manage company departments and their details.</p>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">
+        <i data-lucide="building-2" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>All Departments</h3>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Department Name</th>
+                    <th>Description</th>
+                    <th>Manager</th>
+                    <th>Established</th>
+                    <th>Headcount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dept in departments %}
+                <tr>
+                    <td><strong>{{ dept.name }}</strong></td>
+                    <td>{{ dept.description|default:"—" }}</td>
+                    <td>{{ dept.manager.get_full_name|default:"—" }}</td>
+                    <td>{{ dept.established_date|date:"Y-m-d"|default:"—" }}</td>
+                    <td>{{ dept.employees.count }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-light);">No departments found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

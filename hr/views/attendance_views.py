@@ -55,15 +55,16 @@ def attendance_logs(request):
         Attendance.objects
         .filter(date__month=month, date__year=year)
         .select_related('employee', 'employee__department')
-        .order_by('-date', 'employee__last_name')
+        .order_by('employee__first_name', 'employee__last_name', '-date')
     )
 
     if dept_id:
         records = records.filter(employee__department_id=dept_id)
     if status_f:
         records = records.filter(status=status_f)
+    from django.db.models import Q
     if query:
-        records = records.filter(employee__first_name__icontains=query) | records.filter(employee__last_name__icontains=query)
+        records = records.filter(Q(employee__first_name__icontains=query) | Q(employee__last_name__icontains=query))
 
     departments = Department.objects.all()
 
@@ -87,35 +88,49 @@ def attendance_logs(request):
     return render(request, 'hr/attendance_logs.html', context)
 
 
-@login_required(login_url='/login/')
 def manual_attendance(request):
     """
     Employee manually submits attendance (PIN + canvas signature).
     - First submission = clock-in
     - Second submission (same day) = clock-out
-    Saves to DB and redirects to own attendance logs page.
+    Saves to DB and redirects. Supports unauthenticated kiosk access.
     """
-    try:
-        employee = Employee.objects.get(user=request.user)
-    except Employee.DoesNotExist:
-        messages.error(request, "No employee profile linked to your account.")
-        return redirect('/')
+    # If logged in, find employee profile
+    employee = None
+    if request.user.is_authenticated:
+        try:
+            employee = Employee.objects.get(user=request.user)
+        except Employee.DoesNotExist:
+            pass
 
-    simple_mode = not is_hr(request.user)
+    simple_mode = True
+    if request.user.is_authenticated and is_hr(request.user):
+        simple_mode = False
 
     if request.method == 'POST':
         pin_entered   = request.POST.get('pin', '').strip()
         sig_data      = request.POST.get('signature_data', '').strip()
-        sig_text_only = request.POST.get('signature', '').strip()   # legacy fallback
+        sig_text_only = request.POST.get('signature', '').strip()
 
-        # Validate PIN
-        if pin_entered != (employee.attendance_pin or ''):
+        # If public kiosk access, find employee by form parameter
+        if not employee:
+            emp_id = request.POST.get('employee_id')
+            if emp_id:
+                try:
+                    employee = Employee.objects.get(id=emp_id)
+                except Employee.DoesNotExist:
+                    pass
+
+        if not employee:
+            messages.error(request, "Please select/provide a valid employee name.")
+        # Validate PIN (both attendance_pin and legacy pin fields)
+        elif pin_entered != (employee.attendance_pin or employee.pin or ''):
             messages.error(request, "Invalid Attendance PIN. Please try again.")
         else:
             now   = timezone.now()
             today = timezone.localdate()
 
-            # Decode canvas base64 signature → ImageField file if present
+            # Decode canvas base64 signature
             sig_file = None
             if sig_data and sig_data.startswith('data:image/'):
                 import base64, uuid as _uuid
@@ -139,7 +154,7 @@ def manual_attendance(request):
                     defaults={
                         'time_in':       now,
                         'status':        'Present',
-                        'signature_text': sig_text_only,
+                        'signature_text': sig_text_only or employee.get_full_name(),
                     },
                 )
                 if created:
@@ -147,17 +162,17 @@ def manual_attendance(request):
                     if sig_file:
                         obj.signature = sig_file
                     obj.save()
-                    messages.success(request, f"Clock-in recorded at {timezone.localtime(now).strftime('%H:%M')}.")
+                    messages.success(request, f"Clock-in recorded for {employee.get_full_name()} at {timezone.localtime(now).strftime('%H:%M')}.")
                 elif obj.time_out is None:
                     obj.time_out = now
                     if not obj.signature_text:
-                        obj.signature_text = sig_text_only
+                        obj.signature_text = sig_text_only or employee.get_full_name()
                     if sig_file:
                         obj.signature = sig_file
                     obj.save()
-                    messages.success(request, f"Clock-out recorded at {timezone.localtime(now).strftime('%H:%M')}.")
+                    messages.success(request, f"Clock-out recorded for {employee.get_full_name()} at {timezone.localtime(now).strftime('%H:%M')}.")
                 else:
-                    messages.info(request, "Attendance already completed for today.")
+                    messages.info(request, f"Attendance already completed for {employee.get_full_name()} today.")
             else:
                 # Full HR mode: allow specifying date and times
                 from hr.forms import ManualAttendanceForm
@@ -174,7 +189,7 @@ def manual_attendance(request):
                     defaults = {
                         'time_in':        dt_in,
                         'status':         'Present',
-                        'signature_text': sig_text_only,
+                        'signature_text': sig_text_only or employee.get_full_name(),
                     }
                     if dt_out:
                         defaults['time_out'] = dt_out
@@ -189,22 +204,30 @@ def manual_attendance(request):
                         obj.signature = sig_file
                     obj.save()
                     action = 'submitted' if created else 'updated'
-                    messages.success(request, f"Attendance {action} for {date}.")
+                    messages.success(request, f"Attendance {action} for {employee.get_full_name()} on {date}.")
                 else:
+                    active_employees = Employee.objects.filter(status__name='Active').order_by('first_name', 'last_name')
                     context = {
                         'form':        form,
                         'employee':    employee,
                         'active_page': 'manual_attendance',
                         'simple_mode': False,
+                        'active_employees': active_employees,
                     }
                     return render(request, 'hr/manual_attendance.html', context)
 
-            return redirect('my_attendance_record')
+            if request.user.is_authenticated:
+                return redirect('my_attendance_record')
+            else:
+                return redirect('tablet_kiosk')
 
     # GET — show empty form
     from hr.forms import ManualAttendanceForm, EmployeeKioskForm
+    active_employees = Employee.objects.filter(status__name='Active').order_by('first_name', 'last_name')
+
     if simple_mode:
-        form = EmployeeKioskForm(initial={'name': employee.get_full_name()})
+        initial_name = employee.get_full_name() if employee else ""
+        form = EmployeeKioskForm(initial={'name': initial_name})
     else:
         form = ManualAttendanceForm(initial={'date': timezone.localdate()})
 
@@ -213,6 +236,7 @@ def manual_attendance(request):
         'employee':    employee,
         'active_page': 'manual_attendance',
         'simple_mode': simple_mode,
+        'active_employees': active_employees,
     }
     return render(request, 'hr/manual_attendance.html', context)
 
@@ -264,21 +288,35 @@ def api_scan(request):
 @login_required(login_url='/login/')
 def my_attendance(request):
     """Employee's own attendance history with optional month/year/status filters."""
-    month        = request.GET.get('month', '')
-    year         = request.GET.get('year', '')
-    status_f     = request.GET.get('status', '')
-    history = get_my_attendance(
-        request.user,
-        month=int(month) if month else None,
-        year=int(year) if year else None,
-        status_filter=status_f or None,
-    )
+    month    = request.GET.get('month', '')
+    year     = request.GET.get('year', '')
+    status_f = request.GET.get('status', '')
+    query    = request.GET.get('q', '').strip()
+
+    from hr.models import Employee as Emp
+    employee = None
+    try:
+        employee = Emp.objects.get(user=request.user)
+    except Emp.DoesNotExist:
+        pass
+
+    history = []
+    if employee:
+        history = get_my_attendance(
+            request.user,
+            month=int(month) if month else None,
+            year=int(year) if year else None,
+            status_filter=status_f or None,
+        )
+
     from django.utils import timezone as tz
     context = {
-        'records':     history,
-        'month':       month or tz.localdate().month,
-        'year':        year  or tz.localdate().year,
-        'status_f':    status_f,
+        'records':      history,
+        'employee':     employee,
+        'month':        month or tz.localdate().month,
+        'year':         year  or tz.localdate().year,
+        'status_f':     status_f,
+        'search_query': query,
         'months': [
             (1,'January'),(2,'February'),(3,'March'),(4,'April'),
             (5,'May'),(6,'June'),(7,'July'),(8,'August'),
@@ -296,7 +334,20 @@ def employee_attendance_report(request, employee_id):
     if not is_hr(request.user):
         return redirect('/login/')
     history = get_employee_attendance_report(employee_id)
-    return render(request, 'hr/employee_report.html', history)
+    # Reuse attendance_logs template scoped to one employee
+    return render(request, 'hr/attendance_logs.html', {
+        **history,
+        'single_employee_mode': True,
+        'active_page': 'attendance_logs',
+        'months': [
+            (1,'January'),(2,'February'),(3,'March'),(4,'April'),
+            (5,'May'),(6,'June'),(7,'July'),(8,'August'),
+            (9,'September'),(10,'October'),(11,'November'),(12,'December')
+        ],
+        'years': [2024, 2025, 2026],
+        'statuses': ['Present', 'Late', 'Absent', 'On Leave'],
+        'departments': [],
+    })
 
 
 # ─────────────────────────────────────────────

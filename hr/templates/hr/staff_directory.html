@@ -329,7 +329,7 @@
                 tbody.innerHTML = `<tr class="empty-state"><td colspan="6" style="color:var(--danger);">Failed to load employees. Please refresh.</td></tr>`;
                 return;
             }
-            _allEmployees = data.data || [];
+            _allEmployees = data.employees || data.data || [];
             renderEmployees(_allEmployees);
         }
 
@@ -379,6 +379,22 @@
         };
 
         loadEmployees();
+
+        // Client-side search for employee directory
+        document.getElementById('directorySearchInput').addEventListener('input', e => {
+            const query = e.target.value.toLowerCase().trim();
+            if (!query) {
+                renderEmployees(_allEmployees);
+                return;
+            }
+            const filtered = _allEmployees.filter(emp => 
+                (emp.full_name && emp.full_name.toLowerCase().includes(query)) ||
+                (emp.email && emp.email.toLowerCase().includes(query)) ||
+                (emp.department && emp.department.toLowerCase().includes(query)) ||
+                (emp.position && emp.position.toLowerCase().includes(query))
+            );
+            renderEmployees(filtered);
+        });
 
         //  REFERENCE DATA (departments, positions, roles)
         async function loadReferenceData() {

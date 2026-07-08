@@ -132,7 +132,7 @@
             <div class="err-banner">{{ error_msg }}</div>
             {% endif %}
 
-            <form method="POST" novalidate>
+            <form method="POST" enctype="multipart/form-data" novalidate>
                 {% csrf_token %}
                 <div class="form-field">
                     <label>Leave Type <span class="req">*</span></label>
@@ -142,6 +142,11 @@
                             <option value="{{ lt.id }}">{{ lt.name }} (max {{ lt.max_days }} days)</option>
                         {% endfor %}
                     </select>
+                </div>
+                <div class="form-field">
+                    <small style="display:block; margin-bottom:8px; color:var(--text-muted);">
+                        Leave days are counted as working days only; weekends and Ethiopian public holidays are excluded.
+                    </small>
                 </div>
                 <div class="form-field">
                     <label>Start Date <span class="req">*</span></label>
@@ -155,7 +160,15 @@
                     <label>Reason / Comments</label>
                     <textarea name="comments" class="form-control" rows="3" placeholder="Optional reason for leave…"></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary" style="width:100%;">
+                <div class="form-field">
+                    <label>Contact Info During Leave <span style="font-size:11px;color:var(--text-light);">(phone or address where you can be reached)</span></label>
+                    <input type="text" name="contact_info_during_leave" class="form-control" placeholder="e.g. +251 91 234 5678 or home address">
+                </div>
+                <div class="form-field">
+                    <label>Supporting Document <span style="font-size:11px;color:var(--text-light);">(optional — PDF or image)</span></label>
+                    <input type="file" name="document" class="form-control" accept=".pdf,.png,.jpg,.jpeg">
+                </div>
+                <button type="submit" name="action" value="submit" class="btn btn-primary" style="width:100%;">
                     <i data-lucide="send" style="width:15px;height:15px;"></i> Submit Request
                 </button>
             </form>
@@ -176,7 +189,9 @@
                         <th>From</th>
                         <th>To</th>
                         <th>Days</th>
+                        <th>Supervisor</th>
                         <th>Status</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -187,17 +202,41 @@
                         <td>{{ r.end_date }}</td>
                         <td>{{ r.requested_days|default:"—" }}</td>
                         <td>
+                            {% if r.supervisor_recommendation == 'recommended' %}
+                                <span class="badge badge-success" style="font-size:11px;">Recommended</span>
+                            {% elif r.supervisor_recommendation == 'not_recommended' %}
+                                <span class="badge badge-danger" style="font-size:11px;">Not Recommended</span>
+                            {% else %}
+                                <span style="font-size:12px;color:var(--text-light);">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>
                             <span class="badge
                                 {% if r.status == 'Approved' %}badge-success
                                 {% elif r.status == 'Rejected' %}badge-danger
+                                {% elif r.status == 'Cancelled' %}badge-secondary
                                 {% else %}badge-warning{% endif %}">
                                 {{ r.status }}
                             </span>
                         </td>
+                        <td>
+                            {% if r.status == 'Pending' %}
+                            <form method="POST" action="{% url 'employee_leave_manager' %}" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="cancel">
+                                <input type="hidden" name="request_id" value="{{ r.id }}">
+                                <button type="submit" class="btn btn-ghost"
+                                    style="font-size:12px;padding:4px 10px;color:var(--danger);border-color:var(--danger);"
+                                    onclick="return confirm('Cancel this leave request?')">
+                                    Cancel
+                                </button>
+                            </form>
+                            {% else %}—{% endif %}
+                        </td>
                     </tr>
                     {% empty %}
                     <tr class="empty-state">
-                        <td colspan="5">
+                        <td colspan="7">
                             <i data-lucide="calendar-x" style="width:28px;height:28px;opacity:0.3;"></i><br>
                             You have no leave requests yet.
                         </td>

@@ -15,31 +15,27 @@
     </div>
     
     <div style="padding: 24px;">
-        <form>
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Company Name</label>
-                <input type="text" class="form-control" value="ACT HRMS" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
-            </div>
-            
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Default Work Hours</label>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <input type="time" class="form-control" value="09:00" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
-                    <input type="time" class="form-control" value="17:00" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+        <form method="post">
+            {% csrf_token %}
+            {% for category, settings in settings_grouped.items %}
+                <div style="margin-bottom: 18px; padding:12px; border:1px solid var(--border-color); border-radius:6px; background:#fff;">
+                    <h4 style="margin:0 0 8px 0; font-size:14px; font-weight:700;">{{ category|capfirst }}</h4>
+                    {% for s in settings %}
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">{{ s.display_label }}</label>
+                            <input type="text" name="setting_{{ category }}__{{ s.key }}" class="form-control" value="{{ s.value }}" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                            {% if s.description %}
+                                <small style="color: var(--text-muted);">{{ s.description }}</small>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
                 </div>
-            </div>
-            
-            <div style="margin-bottom: 32px;">
-                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">Timezone</label>
-                <select class="form-control" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
-                    <option>UTC (Coordinated Universal Time)</option>
-                    <option>EST (Eastern Standard Time)</option>
-                    <option>PST (Pacific Standard Time)</option>
-                </select>
-            </div>
-            
-            <div style="text-align: right; border-top: 1px solid var(--border-color); padding-top: 24px;">
-                <button type="button" class="btn btn-primary"><i data-lucide="save" style="width:16px;height:16px;margin-right:6px;"></i> Save Settings</button>
+            {% empty %}
+                <p>No settings available.</p>
+            {% endfor %}
+
+            <div style="text-align: right; border-top: 1px solid var(--border-color); padding-top: 18px; margin-top: 12px;">
+                <button type="submit" class="btn btn-primary"><i data-lucide="save" style="width:16px;height:16px;margin-right:6px;"></i> Save Settings</button>
             </div>
         </form>
     </div>

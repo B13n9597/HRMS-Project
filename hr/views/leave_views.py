@@ -39,10 +39,27 @@ def employee_leave_manager(request):
     error_msg = None
 
     if request.method == 'POST':
-        leave_type_id = request.POST.get('leave_type_id')
-        start_date    = request.POST.get('start_date')
-        end_date      = request.POST.get('end_date')
-        comments      = request.POST.get('comments', '')
+        action = request.POST.get('action', 'submit')
+
+        # Cancel a pending leave request
+        if action == 'cancel' and employee:
+            request_id = request.POST.get('request_id')
+            if request_id:
+                try:
+                    leave_service.cancel_request(int(request_id), employee)
+                    messages.success(request, "Leave request cancelled.")
+                except ValidationError as exc:
+                    messages.error(request, exc.message)
+                except Exception as exc:
+                    messages.error(request, str(exc))
+            return redirect('employee_leave_manager')
+
+        # Submit a new leave request
+        leave_type_id             = request.POST.get('leave_type_id')
+        start_date                = request.POST.get('start_date')
+        end_date                  = request.POST.get('end_date')
+        comments                  = request.POST.get('comments', '')
+        contact_info_during_leave = request.POST.get('contact_info_during_leave', '').strip()
 
         if not leave_type_id or not start_date or not end_date:
             error_msg = "All fields are required."
@@ -54,11 +71,14 @@ def employee_leave_manager(request):
                 if e < s:
                     error_msg = "End date cannot be before start date."
                 else:
+                    doc_file = request.FILES.get('document')
                     leave_service.submit_leave_request(employee.pk, {
-                        'leave_type_id': int(leave_type_id),
-                        'start_date':    s,
-                        'end_date':      e,
-                        'reason':        comments,
+                        'leave_type_id':             int(leave_type_id),
+                        'start_date':                s,
+                        'end_date':                  e,
+                        'reason':                    comments,
+                        'document':                  doc_file,
+                        'contact_info_during_leave': contact_info_during_leave,
                     })
                     messages.success(request, "Leave request submitted successfully.")
                     return redirect('employee_leave_manager')
@@ -122,8 +142,9 @@ def hr_leave_manager(request):
         records = records.filter(employee__department_id=dept_id)
     if leave_type_f:
         records = records.filter(leave_type_id=leave_type_f)
+    from django.db.models import Q
     if query:
-        records = records.filter(employee__first_name__icontains=query) | records.filter(employee__last_name__icontains=query)
+        records = records.filter(Q(employee__first_name__icontains=query) | Q(employee__last_name__icontains=query))
 
     departments = Department.objects.all()
     leave_types = leave_service.get_all_leave_types()
@@ -196,6 +217,11 @@ def hr_leave_approvals(request):
         'hr_employee':    hr_employee,
         'active_page':    'hr_leave_approvals',
         'current_year':   timezone.localdate().year,
+        'recommendation_labels': {
+            '':                'Awaiting Supervisor',
+            'recommended':     'Recommended',
+            'not_recommended': 'Not Recommended',
+        },
     }
     return render(request, 'hr/hr_leave_approvals.html', context)
 
@@ -214,3 +240,75 @@ def leave_approvals_view(request):
 def request_leave(request):
     """Redirect old request-leave URL to the employee leave manager."""
     return redirect('employee_leave_manager')
+
+
+@login_required(login_url='/login/')
+def cancel_leave_view(request, request_id):
+    """Employee cancels their own pending leave request."""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, "No employee profile found.")
+        return redirect('employee_leave_manager')
+
+    if request.method == 'POST':
+        try:
+            leave_service.cancel_request(request_id, employee)
+            messages.success(request, "Leave request cancelled.")
+        except Exception as exc:
+            messages.error(request, str(exc))
+    return redirect('employee_leave_manager')
+
+
+@login_required(login_url='/login/')
+def leave_reports(request):
+    """HR leave reports — summary by type, department, status."""
+    if not is_hr(request.user):
+        messages.error(request, "Access denied.")
+        return redirect('/')
+
+    from hr.models import Department
+    from django.db.models import Count
+
+    year = int(request.GET.get('year', timezone.localdate().year))
+
+    all_requests = leave_service.get_all_requests().filter(start_date__year=year)
+
+    # Summary by leave type
+    by_type = (
+        all_requests
+        .values('leave_type__name')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
+
+    # Summary by status
+    by_status = (
+        all_requests
+        .values('status')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
+
+    # Summary by department
+    by_dept = (
+        all_requests
+        .values('employee__department__name')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
+
+    context = {
+        'year':       year,
+        'years':      [2024, 2025, 2026],
+        'by_type':    list(by_type),
+        'by_status':  list(by_status),
+        'by_dept':    list(by_dept),
+        'total':      all_requests.count(),
+        'approved':   all_requests.filter(status='Approved').count(),
+        'pending':    all_requests.filter(status='Pending').count(),
+        'rejected':   all_requests.filter(status='Rejected').count(),
+        'cancelled':  all_requests.filter(status='Cancelled').count(),
+        'active_page': 'leave_reports',
+    }
+    return render(request, 'hr/leave_reports.html', context)

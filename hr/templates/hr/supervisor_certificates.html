@@ -1,0 +1,40 @@
+{% extends 'hr/supervisor_base.html' %}
+{% block title %}Employee Certificates — Supervisor{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left"><h1>Employee Certificates</h1><p>View certificates uploaded by employees in your department(s).</p></div>
+</div>
+<form method="GET" style="display:flex;gap:12px;margin-bottom:20px;">
+    <input type="text" name="q" class="form-input" placeholder="Search employee or certificate..." value="{{ search_query }}" style="width:300px;">
+    <button type="submit" class="btn btn-primary"><i data-lucide="search" style="width:16px;height:16px;"></i> Search</button>
+    {% if search_query %}<a href="{% url 'supervisor_certificates' %}" class="btn btn-ghost">Clear</a>{% endif %}
+</form>
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Employee</th><th>Certificate Title</th><th>Type</th><th>Issued By</th><th>Issued Date</th><th>Expiry</th><th>Uploaded</th><th>Document</th></tr></thead>
+            <tbody>
+                {% for cert in certificates %}
+                <tr>
+                    <td><strong>{{ cert.employee.get_full_name }}</strong><br><small>{{ cert.employee.department.name|default:"" }}</small></td>
+                    <td>{{ cert.title }}</td>
+                    <td><span class="badge badge-primary">{{ cert.get_cert_type_display }}</span></td>
+                    <td>{{ cert.issued_by|default:"—" }}</td>
+                    <td>{{ cert.issued_date|default:"—" }}</td>
+                    <td>{{ cert.expiry_date|default:"—" }}</td>
+                    <td>{{ cert.uploaded_at|date:"Y-m-d H:i" }}</td>
+                    <td>
+                        {% if cert.document %}
+                        <a href="{{ cert.document.url }}" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:6px 10px;">
+                            <i data-lucide="download" style="width:14px;height:14px;"></i> View
+                        </a>
+                        {% else %}—{% endif %}
+                    </td>
+                </tr>
+                {% empty %}<tr class="empty-state"><td colspan="8">No certificates found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

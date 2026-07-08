@@ -87,7 +87,7 @@
         <input type="text" name="q" class="search-input" placeholder="Search by name..." value="{{ search_query }}">
         <button type="submit" class="btn btn-primary"><i data-lucide="search" style="width:16px;height:16px;"></i></button>
         {% if search_query %}
-            <a href="{% url 'dashboard_hr' %}" class="btn btn-ghost">Clear</a>
+            <a href="{% url 'hr_lifecycle' %}" class="btn btn-ghost">Clear</a>
         {% endif %}
     </form>
 </div>

@@ -1,0 +1,45 @@
+{% extends 'hr/hr_base.html' %}
+{% block title %}HR Reports — ACT HRMS{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>HR Reports</h1>
+        <p>Key metrics and summary reports across the organisation.</p>
+    </div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:28px;">
+    <div class="card" style="padding:24px;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--primary);">{{ total_employees }}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;font-weight:600;">Total Employees</div>
+    </div>
+    <div class="card" style="padding:24px;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--success);">{{ active_employees }}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;font-weight:600;">Active Staff</div>
+    </div>
+    <div class="card" style="padding:24px;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--warning);">{{ present_today }}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;font-weight:600;">Present Today</div>
+    </div>
+    <div class="card" style="padding:24px;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--primary);">{{ pending_leaves }}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;font-weight:600;">Pending Leaves</div>
+    </div>
+    <div class="card" style="padding:24px;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:40px;font-weight:800;color:var(--warning);">{{ pending_payroll }}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px;text-transform:uppercase;font-weight:600;">Pending Payroll</div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">
+        <i data-lucide="clipboard-list" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>Quick Links</h3>
+    </div>
+    <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;">
+        <a href="{% url 'attendance_logs' %}" class="btn btn-secondary">Attendance Logs</a>
+        <a href="{% url 'hr_leave_manager' %}" class="btn btn-secondary">Leave Records</a>
+        <a href="{% url 'finance_dashboard' %}" class="btn btn-secondary">Payroll Records</a>
+        <a href="{% url 'performance_kpis' %}" class="btn btn-secondary">KPI Scores</a>
+        <a href="{% url 'leave_reports' %}" class="btn btn-secondary">Leave Reports</a>
+    </div>
+</div>
+{% endblock %}

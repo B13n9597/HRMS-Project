@@ -172,6 +172,27 @@
                 <div class="lbl">Days</div>
                 <div class="val">{{ req.requested_days|default:"—" }}</div>
             </div>
+            <div class="approval-detail">
+                <div class="lbl">Supervisor</div>
+                <div class="val">
+                    {% if req.supervisor_recommendation == 'recommended' %}
+                        <span class="badge badge-success" style="font-size:11px;">Recommended</span>
+                    {% elif req.supervisor_recommendation == 'not_recommended' %}
+                        <span class="badge badge-danger" style="font-size:11px;">Not Recommended</span>
+                    {% else %}
+                        <span class="badge badge-warning" style="font-size:11px;">Not Reviewed</span>
+                    {% endif %}
+                    {% if req.supervisor_note %}
+                        <br><small style="color:var(--text-light);font-size:11px;">{{ req.supervisor_note|truncatechars:40 }}</small>
+                    {% endif %}
+                </div>
+            </div>
+            {% if req.contact_info_during_leave %}
+            <div class="approval-detail">
+                <div class="lbl">Contact Info</div>
+                <div class="val" style="font-size:13px;">{{ req.contact_info_during_leave }}</div>
+            </div>
+            {% endif %}
 
             <!-- Actions -->
             <div class="approval-actions">

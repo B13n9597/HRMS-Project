@@ -238,6 +238,8 @@
                 Your Identity
             </h2>
 
+            <!-- Employee identity selection -->
+            {% if employee %}
             <!-- Employee chip -->
             <div class="employee-chip">
                 <div class="avatar">{{ employee.first_name|slice:":1"|upper }}{{ employee.last_name|slice:":1"|upper }}</div>
@@ -252,6 +254,34 @@
                     </div>
                 </div>
             </div>
+            {% else %}
+            <!-- Dropdown for kiosk mode / unauthenticated / HR admin without employee profile -->
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label class="form-label">Employee Name *</label>
+                <select name="employee_id" class="form-input" required id="employeeSelect">
+                    <option value="">— Select your name —</option>
+                    {% for emp in active_employees %}
+                        <option value="{{ emp.id }}" 
+                                data-initials="{{ emp.first_name|slice:":1"|upper }}{{ emp.last_name|slice:":1"|upper }}"
+                                data-name="{{ emp.get_full_name }}"
+                                data-position="{{ emp.position.title|default:"Staff" }}"
+                                data-dept="{{ emp.department.name|default:"General" }}"
+                                data-empid="{{ emp.employee_id|default:"—" }}">
+                            {{ emp.get_full_name }} ({{ emp.employee_id }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Employee chip (hidden initially, shown when employee is selected) -->
+            <div class="employee-chip" id="kioskEmployeeChip" style="display: none; margin-bottom: 20px;">
+                <div class="avatar" id="kioskAvatar">??</div>
+                <div class="details">
+                    <div class="name" id="kioskName">—</div>
+                    <div class="sub" id="kioskSub">—</div>
+                </div>
+            </div>
+            {% endif %}
 
             <form method="POST" id="attendanceForm" novalidate>
                 {% csrf_token %}
@@ -467,6 +497,26 @@ updateClock();
         // Embed signature as base64 PNG in hidden input
         sigInput.value = canvas.toDataURL('image/png');
     });
+})();
+
+// ─── Dropdown Chip Update ────────────────────────────────
+(function() {
+    const empSelect = document.getElementById('employeeSelect');
+    if (empSelect) {
+        empSelect.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            const chip = document.getElementById('kioskEmployeeChip');
+            if (this.value) {
+                document.getElementById('kioskAvatar').textContent = opt.getAttribute('data-initials');
+                document.getElementById('kioskName').textContent = opt.getAttribute('data-name');
+                document.getElementById('kioskSub').innerHTML = 
+                    `${opt.getAttribute('data-position')} &nbsp;·&nbsp; ${opt.getAttribute('data-dept')} &nbsp;·&nbsp; ${opt.getAttribute('data-empid')}`;
+                chip.style.display = 'flex';
+            } else {
+                chip.style.display = 'none';
+            }
+        });
+    }
 })();
 </script>
 {% endblock %}

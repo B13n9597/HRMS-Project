@@ -61,6 +61,31 @@
     </div>
 </div>
 
+<!-- Generate Payroll -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header">
+    <i data-lucide="calculator" style="width:18px;height:18px;color:var(--primary);"></i>
+    <h3>Generate Payroll</h3>
+  </div>
+  <div class="card-body">
+    <form method="POST" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="generate">
+      <div class="filter-group">
+        <label>Period Start</label>
+        <input type="date" name="period_start" value="{{ today|default:'' }}" required>
+      </div>
+      <div class="filter-group">
+        <label>Period End</label>
+        <input type="date" name="period_end" value="{{ today|default:'' }}" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="padding:10px 20px;">
+        <i data-lucide="play" style="width:14px;height:14px;"></i> Generate for All Active Staff
+      </button>
+    </form>
+  </div>
+</div>
+
 <!-- Filters -->
 <form method="GET" class="filter-bar">
     <div class="filter-group">
@@ -113,11 +138,14 @@
                     <th>Employee</th>
                     <th>Department</th>
                     <th>Period</th>
-                    <th>Gross Salary</th>
-                    <th>Deductions</th>
+                    <th>Gross</th>
+                    <th>Tax</th>
+                    <th>Pension</th>
+                    <th>Total Deductions</th>
                     <th>Net Salary</th>
-                    <th>Days Worked</th>
+                    <th>Days</th>
                     <th>Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -135,7 +163,9 @@
                     <td>{{ r.employee.department.name|default:"—" }}</td>
                     <td>{{ r.period_start|date:"M Y" }}</td>
                     <td>ETB {{ r.gross_salary }}</td>
-                    <td style="color:var(--danger-dark);">ETB {{ r.deductions }}</td>
+                    <td style="color:var(--danger-dark);">ETB {{ r.income_tax|default:"—" }}</td>
+                    <td style="color:var(--danger-dark);">ETB {{ r.pension|default:"—" }}</td>
+                    <td style="color:var(--danger-dark);">ETB {{ r.total_deductions }}</td>
                     <td style="color:var(--success-dark);font-weight:700;">ETB {{ r.net_salary }}</td>
                     <td>{{ r.days_worked }} / {{ r.required_days }}</td>
                     <td>
@@ -145,6 +175,20 @@
                             {% else %}badge-warning{% endif %}">
                             {{ r.payment_status }}
                         </span>
+                    </td>
+                    <td>
+                        {% if r.payment_status != 'Paid' %}
+                        <form method="POST" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="mark_paid">
+                            <input type="hidden" name="record_id" value="{{ r.id }}">
+                            <button type="submit" class="btn btn-ghost" style="font-size:11px;padding:4px 10px;color:var(--success-dark);">
+                                Mark Paid
+                            </button>
+                        </form>
+                        {% else %}
+                        <span style="font-size:12px;color:var(--success-dark);">✓</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}

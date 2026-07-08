@@ -620,55 +620,90 @@
         </div>
 
 
-        <div class="nav-section-title">Attendance</div>
-        <a href="{% url 'attendance_logs' %}" class="nav-link {% if active_page == 'attendance_logs' %}active{% endif %}">
-            <i data-lucide="clock" style="width:18px;height:18px;"></i> Attendance Logs
+        <a href="{% url 'dashboard_hr' %}" class="nav-link {% if active_page == 'dashboard_hr' %}active{% endif %}">
+            <i data-lucide="layout-dashboard" style="width:18px;height:18px;"></i> Dashboard
         </a>
-        <a href="{% url 'live_attendance' %}" class="nav-link {% if active_page == 'live_attendance' %}active{% endif %}">
-            <i data-lucide="activity" style="width:18px;height:18px;"></i> Live Attendance
-        </a>
-        <a href="{% url 'tablet_kiosk_attendance' %}" class="nav-link {% if active_page == 'tablet_kiosk' %}active{% endif %}">
-            <i data-lucide="tablet" style="width:18px;height:18px;"></i> Office Kiosk
+
+        <div class="nav-section-title">My Workspace</div>
+        <a href="{% url 'my_lifecycle' %}" class="nav-link {% if active_page == 'my_lifecycle' %}active{% endif %}">
+            <i data-lucide="user" style="width:18px;height:18px;"></i> My Profile
         </a>
         <a href="{% url 'my_attendance_record' %}" class="nav-link {% if active_page == 'my_attendance' %}active{% endif %}">
             <i data-lucide="user-check" style="width:18px;height:18px;"></i> My Attendance
         </a>
+        <a href="{% url 'employee_leave_manager' %}" class="nav-link {% if active_page == 'employee_leave_manager' %}active{% endif %}">
+            <i data-lucide="calendar" style="width:18px;height:18px;"></i> My Leave
+        </a>
+        <a href="{% url 'my_salary_slips' %}" class="nav-link {% if active_page == 'my_salary_slips' %}active{% endif %}">
+            <i data-lucide="file-text" style="width:18px;height:18px;"></i> My Payslips
+        </a>
+
+        <div class="nav-section-title">Attendance</div>
+        <a href="{% url 'live_attendance' %}" class="nav-link {% if active_page == 'live_attendance' %}active{% endif %}">
+            <i data-lucide="activity" style="width:18px;height:18px;"></i> Live Attendance
+        </a>
+        <a href="{% url 'attendance_logs' %}" class="nav-link {% if active_page == 'attendance_logs' %}active{% endif %}">
+            <i data-lucide="clock" style="width:18px;height:18px;"></i> Attendance Logs
+        </a>
+        <a href="{% url 'tablet_kiosk_attendance' %}" class="nav-link {% if active_page == 'tablet_kiosk' %}active{% endif %}">
+            <i data-lucide="tablet" style="width:18px;height:18px;"></i> Office Kiosk
+        </a>
 
         <div class="nav-section-title">Leave</div>
-        <a href="{% url 'employee_leave_manager' %}" class="nav-link {% if active_page == 'employee_leave_manager' %}active{% endif %}">
-            <i data-lucide="calendar" style="width:18px;height:18px;"></i> Leave Manager
-        </a>
         <a href="{% url 'hr_leave_manager' %}" class="nav-link {% if active_page == 'hr_leave_manager' %}active{% endif %}">
-            <i data-lucide="layout-list" style="width:18px;height:18px;"></i> All Leave Records
+            <i data-lucide="layout-list" style="width:18px;height:18px;"></i> Leave Requests
         </a>
         <a href="{% url 'hr_leave_approvals' %}" class="nav-link {% if active_page == 'hr_leave_approvals' %}active{% endif %}">
             <i data-lucide="check-square" style="width:18px;height:18px;"></i> Leave Approvals
         </a>
+        <a href="{% url 'leave_reports' %}" class="nav-link {% if active_page == 'leave_reports' %}active{% endif %}">
+            <i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i> Leave Reports
+        </a>
 
-        <div class="nav-section-title">HR &amp; Administration</div>
-        {% if request.user.is_staff or request.user.is_superuser %}
-        <a href="{% url 'dashboard_hr' %}" class="nav-link {% if active_page == 'dashboard_hr' %}active{% endif %}">
-            <i data-lucide="git-branch" style="width:18px;height:18px;"></i> Employee Lifecycle
-        </a>
-        {% else %}
-        <a href="{% url 'my_lifecycle' %}" class="nav-link {% if active_page == 'my_lifecycle' %}active{% endif %}">
-            <i data-lucide="git-branch" style="width:18px;height:18px;"></i> Employee Lifecycle
-        </a>
-        {% endif %}
+        <div class="nav-section-title">Employees</div>
         <a href="{% url 'staff_directory' %}" class="nav-link {% if active_page == 'staff_directory' %}active{% endif %}">
             <i data-lucide="users" style="width:18px;height:18px;"></i> Staff Directory
         </a>
-        <a href="{% url 'payroll_center' %}" class="nav-link {% if active_page == 'payroll_center' %}active{% endif %}">
-            <i data-lucide="banknote" style="width:18px;height:18px;"></i> Payroll Center
+        <a href="{% url 'hr_lifecycle' %}" class="nav-link {% if active_page == 'hr_lifecycle' %}active{% endif %}">
+            <i data-lucide="git-branch" style="width:18px;height:18px;"></i> Employee Lifecycle
         </a>
-        <a href="{% url 'performance_kpis' %}" class="nav-link {% if active_page == 'performance_kpis' %}active{% endif %}">
-            <i data-lucide="bar-chart-3" style="width:18px;height:18px;"></i> Performance KPIs
+        <a href="{% url 'departments' %}" class="nav-link {% if active_page == 'departments' %}active{% endif %}">
+            <i data-lucide="building-2" style="width:18px;height:18px;"></i> Departments
         </a>
         <a href="{% url 'candidate_screen' %}" class="nav-link {% if active_page == 'candidate_screen' %}active{% endif %}">
-            <i data-lucide="briefcase" style="width:18px;height:18px;"></i> Candidate Screen
+            <i data-lucide="briefcase" style="width:18px;height:18px;"></i> Recruitment
         </a>
+
+        <div class="nav-section-title">Performance</div>
+        <a href="{% url 'performance_kpis' %}" class="nav-link {% if active_page == 'performance_kpis' %}active{% endif %}">
+            <i data-lucide="bar-chart-3" style="width:18px;height:18px;"></i> Performance
+        </a>
+        <a href="{% url 'training' %}" class="nav-link {% if active_page == 'training' %}active{% endif %}">
+            <i data-lucide="graduation-cap" style="width:18px;height:18px;"></i> Training
+        </a>
+
+        <div class="nav-section-title">Payroll</div>
+        <a href="{% url 'finance_dashboard' %}" class="nav-link {% if active_page == 'finance_dashboard' %}active{% endif %}">
+            <i data-lucide="landmark" style="width:18px;height:18px;"></i> Payroll Center
+        </a>
+        <a href="{% url 'my_salary_slips' %}" class="nav-link {% if active_page == 'salary_slips_hr' %}active{% endif %}">
+            <i data-lucide="file-text" style="width:18px;height:18px;"></i> Salary Slips
+        </a>
+
+        <div class="nav-section-title">Reports</div>
+        <a href="{% url 'hr_reports' %}" class="nav-link {% if active_page == 'hr_reports' %}active{% endif %}">
+            <i data-lucide="clipboard-list" style="width:18px;height:18px;"></i> HR Reports
+        </a>
+        <a href="{% url 'dashboard_dean' %}" class="nav-link {% if active_page == 'analytics' %}active{% endif %}">
+            <i data-lucide="trending-up" style="width:18px;height:18px;"></i> Analytics
+        </a>
+
+        <div class="nav-section-title">System</div>
         <a href="{% url 'global_settings' %}" class="nav-link {% if active_page == 'global_settings' %}active{% endif %}">
             <i data-lucide="sliders" style="width:18px;height:18px;"></i> Global Settings
+        </a>
+        <a href="{% url 'roles_permissions' %}" class="nav-link {% if active_page == 'roles_permissions' %}active{% endif %}">
+            <i data-lucide="shield" style="width:18px;height:18px;"></i> Roles &amp; Permissions
         </a>
 
         <a href="{% url 'logout' %}" class="nav-link nav-link-logout">

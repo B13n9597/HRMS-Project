@@ -24,7 +24,7 @@ class BaseModel(models.Model):
     is_deleted = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
-    objects     = ActiveManager()       # default → active records only
+    objects     = ActiveManager()       # default -> active records only
     all_objects = models.Manager()      # includes soft-deleted records
 
     def delete(self, *args, **kwargs):
@@ -441,9 +441,17 @@ class LeaveType(BaseModel):
 class LeaveRequest(BaseModel):
     STATUS_CHOICES = [
         ('Pending',  'Pending'),
+        ('Recommended', 'Recommended'),
+        ('Not Recommended', 'Not Recommended'),
         ('Approved', 'Approved'),
         ('Rejected', 'Rejected'),
         ('Cancelled', 'Cancelled'),
+    ]
+
+    SUPERVISOR_RECOMMENDATION_CHOICES = [
+        ('', 'Pending Supervisor Review'),
+        ('recommended', 'Recommended'),
+        ('not_recommended', 'Not Recommended'),
     ]
 
     employee       = models.ForeignKey(Employee, on_delete=models.CASCADE)
@@ -451,32 +459,51 @@ class LeaveRequest(BaseModel):
     start_date     = models.DateField()
     end_date       = models.DateField()
     requested_days = models.IntegerField(null=True, blank=True)
-    status         = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     approved_by    = models.ForeignKey(
         Employee, on_delete=models.SET_NULL,
-        null=True, related_name='approved_leaves'
+        null=True, blank=True, related_name='approved_leaves'
     )
     approved_date  = models.DateField(null=True, blank=True)
     comments       = models.TextField(blank=True)
-    attachment = models.FileField(
-    upload_to='leave_documents/',
-    null=True,
-    blank=True
-    
+
+    # Supervisor recommendation fields
+    supervisor_recommendation = models.CharField(
+        max_length=20,
+        choices=SUPERVISOR_RECOMMENDATION_CHOICES,
+        blank=True,
+        default='',
     )
-    def __str__(self):
-        return f"{self.employee} - {self.leave_type}"   
+    supervisor_reviewed_by = models.ForeignKey(
+        Employee, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='supervised_leave_reviews'
+    )
+    supervisor_reviewed_date = models.DateField(null=True, blank=True)
+    supervisor_note = models.TextField(blank=True, default='')
+
+    # Contact info during leave
+    contact_info_during_leave = models.CharField(
+        max_length=255, blank=True, default='',
+        help_text='Phone number or address where employee can be reached during leave'
+    )
+
+    # Optional supporting document (PDF or image)
+    document       = models.FileField(
+        upload_to='leave_documents/', null=True, blank=True
+    )
+
 
 class LeaveBalance(BaseModel):
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
-    leave_type = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
+    employee       = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    leave_type     = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
+    allocated_days = models.IntegerField(default=0)
+    used_days      = models.IntegerField(default=0)
     remaining_days = models.IntegerField()
 
     class Meta:
         unique_together = ('employee', 'leave_type')
-        
-    def __str__(self):
-        return f"{self.employee} - {self.leave_type}"
+
+
 # ============================================================
 #  SALARY  —  (good design)
 # ============================================================
@@ -492,7 +519,7 @@ class Salary(BaseModel):
 #  PAYROLL
 #   added required_days, days_worked, deduction_amount
 #          and calculate_for_employee() so the examiner can see
-#          the attendance → salary deduction formula clearly
+#          the attendance -> salary deduction formula clearly
 # ============================================================
 
 class Payroll(BaseModel):
@@ -588,21 +615,21 @@ class KPIIndicator(BaseModel):
 #         For HR/dept head evaluations, evaluator.user gives the User account.
 #
 #         evaluation_type distinguishes who is evaluating:
-#           'probation_review' → dept head evaluates new hire
-#           'annual'           → HR manager evaluates permanent staff
-#           'peer'             → employee evaluates a colleague  ← peer-to-peer
-#           'self'             → employee evaluates themselves
+#           'probation_review' -> dept head evaluates new hire
+#           'annual'           -> HR manager evaluates permanent staff
+#           'peer'             -> employee evaluates a colleague  <- peer-to-peer
+#           'self'             -> employee evaluates themselves
 # ============================================================
 
 class PerformanceEvaluation(BaseModel):
     EVAL_TYPE_CHOICES = [
-        ('probation_review', 'Probation Review'),   # dept head → new employee
-        ('annual',           'Annual Review'),       # HR → permanent employee
-        ('peer',             'Peer Review'),         # employee → colleague
-        ('self',             'Self Review'),         # employee → themselves
+        ('probation_review', 'Probation Review'),   # dept head -> new employee
+        ('annual',           'Annual Review'),       # HR -> permanent employee
+        ('peer',             'Peer Review'),         # employee -> colleague
+        ('self',             'Self Review'),         # employee -> themselves
     ]
     OUTCOME_CHOICES = [
-        ('passed_probation', 'Passed Probation → now permanent'),
+        ('passed_probation', 'Passed Probation -> now permanent'),
         ('failed_probation', 'Failed Probation'),
         ('promoted',         'Promoted'),
         ('salary_raise',     'Salary Raise Approved'),
@@ -635,7 +662,7 @@ class PerformanceEvaluation(BaseModel):
     def calculate_overall_score(self):
         """
         Weighted average across all KPI categories.
-        (avg score in category / max_score) × category weight → sum = total out of 100
+        (avg score in category / max_score) * category weight -> sum = total out of 100
         """
         total = 0.0
         for category in KPICategory.objects.all():
@@ -846,3 +873,170 @@ class AuditLog(BaseModel):
     record_id   = models.IntegerField()
     timestamp   = models.DateTimeField(auto_now_add=True)
     ip_address  = models.CharField(max_length=50)
+
+
+# ============================================================
+#  SUPERVISOR -> DEPARTMENT ASSIGNMENT
+# ============================================================
+
+class SupervisorDepartment(BaseModel):
+    """Links a supervisor employee to the department(s) they supervise."""
+    supervisor = models.ForeignKey(
+        Employee, on_delete=models.CASCADE,
+        related_name='supervised_departments'
+    )
+    department = models.ForeignKey(
+        Department, on_delete=models.CASCADE,
+        related_name='supervisors'
+    )
+
+    class Meta:
+        unique_together = ('supervisor', 'department')
+
+    def __str__(self):
+        return f"{self.supervisor.get_full_name()} -> {self.department.name}"
+
+
+# ============================================================
+#  EMPLOYEE CERTIFICATE / DOCUMENT UPLOAD
+# ============================================================
+
+class EmployeeCertificate(BaseModel):
+    CERT_TYPES = [
+        ('degree',   'Academic Degree'),
+        ('diploma',  'Diploma'),
+        ('training', 'Training Certificate'),
+        ('license',  'Professional License'),
+        ('other',    'Other'),
+    ]
+    employee    = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='certificates')
+    title       = models.CharField(max_length=200)
+    cert_type   = models.CharField(max_length=20, choices=CERT_TYPES, default='other')
+    issued_by   = models.CharField(max_length=200, blank=True)
+    issued_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    document    = models.FileField(upload_to='certificates/', null=True, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.employee.get_full_name()} - {self.title}"
+
+
+# ============================================================
+#  HOLIDAY CALENDAR
+# ============================================================
+
+class Holiday(BaseModel):
+    name      = models.CharField(max_length=100)
+    date      = models.DateField()
+    is_public = models.BooleanField(default=True)
+    notes     = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['date']
+
+    def __str__(self):
+        return f"{self.name} ({self.date})"
+
+
+# ============================================================
+#  PAYROLL RECORD (detailed, replaces simple Payroll for new logic)
+# ============================================================
+
+class PayrollRecord(BaseModel):
+    PAYMENT_STATUS = [
+        ('Pending', 'Pending'),
+        ('Reviewed', 'Reviewed'),
+        ('HR Approved', 'HR Approved'),
+        ('Paid',    'Paid'),
+        ('On Hold', 'On Hold'),
+    ]
+    employee         = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='payroll_records')
+    period_start     = models.DateField()
+    period_end       = models.DateField()
+    base_salary      = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_allowances = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    bonus            = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    gross_salary     = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    required_days    = models.IntegerField(default=20)
+    days_worked      = models.IntegerField(default=0)
+    absent_deduction = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    income_tax       = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    pension          = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    loan_deduction   = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_deductions = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    net_salary       = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    payment_status   = models.CharField(max_length=20, choices=PAYMENT_STATUS, default='Pending')
+    notes            = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ('employee', 'period_start', 'period_end')
+
+    @staticmethod
+    def calculate_income_tax(gross: float) -> float:
+        """Flat 15% income tax."""
+        return round(gross * 0.15, 2)
+
+    @classmethod
+    def calculate_for_employee(cls, employee, period_start, period_end, bonus=0):
+        required_days = int(SystemSetting.get('attendance', 'required_days_per_month', 20))
+        days_worked = Attendance.objects.filter(
+            employee=employee, date__gte=period_start, date__lte=period_end,
+            status__in=['Present', 'Late'],
+        ).count()
+        salary_record = Salary.objects.filter(
+            employee=employee, effective_from__lte=period_start,
+        ).order_by('-effective_from').first()
+        base = float(salary_record.base_salary) if salary_record else 0.0
+        absent_days = max(0, required_days - days_worked)
+        absent_deduction = round((absent_days / required_days * base) if required_days else 0, 2)
+        gross = round(base - absent_deduction + float(bonus), 2)
+        pension = round(gross * 0.07, 2)
+        income_tax = round(cls.calculate_income_tax(gross), 2)
+        total_deductions = round(pension + income_tax, 2)
+        net = round(gross - total_deductions, 2)
+        return {
+            'base_salary': base, 'bonus': float(bonus),
+            'absent_deduction': absent_deduction, 'gross_salary': gross,
+            'required_days': required_days, 'days_worked': days_worked,
+            'pension': pension, 'income_tax': income_tax,
+            'total_deductions': total_deductions, 'net_salary': net,
+        }
+
+    def __str__(self):
+        return f"{self.employee.get_full_name()} {self.period_start}"
+
+
+# ============================================================
+#  BIANNUAL KPI SCORE (1-5 scale, per criterion)
+# ============================================================
+
+class BiannualKPIScore(BaseModel):
+    PERIOD_CHOICES = [('H1', 'Jan-Jun'), ('H2', 'Jul-Dec')]
+    SCORE_CHOICES  = [(i, str(i)) for i in range(1, 6)]
+    EVAL_TYPE      = [('self', 'Self'), ('supervisor', 'Supervisor'), ('hr', 'HR')]
+
+    employee        = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='kpi_scores')
+    evaluator       = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='kpi_scores_given')
+    evaluation_type = models.CharField(max_length=20, choices=EVAL_TYPE)
+    year            = models.IntegerField()
+    period          = models.CharField(max_length=2, choices=PERIOD_CHOICES)
+    job_knowledge   = models.IntegerField(choices=SCORE_CHOICES, default=3)
+    work_quality    = models.IntegerField(choices=SCORE_CHOICES, default=3)
+    attendance      = models.IntegerField(choices=SCORE_CHOICES, default=3)
+    teamwork        = models.IntegerField(choices=SCORE_CHOICES, default=3)
+    ethics          = models.IntegerField(choices=SCORE_CHOICES, default=3)
+    overall_score   = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
+    comments        = models.TextField(blank=True)
+    submitted_at    = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('employee', 'evaluator', 'evaluation_type', 'year', 'period')
+
+    def compute_overall(self):
+        scores = [self.job_knowledge, self.work_quality, self.attendance, self.teamwork, self.ethics]
+        self.overall_score = round(sum(scores) / len(scores), 2)
+        return self.overall_score
+
+    def __str__(self):
+        return f"{self.employee.get_full_name()} {self.evaluation_type} {self.year}/{self.period}"

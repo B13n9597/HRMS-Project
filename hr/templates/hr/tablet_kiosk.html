@@ -453,11 +453,11 @@
     <header>
         <div class="logo-container">
             <span class="logo-box">ACT</span>
-            <span>Tablet Attendance</span>
+            <span>Office Kiosk</span>
         </div>
-        <a href="/kiosk/" class="btn-back">
-            <i data-lucide="scan" style="width:16px; height:16px;"></i>
-            <span>Back to QR Kiosk</span>
+        <a href="/login/" class="btn-back">
+            <i data-lucide="arrow-left" style="width:16px; height:16px;"></i>
+            <span>Back</span>
         </a>
     </header>
 
@@ -466,7 +466,49 @@
         <div class="kiosk-date" id="kioskDate">Wednesday, June 3, 2026</div>
     </div>
 
-    <div class="kiosk-container">
+    <!-- Mode Tabs -->
+    <div style="display:flex;gap:0;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border-color);margin-bottom:20px;max-width:760px;width:100%;">
+        <button id="tabQR" onclick="switchTab('qr')" style="flex:1;padding:13px;background:var(--primary);color:#0f172a;font-weight:700;font-size:14px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <i data-lucide="qr-code" style="width:16px;height:16px;"></i> QR Scan
+        </button>
+        <button id="tabPIN" onclick="switchTab('pin')" style="flex:1;padding:13px;background:var(--bg-surface);color:var(--text-muted);font-weight:700;font-size:14px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            <i data-lucide="keyboard" style="width:16px;height:16px;"></i> PIN + Signature
+        </button>
+    </div>
+
+    <!-- QR MODE -->
+    <div id="qrMode" class="kiosk-container" style="max-width:760px;">
+        <h3 class="screen-title">
+            <i data-lucide="scan-line" style="width:24px;height:24px;"></i>
+            QR Code Attendance
+        </h3>
+        <p class="screen-desc">Point your QR code at the camera. Attendance is recorded automatically.</p>
+
+        <div id="qrReaderContainer" style="width:100%;max-width:480px;margin:0 auto 20px;border-radius:var(--radius-md);overflow:hidden;border:2px solid var(--border-color);background:#000;min-height:300px;display:flex;align-items:center;justify-content:center;position:relative;">
+            <video id="qrVideo" autoplay playsinline muted style="width:100%;display:block;"></video>
+            <canvas id="qrCanvas" style="display:none;"></canvas>
+            <div id="qrOverlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+                <div style="width:200px;height:200px;border:3px solid var(--primary);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);"></div>
+            </div>
+        </div>
+
+        <div id="qrStatus" style="text-align:center;font-size:14px;color:var(--text-muted);margin-bottom:16px;">
+            Starting camera…
+        </div>
+        <div id="qrResult" class="alert-box" style="display:none;text-align:center;"></div>
+
+        <div style="text-align:center;margin-top:16px;">
+            <button id="btnStartCamera" onclick="startQRCamera()" class="btn" style="width:auto;padding:12px 28px;font-size:14px;">
+                <i data-lucide="camera" style="width:16px;height:16px;"></i> Start Camera
+            </button>
+            <button id="btnStopCamera" onclick="stopQRCamera()" class="btn" style="width:auto;padding:12px 28px;font-size:14px;background:#334155;display:none;">
+                <i data-lucide="camera-off" style="width:16px;height:16px;"></i> Stop Camera
+            </button>
+        </div>
+    </div>
+
+    <!-- PIN + SIGNATURE MODE -->
+    <div id="pinMode" class="kiosk-container" style="max-width:760px;display:none;">
         
         <!-- SCREEN 1: LOGIN (Credentials Verification) -->
         <div id="screenAuth" class="screen active">
@@ -580,49 +622,197 @@
 
     </div>
 
+    <!-- jsQR fallback for browsers without BarcodeDetector -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
         // Initialize Icons
         lucide.createIcons();
 
-        // 1. DIGITAL CLOCK LOGIC
+        // ── CSRF helper ───────────────────────────────────────────────────────
+        function getCookie(name) {
+            const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+            return v ? v[2] : '';
+        }
+
+        // ── TAB SWITCHING ─────────────────────────────────────────────────────
+        function switchTab(mode) {
+            const qrMode  = document.getElementById('qrMode');
+            const pinMode = document.getElementById('pinMode');
+            const tabQR   = document.getElementById('tabQR');
+            const tabPIN  = document.getElementById('tabPIN');
+            if (mode === 'qr') {
+                qrMode.style.display  = 'flex';
+                pinMode.style.display = 'none';
+                tabQR.style.background  = 'var(--primary)';
+                tabQR.style.color       = '#0f172a';
+                tabPIN.style.background = 'var(--bg-surface)';
+                tabPIN.style.color      = 'var(--text-muted)';
+            } else {
+                qrMode.style.display  = 'none';
+                pinMode.style.display = 'flex';
+                tabQR.style.background  = 'var(--bg-surface)';
+                tabQR.style.color       = 'var(--text-muted)';
+                tabPIN.style.background = 'var(--primary)';
+                tabPIN.style.color      = '#0f172a';
+                stopQRCamera();
+            }
+        }
+        switchTab('qr');   // QR is the default tab
+
+        // ── QR CAMERA SCANNING ────────────────────────────────────────────────
+        let qrStream = null;
+        let qrScanInterval = null;
+        let qrProcessing = false;
+
+        async function startQRCamera() {
+            const statusEl = document.getElementById('qrStatus');
+            const resultEl = document.getElementById('qrResult');
+            const startBtn = document.getElementById('btnStartCamera');
+            const stopBtn  = document.getElementById('btnStopCamera');
+
+            resultEl.style.display = 'none';
+            statusEl.style.color   = 'var(--text-muted)';
+            statusEl.textContent   = 'Requesting camera access…';
+
+            try {
+                qrStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                });
+                const video = document.getElementById('qrVideo');
+                video.srcObject = qrStream;
+                await video.play();
+
+                startBtn.style.display = 'none';
+                stopBtn.style.display  = 'inline-flex';
+                statusEl.textContent   = 'Camera active — hold your QR code steady in the frame.';
+
+                qrScanInterval = setInterval(scanQRFrame, 500);
+            } catch (err) {
+                statusEl.style.color = 'var(--danger-dark)';
+                statusEl.textContent = 'Camera access denied. Please allow camera access in your browser settings and try again.';
+            }
+        }
+
+        function stopQRCamera() {
+            if (qrScanInterval) { clearInterval(qrScanInterval); qrScanInterval = null; }
+            if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+            const video    = document.getElementById('qrVideo');
+            const startBtn = document.getElementById('btnStartCamera');
+            const stopBtn  = document.getElementById('btnStopCamera');
+            if (video)    video.srcObject = null;
+            if (startBtn) startBtn.style.display = 'inline-flex';
+            if (stopBtn)  stopBtn.style.display  = 'none';
+            const statusEl = document.getElementById('qrStatus');
+            if (statusEl) statusEl.textContent = 'Camera stopped.';
+            qrProcessing = false;
+        }
+
+        function scanQRFrame() {
+            if (qrProcessing) return;
+            const video  = document.getElementById('qrVideo');
+            const canvas = document.getElementById('qrCanvas');
+            if (!video || video.readyState < 2 || !video.videoWidth) return;
+
+            canvas.width  = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx2 = canvas.getContext('2d');
+            ctx2.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            if ('BarcodeDetector' in window) {
+                const detector = new BarcodeDetector({ formats: ['qr_code'] });
+                detector.detect(canvas).then(codes => {
+                    if (codes.length > 0) handleQRResult(codes[0].rawValue);
+                }).catch(() => {});
+            } else if (typeof jsQR !== 'undefined') {
+                const imageData = ctx2.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+                if (code) handleQRResult(code.data);
+            }
+        }
+
+        async function handleQRResult(token) {
+            if (qrProcessing) return;
+            qrProcessing = true;
+
+            const statusEl = document.getElementById('qrStatus');
+            const resultEl = document.getElementById('qrResult');
+            statusEl.textContent = 'QR code detected — recording attendance…';
+
+            try {
+                const res = await fetch('/attendance/api/attendance/scan/', {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ token: token }),
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    const d = data.data || {};
+                    resultEl.style.cssText = 'display:block;background:var(--success-light);color:var(--success-dark);border:1px solid rgba(16,185,129,0.3);padding:16px;border-radius:8px;text-align:center;font-weight:600;font-size:15px;';
+                    resultEl.innerHTML = `${d.employee || 'Employee'} — ${d.message || 'Attendance recorded'}<br><small>${d.time || ''}</small>`;
+                    statusEl.style.color = 'var(--success-dark)';
+                    statusEl.textContent = 'Attendance recorded successfully.';
+
+                    // Auto-resume scanning after 4 seconds
+                    setTimeout(() => {
+                        resultEl.style.display = 'none';
+                        statusEl.style.color   = 'var(--text-muted)';
+                        statusEl.textContent   = 'Ready — hold next QR code in frame.';
+                        qrProcessing = false;
+                    }, 4000);
+                } else {
+                    resultEl.style.cssText = 'display:block;background:var(--danger-light);color:var(--danger-dark);border:1px solid rgba(239,68,68,0.3);padding:16px;border-radius:8px;text-align:center;font-weight:600;';
+                    resultEl.textContent = data.error || 'Scan failed. Please try again.';
+                    setTimeout(() => {
+                        resultEl.style.display = 'none';
+                        qrProcessing = false;
+                    }, 3000);
+                }
+            } catch (err) {
+                resultEl.style.cssText = 'display:block;background:var(--danger-light);color:var(--danger-dark);padding:16px;border-radius:8px;text-align:center;';
+                resultEl.textContent = 'Network error — please try again.';
+                setTimeout(() => { resultEl.style.display = 'none'; qrProcessing = false; }, 3000);
+            }
+        }
+
+        // ── DIGITAL CLOCK ─────────────────────────────────────────────────────
         function updateClock() {
             const now = new Date();
             const timeStr = now.toLocaleTimeString();
             const dateStr = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            
             const clockEl = document.getElementById('kioskClock');
-            const dateEl = document.getElementById('kioskDate');
+            const dateEl  = document.getElementById('kioskDate');
             if (clockEl) clockEl.textContent = timeStr;
-            if (dateEl) dateEl.textContent = dateStr;
+            if (dateEl)  dateEl.textContent  = dateStr;
         }
         setInterval(updateClock, 1000);
         updateClock();
 
-        // 2. STATE STORAGE
-        let currentEmployee = null; // Stores verified employee profile
+        // ── PIN MODE STATE ────────────────────────────────────────────────────
+        let currentEmployee = null;
         let sigCanvas = document.getElementById('sigCanvas');
-        let ctx = sigCanvas.getContext('2d');
+        let ctx = sigCanvas ? sigCanvas.getContext('2d') : null;
         let isDrawing = false;
         let hasSigned = false;
 
-        // Auto-scaling Canvas to its container size
+        // Auto-scaling Canvas
         function resizeCanvas() {
+            if (!sigCanvas) return;
             const rect = sigCanvas.getBoundingClientRect();
-            sigCanvas.width = rect.width;
+            sigCanvas.width  = rect.width;
             sigCanvas.height = rect.height;
-            
-            // Re-setup context styling since width reset clears context variables
-            ctx.strokeStyle = '#0f172a'; // Navy dark stroke
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
+            if (ctx) {
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth   = 3;
+                ctx.lineCap     = 'round';
+                ctx.lineJoin    = 'round';
+            }
             hasSigned = false;
         }
-        
-        // Resize canvas on activation
         window.addEventListener('resize', resizeCanvas);
-
-        // 3. CANVAS DRAWING IMPLEMENTATION
         function getCoords(e) {
             const rect = sigCanvas.getBoundingClientRect();
             let clientX, clientY;
@@ -674,7 +864,7 @@
             hasSigned = false;
         });
 
-        // 4. SCREEN ROUTING
+        // ── SCREEN ROUTING ────────────────────────────────────────────────────
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(scr => {
                 scr.classList.remove('active');
@@ -688,7 +878,7 @@
             }
         }
 
-        // 5. API CALLS
+        // ── API HELPER ────────────────────────────────────────────────────────
         async function fetchAPI(url, data) {
             try {
                 const response = await fetch(url, {
@@ -705,7 +895,7 @@
             }
         }
 
-        // 6. ACTIONS
+        // ── PIN VERIFY + ATTENDANCE SUBMIT ───────────────────────────────────
 
         // A. Verification Button
         const btnVerify = document.getElementById('btnVerify');

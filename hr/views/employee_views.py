@@ -94,11 +94,26 @@ def change_employee_status(request, employee_id):
     if not _is_hr(request.user):
         return err("Unauthorized", 403)
 
-    new_status = request.data.get("status")
+    # Accept both 'status' (raw name) and 'action' (activate/terminate shorthand)
+    action     = request.data.get("action", "")
+    new_status = request.data.get("status", "")
+
+    if action == "activate":
+        new_status = "active"
+    elif action == "terminate":
+        new_status = "terminated"
+
+    if not new_status:
+        return err("Provide 'status' or 'action' field.", 400)
 
     try:
         employee = employee_service.transition_employee_status(employee_id, new_status)
-
+        # Record lifecycle event
+        recorder = employee_service.get_employee_for_user(request.user)
+        employee_service.record_lifecycle_event(
+            employee, action if action else "transferred",
+            f"Status changed to {new_status}", recorder
+        )
         return ok({
             "id": employee.id,
             "new_status": employee.status.name if employee.status else None
@@ -256,11 +271,37 @@ def import_employees_bulk(request):
 
 @login_required
 def staff_directory_view(request):
-    """Render staff directory page with active employees (not deleted)."""
-    employees = Employee.objects.select_related('department', 'position').order_by('first_name', 'last_name')
+    """Render staff directory page — all employees, full DB dataset."""
+    from hr.models import Department
+    query   = request.GET.get('q', '').strip()
+    dept_id = request.GET.get('department_id', '')
+    status  = request.GET.get('status', '')
+
+    employees = Employee.objects.select_related(
+        'department', 'position', 'status', 'role'
+    ).order_by('last_name', 'first_name')
+
+    if query:
+        from django.db.models import Q
+        employees = employees.filter(
+            Q(first_name__icontains=query) | Q(last_name__icontains=query) |
+            Q(employee_id__icontains=query) | Q(user__email__icontains=query)
+        )
+    if dept_id:
+        employees = employees.filter(department_id=dept_id)
+    if status:
+        employees = employees.filter(status__name__iexact=status)
+
+    departments = Department.objects.all().order_by('name')
     context = {
-        'employees': employees,
+        'employees':    employees,
+        'departments':  departments,
+        'search_query': query,
+        'dept_id':      dept_id,
+        'status_f':     status,
+        'statuses':     ['Active', 'On Leave', 'Terminated'],
+        'active_page':  'staff_directory',
     }
     return render(request, 'hr/staff_directory.html', context)
 
-    
+

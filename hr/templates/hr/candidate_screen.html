@@ -1,17 +1,130 @@
 {% extends 'hr/hr_base.html' %}
-
 {% block title %}Candidate Screening — HR{% endblock %}
 
+{% block extra_styles %}
+<style>
+.pipeline-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:24px; }
+.pipe-card { background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; text-align:center; cursor:pointer; transition:var(--transition); }
+.pipe-card:hover,.pipe-card.active { border-color:var(--primary); background:var(--primary-light); }
+.pipe-num { font-family:var(--font-display); font-size:28px; font-weight:800; color:var(--primary); }
+.pipe-lbl { font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-muted); margin-top:2px; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="page-header" style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color);">
-    <h1 style="font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px;">Candidate Screening</h1>
-    <p style="color: var(--text-muted); font-size: 14px;">Review applicants and process new recruitments.</p>
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Candidate Screening</h1>
+    <p>Recruitment pipeline: Application → Screening → Interview → Selection</p>
+  </div>
 </div>
 
-<div class="card" style="padding: 60px 20px; text-align: center;">
-    <i data-lucide="briefcase" style="width: 48px; height: 48px; color: var(--text-light); margin-bottom: 16px;"></i>
-    <h3>No Active Candidates</h3>
-    <p style="color: var(--text-muted);">There are no pending applications in the pipeline currently.</p>
-    <button class="btn btn-primary" style="margin-top: 16px;">Add Candidate</button>
+{% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}">{{ m }}</div>{% endfor %}{% endif %}
+
+<!-- Pipeline counts -->
+<div class="pipeline-grid">
+  {% for label, count in pipeline_counts.items %}
+  <a href="?status={{ label }}" class="pipe-card {% if status_f == label %}active{% endif %}" style="text-decoration:none;color:inherit;">
+    <div class="pipe-num">{{ count }}</div>
+    <div class="pipe-lbl">{{ label }}</div>
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Filters -->
+<form method="GET" style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end;">
+  <div>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Search</label>
+    <input type="text" name="q" class="form-input" placeholder="Name or email..." value="{{ search_query }}" style="width:220px;">
+  </div>
+  <div>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Status</label>
+    <select name="status" class="form-input" style="width:160px;">
+      <option value="">All Statuses</option>
+      {% for s in status_choices %}<option value="{{ s }}" {% if status_f == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Department</label>
+    <select name="department_id" class="form-input" style="width:180px;">
+      <option value="">All Departments</option>
+      {% for d in departments %}<option value="{{ d.id }}" {% if dept_id == d.id|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary"><i data-lucide="search" style="width:14px;height:14px;"></i> Filter</button>
+  {% if search_query or status_f or dept_id %}<a href="{% url 'candidate_screen' %}" class="btn btn-ghost">Clear</a>{% endif %}
+</form>
+
+<!-- Candidates table -->
+<div class="card">
+  <div class="card-header">
+    <i data-lucide="briefcase" style="width:18px;height:18px;color:var(--primary);"></i>
+    <h3>Applications</h3>
+    <span style="margin-left:auto;font-size:13px;color:var(--text-light);">{{ candidates.count }} total</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Applicant</th><th>Job Title</th><th>Department</th>
+          <th>Applied</th><th>Education</th><th>Experience</th>
+          <th>Score</th><th>Status</th><th>Move to</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in candidates %}
+        <tr>
+          <td>
+            <div style="font-weight:600;">{{ c.applicant.first_name }} {{ c.applicant.last_name }}</div>
+            <div style="font-size:12px;color:var(--text-light);">{{ c.applicant.email }}</div>
+          </td>
+          <td>{{ c.job.title }}</td>
+          <td>{{ c.job.department.name|default:"—" }}</td>
+          <td>{{ c.applied_date|date:"d M Y" }}</td>
+          <td>{{ c.education_level|default:"—" }}</td>
+          <td>{{ c.experience_years }} yr{{ c.experience_years|pluralize }}</td>
+          <td>
+            {% if c.screening_score %}
+              {% if c.screening_score >= 70 %}<span class="badge badge-success">{{ c.screening_score }}/100</span>
+              {% elif c.screening_score >= 50 %}<span class="badge badge-warning">{{ c.screening_score }}/100</span>
+              {% else %}<span class="badge badge-danger">{{ c.screening_score }}/100</span>{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if c.status == "Applied" %}<span class="badge badge-primary">{{ c.status }}</span>
+            {% elif c.status == "Screening" %}<span class="badge badge-warning" style="color:#78350f;">{{ c.status }}</span>
+            {% elif c.status == "Qualified" %}<span class="badge badge-success">{{ c.status }}</span>
+            {% elif c.status == "Interviewed" %}<span class="badge badge-primary">{{ c.status }}</span>
+            {% elif c.status == "Selected" %}<span class="badge badge-success">{{ c.status }}</span>
+            {% elif c.status == "Rejected" or c.status == "Rejected_Auto" %}<span class="badge badge-danger">Rejected</span>
+            {% else %}<span class="badge badge-primary">{{ c.status }}</span>{% endif %}
+          </td>
+          <td>
+            <form method="POST" style="display:flex;gap:4px;flex-wrap:wrap;">
+              {% csrf_token %}
+              <input type="hidden" name="application_id" value="{{ c.id }}">
+              {% if c.status == "Applied" %}
+                <button name="new_status" value="Screening" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">Screen</button>
+              {% elif c.status == "Screening" or c.status == "Qualified" %}
+                <button name="new_status" value="Interviewed" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">Interview</button>
+                <button name="new_status" value="Rejected" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;color:var(--danger);">Reject</button>
+              {% elif c.status == "Interviewed" %}
+                <button name="new_status" value="Selected" class="btn btn-primary" style="font-size:11px;padding:4px 8px;">Select</button>
+                <button name="new_status" value="Rejected" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;color:var(--danger);">Reject</button>
+              {% elif c.status == "Selected" %}
+                <span style="font-size:12px;color:var(--success-dark);font-weight:600;">✓ Hired</span>
+              {% endif %}
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" style="text-align:center;padding:48px;color:var(--text-muted);">
+          <i data-lucide="briefcase" style="width:40px;height:40px;opacity:.3;display:block;margin:0 auto 12px;"></i>
+          No applications found{% if search_query or status_f %} for the selected filters{% endif %}.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}

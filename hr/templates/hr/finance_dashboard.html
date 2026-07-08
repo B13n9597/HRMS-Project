@@ -1,0 +1,388 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}Finance Dashboard — ACT HRMS{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .pipeline-strip {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 28px;
+    }
+    .pipeline-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 20px 22px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        position: relative;
+    }
+    .pipeline-card::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        height: 4px;
+        width: 100%;
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
+    }
+    .pipeline-card.pending::after   { background: var(--warning); }
+    .pipeline-card.reviewed::after  { background: #6366f1; }
+    .pipeline-card.approved::after  { background: var(--primary); }
+    .pipeline-card.paid::after      { background: var(--success); }
+    .pipeline-icon {
+        width: 46px; height: 46px;
+        border-radius: var(--radius-sm);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .pipeline-num  { font-family: var(--font-display); font-size: 28px; font-weight: 800; line-height: 1; }
+    .pipeline-lbl  { font-size: 12px; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 4px; }
+
+    .gen-form {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 20px 24px;
+        margin-bottom: 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: flex-end;
+    }
+    .gen-form .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .gen-form .form-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-light); }
+    .gen-form input[type="date"] {
+        padding: 10px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        background: #f8fafc;
+        min-width: 160px;
+    }
+    .badge-reviewed  { background: #ede9fe; color: #4f46e5; }
+    .badge-approved  { background: var(--primary-light); color: var(--primary); }
+    .badge-paid      { background: var(--success-light); color: var(--success-dark); }
+    .badge-pending   { background: var(--warning-light); color: #78350f; }
+    .badge-on-hold   { background: #f1f5f9; color: #475569; }
+
+    .filter-bar {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: 16px 20px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+        margin-bottom: 20px;
+    }
+    .filter-bar select,
+    .filter-bar input {
+        padding: 9px 12px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        background: #f8fafc;
+        min-width: 130px;
+    }
+    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-xs {
+        padding: 5px 10px;
+        font-size: 12px;
+        border-radius: var(--radius-sm);
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    .totals-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .total-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        padding: 14px 18px;
+        text-align: center;
+    }
+    .total-card .lbl { font-size: 11px; color: var(--text-light); font-weight: 600; text-transform: uppercase; }
+    .total-card .val { font-family: var(--font-display); font-size: 20px; font-weight: 800; margin-top: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Finance Dashboard</h1>
+        <p>Generate, review, and approve payroll. HR gives final sign-off before payment.</p>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}" style="display:block;margin-bottom:16px;">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<!-- Pipeline status strip -->
+<div class="pipeline-strip">
+    <div class="pipeline-card pending">
+        <div class="pipeline-icon" style="background:var(--warning-light);color:#92400e;">
+            <i data-lucide="clock" style="width:22px;height:22px;"></i>
+        </div>
+        <div>
+            <div class="pipeline-num" style="color:var(--warning);">{{ pending_count }}</div>
+            <div class="pipeline-lbl">Pending</div>
+        </div>
+    </div>
+    <div class="pipeline-card reviewed">
+        <div class="pipeline-icon" style="background:#ede9fe;color:#4f46e5;">
+            <i data-lucide="eye" style="width:22px;height:22px;"></i>
+        </div>
+        <div>
+            <div class="pipeline-num" style="color:#6366f1;">{{ reviewed_count }}</div>
+            <div class="pipeline-lbl">Reviewed</div>
+        </div>
+    </div>
+    <div class="pipeline-card approved">
+        <div class="pipeline-icon" style="background:var(--primary-light);color:var(--primary);">
+            <i data-lucide="check-circle" style="width:22px;height:22px;"></i>
+        </div>
+        <div>
+            <div class="pipeline-num" style="color:var(--primary);">{{ approved_count }}</div>
+            <div class="pipeline-lbl">HR Approved</div>
+        </div>
+    </div>
+    <div class="pipeline-card paid">
+        <div class="pipeline-icon" style="background:var(--success-light);color:var(--success-dark);">
+            <i data-lucide="banknote" style="width:22px;height:22px;"></i>
+        </div>
+        <div>
+            <div class="pipeline-num" style="color:var(--success);">{{ paid_count }}</div>
+            <div class="pipeline-lbl">Paid</div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Payroll Form -->
+<div class="gen-form">
+    <div style="flex:0 0 100%;font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--text-main);">
+        <i data-lucide="zap" style="width:16px;height:16px;vertical-align:middle;color:var(--primary);"></i>
+        Generate Payroll
+    </div>
+    <form method="POST" style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;width:100%;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="generate">
+        <div class="form-group">
+            <label>Period Start</label>
+            <input type="date" name="period_start" required value="{{ today|slice:':8' }}01">
+        </div>
+        <div class="form-group">
+            <label>Period End</label>
+            <input type="date" name="period_end" required value="{{ today }}">
+        </div>
+        <button type="submit" class="btn btn-primary">
+            <i data-lucide="play" style="width:15px;height:15px;"></i>
+            Generate
+        </button>
+    </form>
+</div>
+
+<!-- Batch actions -->
+{% if reviewed_count > 0 and user_is_hr %}
+<div class="gen-form" style="background:#f0fdf4;border-color:#86efac;">
+    <div style="flex:0 0 100%;font-family:var(--font-display);font-weight:700;font-size:15px;color:var(--success-dark);">
+        <i data-lucide="shield-check" style="width:16px;height:16px;vertical-align:middle;"></i>
+        HR Final Approval — {{ reviewed_count }} record(s) awaiting sign-off
+    </div>
+    <form method="POST" style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="hr_approve_batch">
+        <div class="form-group">
+            <label>Period Start</label>
+            <input type="date" name="batch_period_start" required>
+        </div>
+        <div class="form-group">
+            <label>Period End</label>
+            <input type="date" name="batch_period_end" required>
+        </div>
+        <button type="submit" class="btn btn-primary">
+            <i data-lucide="check-circle" style="width:15px;height:15px;"></i>
+            Approve All Reviewed
+        </button>
+    </form>
+</div>
+{% endif %}
+
+{% if pending_count > 0 %}
+<div class="gen-form" style="background:#fefce8;border-color:#fde047;">
+    <div style="flex:0 0 100%;font-family:var(--font-display);font-weight:700;font-size:15px;color:#78350f;">
+        <i data-lucide="send" style="width:16px;height:16px;vertical-align:middle;"></i>
+        Send to HR for Review — {{ pending_count }} pending record(s)
+    </div>
+    <form method="POST" style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="mark_reviewed_batch">
+        <div class="form-group">
+            <label>Period Start</label>
+            <input type="date" name="batch_period_start" required>
+        </div>
+        <div class="form-group">
+            <label>Period End</label>
+            <input type="date" name="batch_period_end" required>
+        </div>
+        <button type="submit" class="btn" style="background:#6366f1;color:#fff;">
+            <i data-lucide="eye" style="width:15px;height:15px;"></i>
+            Mark All as Reviewed
+        </button>
+    </form>
+</div>
+{% endif %}
+
+<!-- Totals row -->
+<div class="totals-row">
+    <div class="total-card">
+        <div class="lbl">Total Gross</div>
+        <div class="val">{{ total_gross|floatformat:2 }}</div>
+    </div>
+    <div class="total-card">
+        <div class="lbl">Total Tax (15%)</div>
+        <div class="val" style="color:var(--danger);">{{ total_tax|floatformat:2 }}</div>
+    </div>
+    <div class="total-card">
+        <div class="lbl">Total Pension (7%)</div>
+        <div class="val" style="color:var(--warning);">{{ total_pension|floatformat:2 }}</div>
+    </div>
+    <div class="total-card">
+        <div class="lbl">Total Net Pay</div>
+        <div class="val" style="color:var(--success);">{{ total_net|floatformat:2 }}</div>
+    </div>
+</div>
+
+<!-- Filter bar -->
+<form method="GET" class="filter-bar">
+    <input type="text" name="q" value="{{ search_query }}" placeholder="Search employee..." style="flex:1;min-width:200px;">
+    <select name="month">
+        <option value="">All Months</option>
+        {% for num, name in months %}
+            <option value="{{ num }}" {% if num|stringformat:"s" == month %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+    </select>
+    <select name="year">
+        <option value="">All Years</option>
+        {% for y in years %}
+            <option value="{{ y }}" {% if y|stringformat:"s" == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+    </select>
+    <select name="status">
+        <option value="">All Statuses</option>
+        {% for s in statuses %}
+            <option value="{{ s }}" {% if s == status_f %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary">
+        <i data-lucide="filter" style="width:15px;height:15px;"></i> Filter
+    </button>
+    <a href="{% url 'finance_dashboard' %}" class="btn btn-ghost">Reset</a>
+</form>
+
+<!-- Payroll Table -->
+<div class="card">
+    <div class="card-header">
+        <i data-lucide="landmark" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>Payroll Records</h3>
+        <span style="font-size:12px;color:var(--text-light);margin-left:auto;">{{ records|length }} record(s)</span>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Period</th>
+                    <th>Base Salary</th>
+                    <th>Gross</th>
+                    <th>Tax (15%)</th>
+                    <th>Pension (7%)</th>
+                    <th>Net Pay</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rec in records %}
+                <tr>
+                    <td>
+                        <div class="emp-name-cell">
+                            <span class="emp-avatar">{{ rec.employee.first_name|first }}{{ rec.employee.last_name|first }}</span>
+                            <div>
+                                <div style="font-weight:600;">{{ rec.employee.get_full_name }}</div>
+                                <div style="font-size:12px;color:var(--text-light);">{{ rec.employee.department.name|default:"—" }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ rec.period_start|date:"M d" }} – {{ rec.period_end|date:"M d, Y" }}</td>
+                    <td>{{ rec.base_salary|floatformat:2 }}</td>
+                    <td>{{ rec.gross_salary|floatformat:2 }}</td>
+                    <td style="color:var(--danger);">{{ rec.income_tax|floatformat:2 }}</td>
+                    <td style="color:var(--warning);">{{ rec.pension|floatformat:2 }}</td>
+                    <td style="font-weight:700;color:var(--success);">{{ rec.net_salary|floatformat:2 }}</td>
+                    <td>
+                        {% if rec.payment_status == 'Pending' %}
+                            <span class="badge badge-warning">Pending</span>
+                        {% elif rec.payment_status == 'Reviewed' %}
+                            <span class="badge badge-reviewed">Reviewed</span>
+                        {% elif rec.payment_status == 'HR Approved' %}
+                            <span class="badge badge-approved">HR Approved</span>
+                        {% elif rec.payment_status == 'Paid' %}
+                            <span class="badge badge-success">Paid</span>
+                        {% else %}
+                            <span class="badge badge-on-hold">{{ rec.payment_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            {% if rec.payment_status == 'Pending' %}
+                                <form method="POST" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="mark_reviewed">
+                                    <input type="hidden" name="record_id" value="{{ rec.id }}">
+                                    <button type="submit" class="btn-xs" style="background:#ede9fe;color:#4f46e5;">Review</button>
+                                </form>
+                            {% endif %}
+                            {% if rec.payment_status == 'Reviewed' and user_is_hr %}
+                                <form method="POST" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="hr_approve">
+                                    <input type="hidden" name="record_id" value="{{ rec.id }}">
+                                    <button type="submit" class="btn-xs" style="background:var(--primary-light);color:var(--primary);">HR Approve</button>
+                                </form>
+                            {% endif %}
+                            {% if rec.payment_status == 'HR Approved' %}
+                                <form method="POST" style="display:inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="mark_paid">
+                                    <input type="hidden" name="record_id" value="{{ rec.id }}">
+                                    <button type="submit" class="btn-xs" style="background:var(--success-light);color:var(--success-dark);">Mark Paid</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" style="text-align:center;padding:48px;color:var(--text-light);">
+                        <i data-lucide="inbox" style="width:32px;height:32px;opacity:0.3;display:block;margin:0 auto 12px;"></i>
+                        No payroll records found. Use the Generate form above to create records.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

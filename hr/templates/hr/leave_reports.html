@@ -1,0 +1,70 @@
+{% extends 'hr/hr_base.html' %}
+{% block title %}Leave Reports — ACT HRMS{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Leave Reports</h1>
+        <p>Summary of leave requests for {{ year }}.</p>
+    </div>
+    <form method="GET" style="display:flex;gap:8px;align-items:center;">
+        <select name="year" style="padding:9px 12px;border:1px solid var(--border-color);border-radius:var(--radius-sm);font-size:14px;background:#fff;">
+            {% for y in years %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary" style="padding:9px 16px;">Filter</button>
+    </form>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;">
+    <div class="card" style="padding:20px;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--primary);">{{ total }}</div>
+        <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">Total Requests</div>
+    </div>
+    <div class="card" style="padding:20px;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--success);">{{ approved }}</div>
+        <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">Approved</div>
+    </div>
+    <div class="card" style="padding:20px;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--warning);">{{ pending }}</div>
+        <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">Pending</div>
+    </div>
+    <div class="card" style="padding:20px;text-align:center;">
+        <div style="font-family:var(--font-display);font-size:32px;font-weight:800;color:var(--danger);">{{ rejected }}</div>
+        <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:600;">Rejected</div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div class="card">
+        <div class="card-header"><h3>By Leave Type</h3></div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Leave Type</th><th>Requests</th></tr></thead>
+                <tbody>
+                    {% for row in by_type %}
+                    <tr><td>{{ row.leave_type__name|default:"Unknown" }}</td><td>{{ row.total }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="2" style="text-align:center;padding:24px;color:var(--text-light);">No data.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h3>By Department</h3></div>
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Department</th><th>Requests</th></tr></thead>
+                <tbody>
+                    {% for row in by_dept %}
+                    <tr><td>{{ row.employee__department__name|default:"No Department" }}</td><td>{{ row.total }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="2" style="text-align:center;padding:24px;color:var(--text-light);">No data.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

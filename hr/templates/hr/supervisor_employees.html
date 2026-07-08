@@ -1,0 +1,47 @@
+{% extends 'hr/supervisor_base.html' %}
+{% block title %}My Employees — Supervisor{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left"><h1>My Employees</h1><p>Employees in your supervised department(s).</p></div>
+</div>
+<form method="GET" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+    <input type="text" name="q" class="form-input" placeholder="Search by name..." value="{{ search_query }}" style="width:250px;">
+    <select name="status" class="form-input" style="width:160px;">
+        <option value="">All Statuses</option>
+        {% for s in statuses %}<option value="{{ s }}" {% if status_f == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary"><i data-lucide="search" style="width:16px;height:16px;"></i> Search</button>
+    {% if search_query or status_f %}<a href="{% url 'supervisor_employees' %}" class="btn btn-ghost">Clear</a>{% endif %}
+</form>
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Name</th><th>Department</th><th>Position</th><th>Status</th><th>Hire Date</th><th>Actions</th></tr></thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <td>
+                        <div class="emp-name-cell">
+                            <div class="emp-avatar">{{ emp.first_name|first }}{{ emp.last_name|first }}</div>
+                            <div style="font-weight:600;">{{ emp.get_full_name }}</div>
+                        </div>
+                    </td>
+                    <td>{{ emp.department.name|default:"—" }}</td>
+                    <td>{{ emp.position.title|default:"—" }}</td>
+                    <td>
+                        {% if emp.status.name == "Active" %}<span class="badge badge-success">{{ emp.status.name }}</span>
+                        {% elif emp.status.name == "On Leave" %}<span class="badge badge-warning">{{ emp.status.name }}</span>
+                        {% elif emp.status.name == "Terminated" %}<span class="badge badge-danger">{{ emp.status.name }}</span>
+                        {% else %}<span class="badge badge-primary">{{ emp.status.name|default:"Active" }}</span>{% endif %}
+                    </td>
+                    <td>{{ emp.hire_date|date:"Y-m-d"|default:"—" }}</td>
+                    <td><a href="{% url 'employee_details' emp.id %}" class="btn btn-ghost" style="font-size:12px;padding:6px 10px;">View Profile</a></td>
+                </tr>
+                {% empty %}
+                <tr class="empty-state"><td colspan="6">No employees found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends 'hr/supervisor_base.html' %}
+{% block title %}Leave Review — Supervisor{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Leave Review</h1>
+        <p>Review leave requests from your department. HR will make the final approval decision.</p>
+    </div>
+</div>
+
+{% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}" style="display:block;margin-bottom:12px;">{{ m }}</div>{% endfor %}{% endif %}
+
+{% if pending_requests %}
+<div class="card" style="margin-bottom:24px;">
+    <div class="card-header">
+        <i data-lucide="clock" style="width:18px;height:18px;color:var(--warning);"></i>
+        <h3>Awaiting Your Review ({{ pending_requests.count }})</h3>
+        <span style="font-size:12px;color:var(--text-light);margin-left:auto;">Your recommendation goes to HR for final decision</span>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Leave Type</th>
+                    <th>Dates</th>
+                    <th>Days</th>
+                    <th>Contact During Leave</th>
+                    <th>Reason</th>
+                    <th>Document</th>
+                    <th>Your Recommendation</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in pending_requests %}
+                <tr>
+                    <td>
+                        <strong>{{ req.employee.get_full_name }}</strong><br>
+                        <small style="color:var(--text-light);">{{ req.employee.department.name|default:"" }}</small>
+                    </td>
+                    <td>{{ req.leave_type.name }}</td>
+                    <td style="white-space:nowrap;">{{ req.start_date }} → {{ req.end_date }}</td>
+                    <td>{{ req.requested_days }}</td>
+                    <td>{{ req.contact_info_during_leave|default:"—" }}</td>
+                    <td>{{ req.comments|default:"—"|truncatechars:50 }}</td>
+                    <td>
+                        {% if req.document %}
+                            <a href="{{ req.document.url }}" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:4px 8px;">View</a>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" style="display:inline-flex;flex-direction:column;gap:6px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ req.id }}">
+                            <input type="text" name="note" placeholder="Optional note for HR…" style="padding:5px 8px;border:1px solid var(--border-color);border-radius:6px;font-size:12px;width:180px;">
+                            <div style="display:flex;gap:6px;">
+                                <button type="submit" name="action" value="recommend"
+                                    class="btn btn-primary" style="font-size:12px;padding:6px 12px;flex:1;">
+                                    <i data-lucide="thumbs-up" style="width:13px;height:13px;"></i> Recommend
+                                </button>
+                                <button type="submit" name="action" value="not_recommend"
+                                    class="btn btn-ghost" style="font-size:12px;padding:6px 12px;flex:1;color:var(--danger);border-color:var(--danger);">
+                                    <i data-lucide="thumbs-down" style="width:13px;height:13px;"></i> Not Recommended
+                                </button>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card" style="padding:32px;text-align:center;margin-bottom:24px;color:var(--text-light);">
+    No pending leave requests awaiting your review.
+</div>
+{% endif %}
+
+<!-- All leave records for this supervisor's departments -->
+<div class="card">
+    <div class="card-header">
+        <i data-lucide="list" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>All Department Leave Records</h3>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Type</th>
+                    <th>Dates</th>
+                    <th>Days</th>
+                    <th>Your Recommendation</th>
+                    <th>HR Decision</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in all_requests %}
+                <tr>
+                    <td>{{ req.employee.get_full_name }}</td>
+                    <td>{{ req.leave_type.name }}</td>
+                    <td style="white-space:nowrap;">{{ req.start_date }} → {{ req.end_date }}</td>
+                    <td>{{ req.requested_days }}</td>
+                    <td>
+                        {% if req.supervisor_recommendation == 'recommended' %}
+                            <span class="badge badge-success">Recommended</span>
+                        {% elif req.supervisor_recommendation == 'not_recommended' %}
+                            <span class="badge badge-danger">Not Recommended</span>
+                        {% else %}
+                            <span class="badge badge-warning">Pending Review</span>
+                        {% endif %}
+                        {% if req.supervisor_note %}
+                            <br><small style="color:var(--text-light);">{{ req.supervisor_note|truncatechars:40 }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if req.status == 'Approved' %}
+                            <span class="badge badge-success">Approved</span>
+                        {% elif req.status == 'Rejected' %}
+                            <span class="badge badge-danger">Rejected</span>
+                        {% elif req.status == 'Cancelled' %}
+                            <span class="badge" style="background:#f1f5f9;color:#475569;">Cancelled</span>
+                        {% else %}
+                            <span class="badge badge-warning">Pending HR</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text-light);">No records found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

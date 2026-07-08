@@ -156,15 +156,17 @@ def process_qr_scan(request) -> dict:
 
 def get_todays_attendance() -> dict:
     """Return today's attendance records with summary counts for the Live Attendance page."""
-    from hr.models import Department
     today = timezone.localdate()
-    total_employees = Employee.objects.count()
+    # Only count active employees for the "total staff" figure
+    total_employees = Employee.objects.filter(status__name__iexact='Active').count()
+    if total_employees == 0:
+        total_employees = Employee.objects.count()
 
     records_qs = (
         Attendance.objects
         .filter(date=today)
         .select_related('employee', 'employee__department')
-        .order_by('time_in')
+        .order_by('employee__first_name', 'employee__last_name')  # alphabetical
     )
 
     records = []

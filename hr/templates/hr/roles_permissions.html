@@ -1,0 +1,60 @@
+{% extends 'hr/hr_base.html' %}
+{% block title %}Roles & Permissions — ACT HRMS{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Roles &amp; Permissions</h1>
+        <p>Manage system roles. Assign roles to employees via Staff Directory.</p>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">
+        <i data-lucide="shield" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>System Roles</h3>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Role Name</th>
+                    <th>Dashboard</th>
+                    <th>Permissions</th>
+                    <th>Headcount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for role in roles %}
+                <tr>
+                    <td><strong>{{ role.name }}</strong></td>
+                    <td>
+                        {% if 'hr' in role.name|lower or 'admin' in role.name|lower %}
+                            HR Dashboard
+                        {% elif 'supervisor' in role.name|lower or 'dept head' in role.name|lower %}
+                            Supervisor Dashboard
+                        {% elif 'dean' in role.name|lower %}
+                            Dean Dashboard
+                        {% else %}
+                            Employee Dashboard
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if 'hr' in role.name|lower %}
+                            <span class="badge badge-primary">Full Access</span>
+                        {% elif 'supervisor' in role.name|lower %}
+                            <span class="badge badge-warning">Department View + Leave Review</span>
+                        {% elif 'dean' in role.name|lower %}
+                            <span class="badge badge-success">Reports + Analytics</span>
+                        {% else %}
+                            <span class="badge" style="background:#f1f5f9;color:#475569;">Self-Service</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ role.employees.count }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text-light);">No roles defined yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
