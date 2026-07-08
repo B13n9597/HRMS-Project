@@ -1,0 +1,73 @@
+{% extends 'hr/supervisor_base.html' %}
+{% block title %}Leave Approvals — Supervisor{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left"><h1>Leave Approvals</h1><p>Pending leave requests from your department employees.</p></div>
+</div>
+
+{% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}">{{ m }}</div>{% endfor %}{% endif %}
+
+{% if pending_requests %}
+<div class="card" style="margin-bottom:24px;">
+    <div class="card-header"><i data-lucide="clock" style="width:18px;height:18px;color:var(--warning);"></i><h3>Pending Requests ({{ pending_requests.count }})</h3></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Employee</th><th>Leave Type</th><th>Dates</th><th>Days</th><th>Reason</th><th>Document</th><th>Actions</th></tr></thead>
+            <tbody>
+                {% for req in pending_requests %}
+                <tr>
+                    <td><strong>{{ req.employee.get_full_name }}</strong><br><small>{{ req.employee.department.name|default:"" }}</small></td>
+                    <td>{{ req.leave_type.name }}</td>
+                    <td>{{ req.start_date }} → {{ req.end_date }}</td>
+                    <td>{{ req.requested_days }}</td>
+                    <td>{{ req.comments|default:"—"|truncatechars:50 }}</td>
+                    <td>{% if req.document %}<a href="{{ req.document.url }}" target="_blank" class="btn btn-ghost" style="font-size:12px;padding:4px 8px;">View</a>{% else %}—{% endif %}</td>
+                    <td>
+                        <form method="POST" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ req.id }}">
+                            <input type="hidden" name="action" value="approve">
+                            <button type="submit" class="btn btn-primary" style="font-size:12px;padding:6px 12px;">Approve</button>
+                        </form>
+                        <form method="POST" style="display:inline;margin-left:4px;">
+                            {% csrf_token %}
+                            <input type="hidden" name="request_id" value="{{ req.id }}">
+                            <input type="hidden" name="action" value="reject">
+                            <button type="submit" class="btn btn-ghost" style="font-size:12px;padding:6px 12px;color:var(--danger);border-color:var(--danger);">Reject</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card" style="padding:32px;text-align:center;margin-bottom:24px;color:var(--text-light);">No pending leave requests.</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header"><i data-lucide="list" style="width:18px;height:18px;color:var(--primary);"></i><h3>All Leave Records</h3></div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Employee</th><th>Type</th><th>Dates</th><th>Days</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for req in all_requests %}
+                <tr>
+                    <td>{{ req.employee.get_full_name }}</td>
+                    <td>{{ req.leave_type.name }}</td>
+                    <td>{{ req.start_date }} → {{ req.end_date }}</td>
+                    <td>{{ req.requested_days }}</td>
+                    <td>
+                        {% if req.status == "Approved" %}<span class="badge badge-success">{{ req.status }}</span>
+                        {% elif req.status == "Rejected" %}<span class="badge badge-danger">{{ req.status }}</span>
+                        {% else %}<span class="badge badge-warning">{{ req.status }}</span>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}<tr class="empty-state"><td colspan="5">No records found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

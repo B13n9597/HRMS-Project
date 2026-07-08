@@ -1,0 +1,114 @@
+{% extends 'hr/supervisor_base.html' %}
+{% block title %}KPI Evaluation — Supervisor{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left"><h1>KPI Evaluation</h1><p>Evaluate and view KPI scores for your department employees (1=Poor, 5=Excellent).</p></div>
+</div>
+
+{% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}">{{ m }}</div>{% endfor %}{% endif %}
+
+<!-- Submit evaluation form -->
+<div class="card" style="margin-bottom:24px;">
+    <div class="card-header"><i data-lucide="star" style="width:18px;height:18px;color:var(--primary);"></i><h3>Submit Supervisor Evaluation</h3></div>
+    <div class="card-body">
+        <form method="POST">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="submit_kpi">
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label>Employee <span class="req">*</span></label>
+                    <select name="employee_id" class="form-input" required>
+                        <option value="">— Select Employee —</option>
+                        {% for emp in employees %}<option value="{{ emp.id }}">{{ emp.get_full_name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Period</label>
+                    <div style="display:flex;gap:8px;">
+                        <select name="year" class="form-input">{% for y in years %}<option value="{{ y }}">{{ y }}</option>{% endfor %}</select>
+                        <select name="period" class="form-input">{% for p, pl in periods %}<option value="{{ p }}">{{ pl }}</option>{% endfor %}</select>
+                    </div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;">
+                {% for field, label in criteria %}
+                <div class="form-group">
+                    <label>{{ label }}</label>
+                    <select name="{{ field }}" class="form-input">
+                        {% for i in "12345" %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
+                    </select>
+                </div>
+                {% endfor %}
+                {% with criteria="job_knowledge:Job Knowledge,work_quality:Work Quality,attendance:Attendance,teamwork:Teamwork,ethics:Ethics" %}{% endwith %}
+            </div>
+            {% comment %}Render criteria directly{% endcomment %}
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;" id="criteriaRow">
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+                <label>Comments</label>
+                <textarea name="comments" class="form-input" rows="2" placeholder="Optional feedback..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary"><i data-lucide="save" style="width:16px;height:16px;"></i> Submit Evaluation</button>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Scores Table -->
+<div class="card">
+    <div class="card-header">
+        <i data-lucide="bar-chart-3" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>Evaluation History</h3>
+        <form method="GET" style="margin-left:auto;display:flex;gap:8px;">
+            <select name="year" class="form-input" style="width:90px;">{% for y in years %}<option value="{{ y }}" {% if year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>{% endfor %}</select>
+            <select name="period" class="form-input" style="width:110px;"><option value="">All</option>{% for p, pl in periods %}<option value="{{ p }}" {% if period == p %}selected{% endif %}>{{ pl }}</option>{% endfor %}</select>
+            <button type="submit" class="btn btn-ghost" style="padding:8px 12px;"><i data-lucide="filter" style="width:14px;height:14px;"></i></button>
+        </form>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Employee</th><th>Type</th><th>Period</th><th>Job Know.</th><th>Work Qual.</th><th>Attendance</th><th>Teamwork</th><th>Ethics</th><th>Overall</th><th>By</th></tr></thead>
+            <tbody>
+                {% for s in kpi_scores %}
+                <tr>
+                    <td>{{ s.employee.get_full_name }}</td>
+                    <td><span class="badge badge-primary">{{ s.evaluation_type|title }}</span></td>
+                    <td>{{ s.year }} {{ s.period }}</td>
+                    <td>{{ s.job_knowledge }}/5</td>
+                    <td>{{ s.work_quality }}/5</td>
+                    <td>{{ s.attendance }}/5</td>
+                    <td>{{ s.teamwork }}/5</td>
+                    <td>{{ s.ethics }}/5</td>
+                    <td><strong>{{ s.overall_score|default:"—" }}</strong></td>
+                    <td>{{ s.evaluator.get_full_name|default:"—" }}</td>
+                </tr>
+                {% empty %}<tr class="empty-state"><td colspan="10">No evaluations yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// Render the criteria row dynamically
+const criteriaRow = document.getElementById('criteriaRow');
+if (criteriaRow) {
+    const fields = [
+        ['job_knowledge', 'Job Knowledge'],
+        ['work_quality',  'Work Quality'],
+        ['attendance',    'Attendance'],
+        ['teamwork',      'Teamwork'],
+        ['ethics',        'Ethics'],
+    ];
+    criteriaRow.innerHTML = fields.map(([name, label]) => `
+        <div class="form-group">
+            <label>${label}</label>
+            <select name="${name}" class="form-input">
+                ${[1,2,3,4,5].map(i => `<option value="${i}" ${i===3?'selected':''}>${i}</option>`).join('')}
+            </select>
+        </div>
+    `).join('');
+    // Remove the empty static grid above
+    criteriaRow.previousElementSibling.remove();
+}
+</script>
+{% endblock %}

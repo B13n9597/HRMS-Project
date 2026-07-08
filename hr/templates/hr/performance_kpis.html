@@ -1,48 +1,192 @@
 {% extends 'hr/hr_base.html' %}
-
 {% block title %}Performance KPIs — HR{% endblock %}
 
+{% block extra_styles %}
+<style>
+.kpi-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:28px; }
+.kstat { background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:20px; text-align:center; }
+.kstat-num { font-family:var(--font-display); font-size:32px; font-weight:800; }
+.kstat-lbl { font-size:12px; font-weight:700; text-transform:uppercase; color:var(--text-light); margin-top:4px; }
+.score-bar { display:inline-block; width:40px; height:8px; border-radius:4px; background:var(--border-color); vertical-align:middle; margin-right:6px; overflow:hidden; }
+.score-fill { height:100%; background:var(--primary); border-radius:4px; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="page-header" style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-end;">
-    <div>
-        <h1 style="font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px;">Performance KPIs</h1>
-        <p style="color: var(--text-muted); font-size: 14px;">Track and manage key performance indicators for all staff.</p>
-    </div>
-    <form method="GET" style="display: flex; gap: 8px;">
-        <input type="text" name="q" placeholder="Search employee..." value="{{ search_query }}" style="padding: 10px 16px; border: 1px solid var(--border-color); border-radius: var(--radius-md); width: 300px; font-size: 14px;">
-        <button type="submit" class="btn btn-primary">Search</button>
-        {% if search_query %}<a href="{% url 'performance_kpis' %}" class="btn btn-ghost">Clear</a>{% endif %}
-    </form>
+<div class="page-header">
+  <div class="page-header-left">
+    <h1>Performance KPIs</h1>
+    <p>Biannual evaluation scores for all staff (1 = Poor, 5 = Excellent).</p>
+  </div>
 </div>
 
-<div class="card">
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th>Employee Name</th>
-                    <th>Department</th>
-                    <th>Recent Review</th>
-                    <th>Rating</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for emp in employees %}
-                <tr>
-                    <td><strong>{{ emp.get_full_name }}</strong></td>
-                    <td>{{ emp.department.name|default:"-" }}</td>
-                    <td>Q1 2026 Review</td>
-                    <td>
-                        <span class="badge badge-success">4.5 / 5.0</span>
-                    </td>
-                    <td><button class="btn btn-ghost btn-sm">Update KPI</button></td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5" style="text-align:center;padding:40px;">No employees found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- Stats row -->
+{% if kpi_stats %}
+<div class="kpi-stats">
+  <div class="kstat">
+    <div class="kstat-num" style="color:var(--primary);">{{ kpi_stats.total_employees }}</div>
+    <div class="kstat-lbl">Total Employees</div>
+  </div>
+  <div class="kstat">
+    <div class="kstat-num" style="color:var(--success);">{{ kpi_stats.evaluated }}</div>
+    <div class="kstat-lbl">Evaluated {{ kpi_stats.current_year }} {{ kpi_stats.current_period }}</div>
+  </div>
+  <div class="kstat">
+    <div class="kstat-num" style="color:{% if kpi_stats.completion_pct >= 80 %}var(--success){% elif kpi_stats.completion_pct >= 50 %}var(--warning){% else %}var(--danger){% endif %};">
+      {{ kpi_stats.completion_pct }}%
     </div>
+    <div class="kstat-lbl">Appraisal Completion</div>
+  </div>
+  <div class="kstat">
+    <div class="kstat-num" style="color:var(--warning);">{{ kpi_stats.turnover_rate }}%</div>
+    <div class="kstat-lbl">Turnover Rate</div>
+  </div>
 </div>
+{% endif %}
+
+<!-- Filters -->
+<form method="GET" style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end;">
+  <div>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Search</label>
+    <input type="text" name="q" class="form-input" placeholder="Employee name..." value="{{ search_query }}" style="width:220px;">
+  </div>
+  <div>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Department</label>
+    <select name="department_id" class="form-input" style="width:180px;">
+      <option value="">All Departments</option>
+      {% for d in departments %}<option value="{{ d.id }}" {% if dept_id == d.id|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Year</label>
+    <select name="year" class="form-input" style="width:100px;">
+      <option value="">All</option>
+      {% for y in years %}<option value="{{ y }}" {% if year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:4px;">Period</label>
+    <select name="period" class="form-input" style="width:120px;">
+      <option value="">All</option>
+      {% for p,pl in periods %}<option value="{{ p }}" {% if period == p %}selected{% endif %}>{{ pl }}</option>{% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary">
+    <i data-lucide="search" style="width:14px;height:14px;"></i> Filter
+  </button>
+  {% if search_query or dept_id or period %}
+    <a href="{% url 'performance_kpis' %}" class="btn btn-ghost">Clear</a>
+  {% endif %}
+</form>
+
+<!-- Scores table -->
+<div class="card" style="margin-bottom:28px;">
+  <div class="card-header">
+    <i data-lucide="bar-chart-3" style="width:18px;height:18px;color:var(--primary);"></i>
+    <h3>Evaluation Scores</h3>
+    <span style="margin-left:auto;font-size:13px;color:var(--text-light);">{{ scores.count }} record{{ scores.count|pluralize }}</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Employee</th><th>Department</th><th>Type</th><th>Period</th>
+          <th>Job Know.</th><th>Work Qual.</th><th>Attendance</th><th>Teamwork</th><th>Ethics</th>
+          <th>Overall</th><th>Evaluator</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in scores %}
+        <tr>
+          <td>
+            <div class="emp-name-cell">
+              <div class="emp-avatar">{{ s.employee.first_name|first }}{{ s.employee.last_name|first }}</div>
+              <div style="font-weight:600;">{{ s.employee.get_full_name }}</div>
+            </div>
+          </td>
+          <td>{{ s.employee.department.name|default:"—" }}</td>
+          <td>
+            {% if s.evaluation_type == "self" %}<span class="badge badge-primary">Self</span>
+            {% elif s.evaluation_type == "supervisor" %}<span class="badge badge-warning" style="color:#78350f;">Supervisor</span>
+            {% else %}<span class="badge badge-primary">HR</span>{% endif %}
+          </td>
+          <td>{{ s.year }} {{ s.period }}</td>
+          <td>{{ s.job_knowledge }}/5</td>
+          <td>{{ s.work_quality }}/5</td>
+          <td>{{ s.attendance }}/5</td>
+          <td>{{ s.teamwork }}/5</td>
+          <td>{{ s.ethics }}/5</td>
+          <td>
+            {% if s.overall_score %}
+              <div class="score-bar"><div class="score-fill" style="width:{{ s.overall_score|floatformat:0 }}0%;"></div></div>
+              <strong>{{ s.overall_score }}/5</strong>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:13px;color:var(--text-muted);">{{ s.evaluator.get_full_name|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="11" style="text-align:center;padding:48px;color:var(--text-muted);">
+          No evaluation records found{% if search_query or dept_id %} for the selected filters{% endif %}.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Submit HR evaluation -->
+<div class="card">
+  <div class="card-header">
+    <i data-lucide="star" style="width:18px;height:18px;color:var(--primary);"></i>
+    <h3>Submit HR Evaluation</h3>
+  </div>
+  <div class="card-body">
+    <form method="POST" action="{% url 'supervisor_kpi' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="submit_kpi">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Employee <span class="req">*</span></label>
+          <select name="employee_id" class="form-input" required>
+            <option value="">— Select Employee —</option>
+            {% for emp in all_employees %}<option value="{{ emp.id }}">{{ emp.get_full_name }} — {{ emp.department.name|default:"No dept" }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Evaluation Type</label>
+          <select name="evaluation_type" class="form-input">
+            <option value="hr">HR Review</option>
+            <option value="supervisor">Supervisor Review</option>
+          </select>
+        </div>
+      </div>
+      {# Criteria row is rendered by JavaScript below #}
+      <div id="hrCriteriaRow" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px;"></div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label>Year</label>
+          <select name="year" class="form-input">{% for y in years %}<option value="{{ y }}">{{ y }}</option>{% endfor %}</select>
+        </div>
+        <div class="form-group">
+          <label>Period</label>
+          <select name="period" class="form-input">{% for p,pl in periods %}<option value="{{ p }}">{{ pl }}</option>{% endfor %}</select>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Comments</label>
+        <textarea name="comments" class="form-input" rows="2" placeholder="Optional feedback..."></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary"><i data-lucide="save" style="width:15px;height:15px;"></i> Submit Evaluation</button>
+    </form>
+  </div>
+</div>
+
+<script>
+const row = document.getElementById('hrCriteriaRow');
+if (row) {
+  [['job_knowledge','Job Knowledge'],['work_quality','Work Quality'],['attendance','Attendance'],['teamwork','Teamwork'],['ethics','Ethics']].forEach(([n,l]) => {
+    row.innerHTML += `<div class="form-group"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">${l}</label><select name="${n}" class="form-input">${[1,2,3,4,5].map(i=>`<option value="${i}"${i===3?' selected':''}>${i}</option>`).join('')}</select></div>`;
+  });
+}
+</script>
 {% endblock %}

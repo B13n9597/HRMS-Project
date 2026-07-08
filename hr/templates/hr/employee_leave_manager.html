@@ -132,7 +132,7 @@
             <div class="err-banner">{{ error_msg }}</div>
             {% endif %}
 
-            <form method="POST" novalidate>
+            <form method="POST" enctype="multipart/form-data" novalidate>
                 {% csrf_token %}
                 <div class="form-field">
                     <label>Leave Type <span class="req">*</span></label>
@@ -142,6 +142,11 @@
                             <option value="{{ lt.id }}">{{ lt.name }} (max {{ lt.max_days }} days)</option>
                         {% endfor %}
                     </select>
+                </div>
+                <div class="form-field">
+                    <small style="display:block; margin-bottom:8px; color:var(--text-muted);">
+                        Leave days are counted as working days only; weekends and Ethiopian public holidays are excluded.
+                    </small>
                 </div>
                 <div class="form-field">
                     <label>Start Date <span class="req">*</span></label>
@@ -154,6 +159,10 @@
                 <div class="form-field">
                     <label>Reason / Comments</label>
                     <textarea name="comments" class="form-control" rows="3" placeholder="Optional reason for leave…"></textarea>
+                </div>
+                <div class="form-field">
+                    <label>Supporting Document <span style="font-size:11px;color:var(--text-light);">(optional — PDF or image)</span></label>
+                    <input type="file" name="document" class="form-control" accept=".pdf,.png,.jpg,.jpeg">
                 </div>
                 <button type="submit" class="btn btn-primary" style="width:100%;">
                     <i data-lucide="send" style="width:15px;height:15px;"></i> Submit Request

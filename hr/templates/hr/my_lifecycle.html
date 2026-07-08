@@ -1,83 +1,234 @@
 {% extends 'hr/employee_base.html' %}
-
 {% block title %}My Lifecycle{% endblock %}
 
 {% block extra_styles %}
 <style>
-    .hero-banner {
-        background: linear-gradient(135deg, #025da2 0%, #0ea5e9 100%);
-        border-radius: var(--radius-lg);
-        padding: 36px 40px;
-        color: #fff;
-        margin-bottom: 32px;
-    }
-    .hero-banner h1 { font-family: var(--font-display); font-size: 30px; font-weight: 800; margin-bottom: 6px; }
-    .hero-banner p { opacity: 0.85; font-size: 15px; }
+.hero-banner { background:linear-gradient(135deg,#025da2 0%,#0ea5e9 100%); border-radius:var(--radius-lg); padding:36px 40px; color:#fff; margin-bottom:28px; }
+.hero-banner h1 { font-family:var(--font-display); font-size:28px; font-weight:800; margin-bottom:6px; }
+.hero-banner p { opacity:.85; font-size:15px; }
 
-    .journey-card {
-        background: #fff; border: 1px solid var(--border-color);
-        border-radius: var(--radius-lg); padding: 40px;
-    }
-    
-    .timeline { position: relative; max-width: 600px; margin: 0 auto; }
-    .timeline::before {
-        content: ''; position: absolute; left: 24px; top: 0; bottom: 0;
-        width: 2px; background: var(--border-color);
-    }
-    
-    .t-item { position: relative; padding-left: 60px; margin-bottom: 40px; }
-    .t-item:last-child { margin-bottom: 0; }
-    
-    .t-dot {
-        position: absolute; left: 16px; top: 0;
-        width: 18px; height: 18px; border-radius: 50%;
-        background: var(--border-color); z-index: 2;
-    }
-    .t-item.done .t-dot { background: var(--primary); }
-    .t-item.active .t-dot { background: var(--success); box-shadow: 0 0 0 6px var(--success-light); }
-    
-    .t-content h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; color: var(--text-main); }
-    .t-content p { font-size: 14px; color: var(--text-muted); }
-    .t-date { font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 8px; display: inline-block; }
+.two-col { display:grid; grid-template-columns:1fr 1.2fr; gap:24px; }
+@media(max-width:900px){ .two-col{ grid-template-columns:1fr; } }
+
+.timeline { position:relative; padding-left:32px; }
+.timeline::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:2px; background:var(--border-color); }
+.t-item { position:relative; margin-bottom:28px; }
+.t-dot { position:absolute; left:-28px; top:2px; width:14px; height:14px; border-radius:50%; background:var(--primary); border:3px solid #fff; box-shadow:0 0 0 2px var(--primary); }
+.t-item.muted .t-dot { background:var(--border-color); box-shadow:0 0 0 2px var(--border-color); }
+.t-date { font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px; }
+.t-title { font-size:14px; font-weight:700; color:var(--text-main); }
+.t-desc  { font-size:13px; color:var(--text-muted); margin-top:2px; }
+
+/* Certificate upload card */
+.upload-zone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 74px;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  background: #f8fafc;
+  transition: var(--transition);
+  cursor: pointer;
+}
+.upload-zone:hover,
+.upload-zone:focus-within {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+.upload-zone-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text-main);
+  font-size: 14px;
+}
+.upload-zone-text strong { font-weight: 600; }
+.upload-zone-text span { color: var(--text-muted); font-size: 12px; }
+.upload-zone-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+}
+.upload-zone input[type=file] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="hero-banner">
-    <h1>My Journey</h1>
-    <p>Your career timeline at ACT HRMS.</p>
+  <h1>My Career Journey</h1>
+  <p>Your lifecycle history at ACT HRMS, plus your uploaded certificates.</p>
 </div>
 
-<div class="journey-card">
-    <div class="timeline">
-        <div class="t-item done">
+{% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}" style="margin-bottom:16px;padding:12px 16px;border-radius:var(--radius-sm);">{{ m }}</div>{% endfor %}{% endif %}
+
+<div class="two-col">
+
+  <!-- Left: Timeline from DB -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <i data-lucide="git-branch" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>Lifecycle Timeline</h3>
+      </div>
+      <div class="card-body">
+        <div class="timeline">
+          <!-- Hire date always first -->
+          <div class="t-item">
             <div class="t-dot"></div>
-            <div class="t-content">
-                <span class="t-date">{{ employee.hire_date|date:"F j, Y"|default:"Past" }}</span>
-                <h3>Joined the Company</h3>
-                <p>Welcome aboard! You started your journey as {{ employee.position.title|default:"an employee" }}.</p>
-            </div>
-        </div>
-        
-        <div class="t-item {% if employee.status.name == 'Active' %}active{% else %}done{% endif %}">
+            <div class="t-date">{{ employee.hire_date|date:"d M Y"|default:"Joined" }}</div>
+            <div class="t-title">Joined — {{ employee.position.title|default:"Employee" }}</div>
+            <div class="t-desc">{{ employee.department.name|default:"General" }} Department</div>
+          </div>
+
+          {% for h in history %}
+          <div class="t-item">
             <div class="t-dot"></div>
-            <div class="t-content">
-                <span class="t-date">Present</span>
-                <h3>Active Role</h3>
-                <p>Currently working in the {{ employee.department.name|default:"General" }} department.</p>
-            </div>
-        </div>
-        
-        {% if employee.status.name == 'Terminated' or employee.status.name == 'Resigned' %}
-        <div class="t-item active">
+            <div class="t-date">{{ h.start_date|date:"d M Y" }}</div>
+            <div class="t-title">{{ h.get_event_type_display }}</div>
+            {% if h.notes %}<div class="t-desc">{{ h.notes }}</div>{% endif %}
+            {% if h.old_value and h.new_value %}
+            <div class="t-desc" style="font-size:12px;">{{ h.old_value }} → {{ h.new_value }}</div>
+            {% endif %}
+          </div>
+          {% empty %}
+          <!-- Show current status as only item after hire -->
+          <div class="t-item">
             <div class="t-dot"></div>
-            <div class="t-content">
-                <span class="t-date">Exit</span>
-                <h3>Journey Concluded</h3>
-                <p>You have transitioned out of your active role.</p>
+            <div class="t-date">Present</div>
+            <div class="t-title">
+              {% if employee.status.name == "Active" %}Active Employee{% else %}{{ employee.status.name|default:"Active" }}{% endif %}
             </div>
+            <div class="t-desc">No lifecycle events recorded yet.</div>
+          </div>
+          {% endfor %}
         </div>
-        {% endif %}
+      </div>
     </div>
+  </div>
+
+  <!-- Right: Certificates -->
+  <div>
+    <!-- Upload form -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <i data-lucide="file-plus" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>Upload Certificate</h3>
+      </div>
+      <div class="card-body">
+        <form method="POST" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="action" value="upload_cert">
+          <div class="form-group" style="margin-bottom:12px;">
+            <label>Title <span class="req">*</span></label>
+            <input type="text" name="title" class="form-input" placeholder="e.g. BSc Computer Science" required>
+          </div>
+          <div class="form-grid-2" style="margin-bottom:12px;">
+            <div class="form-group">
+              <label>Type</label>
+              <select name="cert_type" class="form-input">
+                {% for val, display in cert_types %}
+                <option value="{{ val }}">{{ display }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Issued By</label>
+              <input type="text" name="issued_by" class="form-input" placeholder="Institution name">
+            </div>
+          </div>
+          <div class="form-grid-2" style="margin-bottom:12px;">
+            <div class="form-group">
+              <label>Issue Date</label>
+              <input type="date" name="issued_date" class="form-input">
+            </div>
+            <div class="form-group">
+              <label>Expiry Date</label>
+              <input type="date" name="expiry_date" class="form-input">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label>Document <span style="font-size:11px;color:var(--text-light);">(PDF or image)</span></label>
+            <div class="upload-zone" id="uploadZone">
+              <div class="upload-zone-text">
+                <strong id="selectedFileName">Choose a file to upload</strong>
+                <span>Click to browse or drag a file here</span>
+              </div>
+              <span class="upload-zone-button">
+                <i data-lucide="upload" style="width:14px;height:14px;"></i> Browse
+              </span>
+              <input id="documentInput" type="file" name="document" accept=".pdf,.png,.jpg,.jpeg">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">
+            <i data-lucide="upload" style="width:15px;height:15px;"></i> Upload Certificate
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Certificate list -->
+    <div class="card">
+      <div class="card-header">
+        <i data-lucide="file-badge" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>My Certificates</h3>
+      </div>
+      {% if certificates %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Title</th><th>Type</th><th>Issued By</th><th>Date</th><th>File</th></tr></thead>
+          <tbody>
+            {% for cert in certificates %}
+            <tr>
+              <td style="font-weight:600;">{{ cert.title }}</td>
+              <td><span class="badge badge-primary" style="font-size:11px;">{{ cert.get_cert_type_display }}</span></td>
+              <td style="font-size:13px;">{{ cert.issued_by|default:"—" }}</td>
+              <td style="font-size:13px;">{{ cert.issued_date|date:"d M Y"|default:"—" }}</td>
+              <td>
+                {% if cert.document %}
+                <a href="{{ cert.document.url }}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">
+                  <i data-lucide="download" style="width:12px;height:12px;"></i> View
+                </a>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div style="padding:32px;text-align:center;color:var(--text-muted);">
+        <i data-lucide="file-badge" style="width:36px;height:36px;opacity:.3;display:block;margin:0 auto 12px;"></i>
+        No certificates uploaded yet. Use the form above to add one.
+      </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
+<script>
+  const docInput = document.getElementById('documentInput');
+  const fileNameEl = document.getElementById('selectedFileName');
+  if (docInput && fileNameEl) {
+    docInput.addEventListener('change', () => {
+      fileNameEl.textContent = docInput.files.length
+        ? docInput.files[0].name
+        : 'Choose a file to upload';
+    });
+  }
+</script>
 {% endblock %}

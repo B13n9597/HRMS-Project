@@ -48,14 +48,16 @@ STATUS_LABELS = {
     EmployeeStatus.TERMINATED: "Terminated",
 }
  
-ROLE_EMPLOYEE = "employee"
-ROLE_HR       = "hr"
-ROLE_DEAN     = "dean"
- 
+ROLE_EMPLOYEE   = "employee"
+ROLE_HR         = "hr"
+ROLE_DEAN       = "dean"
+ROLE_SUPERVISOR = "supervisor"
+
 ROLE_REDIRECTS = {
-    ROLE_EMPLOYEE: "/dashboard/employee/",
-    ROLE_HR:       "/dashboard/hr/",
-    ROLE_DEAN:     "/dashboard/dean/",
+    ROLE_EMPLOYEE:   "/dashboard/employee/",
+    ROLE_HR:         "/dashboard/hr/",
+    ROLE_DEAN:       "/dashboard/dean/",
+    ROLE_SUPERVISOR: "/dashboard/supervisor/",
 }
  
 
@@ -366,27 +368,58 @@ def get_dean_report_summary():
 def get_role_key(user) -> str:
     if user.is_superuser:
         return ROLE_HR
- 
+
     employee  = get_employee_for_user(user)
     role_name = employee.role.name.strip().lower() if employee and employee.role else ""
- 
+
     if role_name in {"dean", "academic dean"}:
         return ROLE_DEAN
     if role_name in {"hr", "admin", "hr manager", "human resources"}:
         return ROLE_HR
+    if role_name in {"supervisor", "department head", "dept head", "team lead"}:
+        return ROLE_SUPERVISOR
     return ROLE_EMPLOYEE
- 
- 
+
+
 def get_dashboard_redirect(user) -> str:
-    return ROLE_REDIRECTS[get_role_key(user)]
- 
- 
+    return ROLE_REDIRECTS.get(get_role_key(user), "/dashboard/employee/")
+
+
 def can_manage_employees(user) -> bool:
     return get_role_key(user) == ROLE_HR
- 
- 
+
+
 def can_view_dean_reports(user) -> bool:
     return get_role_key(user) in {ROLE_DEAN, ROLE_HR}
+
+
+def can_supervise(user) -> bool:
+    """Returns True if the user is a supervisor, HR, or dean."""
+    return get_role_key(user) in {ROLE_SUPERVISOR, ROLE_HR, ROLE_DEAN}
+
+
+def get_supervised_departments(user):
+    """Return Department queryset that this supervisor manages."""
+    from hr.models import SupervisorDepartment, Department
+    employee = get_employee_for_user(user)
+    if not employee:
+        return Department.objects.none()
+    role_key = get_role_key(user)
+    if role_key == ROLE_HR:
+        return Department.objects.all()
+    if role_key == ROLE_DEAN:
+        return Department.objects.all()
+    # Supervisor: only their assigned departments
+    dept_ids = SupervisorDepartment.objects.filter(
+        supervisor=employee
+    ).values_list('department_id', flat=True)
+    return Department.objects.filter(id__in=dept_ids)
+
+
+def get_department_employees(user):
+    """Return Employee queryset scoped to the user's supervised departments."""
+    departments = get_supervised_departments(user)
+    return get_all_employees().filter(department__in=departments)
  
  
 # ── CHANGE 2 ──────────────────────────────────────────────────────────────────

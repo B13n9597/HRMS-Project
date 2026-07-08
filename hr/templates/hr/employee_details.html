@@ -16,7 +16,7 @@
         </div>
     </div>
     <div>
-        <a href="{% url 'dashboard_hr' %}" class="btn btn-ghost">← Back to Lifecycle</a>
+        <a href="{% url 'hr_lifecycle' %}" class="btn btn-ghost">← Back to Lifecycle</a>
     </div>
 </div>
 
@@ -56,36 +56,28 @@
 
     <!-- Right Column -->
     <div>
-        <!-- Recent Attendance -->
+        <!-- Recent Attendance — uses context variable from view -->
         <div class="card" style="margin-bottom: 24px; overflow: hidden;">
             <div class="card-header">
                 <i data-lucide="clock" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>Recent Attendance (Last 10 Records)</h3>
+                <h3>Recent Attendance (This Month)</h3>
             </div>
-            {% with recent_attendance=employee.attendance_set.all|slice:":10" %}
-            {% if recent_attendance %}
+            {% if attendance %}
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th>Date</th>
-                            <th>Time In</th>
-                            <th>Time Out</th>
-                            <th>Status</th>
+                            <th>Date</th><th>Time In</th><th>Time Out</th><th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for att in recent_attendance %}
+                        {% for att in attendance %}
                         <tr>
                             <td>{{ att.date|date:"d M Y" }}</td>
-                            <td>{{ att.time_in|date:"H:i"|default:"—" }}</td>
-                            <td>{{ att.time_out|date:"H:i"|default:"—" }}</td>
+                            <td>{{ att.time_in|time:"H:i"|default:"—" }}</td>
+                            <td>{{ att.time_out|time:"H:i"|default:"—" }}</td>
                             <td>
-                                <span class="badge
-                                    {% if att.status == 'Present' %}badge-success
-                                    {% elif att.status == 'Late' %}badge-warning
-                                    {% elif att.status == 'Absent' %}badge-danger
-                                    {% else %}badge-primary{% endif %}">
+                                <span class="badge {% if att.status == 'Present' %}badge-success{% elif att.status == 'Late' %}badge-warning{% elif att.status == 'Absent' %}badge-danger{% else %}badge-primary{% endif %}">
                                     {{ att.status }}
                                 </span>
                             </td>
@@ -96,11 +88,72 @@
             </div>
             {% else %}
             <div style="padding: 32px; text-align: center; color: var(--text-muted);">
-                No attendance records found for this employee.
+                No attendance records found for this period.
             </div>
             {% endif %}
-            {% endwith %}
         </div>
+
+        <!-- KPI Scores — uses context variable from view -->
+        {% if kpi_scores %}
+        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
+            <div class="card-header">
+                <i data-lucide="bar-chart-3" style="width:18px;height:18px;color:var(--primary);"></i>
+                <h3>KPI Evaluation Scores</h3>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Period</th><th>Type</th><th>JK</th><th>WQ</th><th>AT</th><th>TW</th><th>ET</th><th>Overall</th><th>By</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for s in kpi_scores %}
+                        <tr>
+                            <td>{{ s.year }} {{ s.period }}</td>
+                            <td><span class="badge badge-primary" style="font-size:11px;">{{ s.evaluation_type|title }}</span></td>
+                            <td>{{ s.job_knowledge }}/5</td>
+                            <td>{{ s.work_quality }}/5</td>
+                            <td>{{ s.attendance }}/5</td>
+                            <td>{{ s.teamwork }}/5</td>
+                            <td>{{ s.ethics }}/5</td>
+                            <td><strong>{{ s.overall_score|default:"—" }}</strong></td>
+                            <td style="font-size:12px;color:var(--text-light);">{{ s.evaluator.get_full_name|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Certificates -->
+        {% if certificates %}
+        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
+            <div class="card-header">
+                <i data-lucide="file-badge" style="width:18px;height:18px;color:var(--primary);"></i>
+                <h3>Certificates &amp; Documents</h3>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Title</th><th>Type</th><th>Issued By</th><th>Date</th><th>File</th></tr></thead>
+                    <tbody>
+                        {% for cert in certificates %}
+                        <tr>
+                            <td style="font-weight:600;">{{ cert.title }}</td>
+                            <td><span class="badge badge-primary" style="font-size:11px;">{{ cert.get_cert_type_display }}</span></td>
+                            <td>{{ cert.issued_by|default:"—" }}</td>
+                            <td>{{ cert.issued_date|date:"d M Y"|default:"—" }}</td>
+                            <td>
+                                {% if cert.document %}
+                                <a href="{{ cert.document.url }}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">View</a>
+                                {% else %}—{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
 
         <!-- Leave Balance -->
         <div class="card" style="overflow: hidden;">
@@ -112,22 +165,14 @@
             {% if leave_balances %}
             <div class="table-wrap">
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Leave Type</th>
-                            <th>Remaining Days</th>
-                            <th>Last Updated</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Leave Type</th><th>Allocated</th><th>Used</th><th>Remaining</th><th>Updated</th></tr></thead>
                     <tbody>
                         {% for lb in leave_balances %}
                         <tr>
                             <td>{{ lb.leave_type.name }}</td>
-                            <td>
-                                <strong style="color: {% if lb.remaining_days > 5 %}var(--success){% elif lb.remaining_days > 0 %}var(--warning){% else %}var(--danger){% endif %};">
-                                    {{ lb.remaining_days }} days
-                                </strong>
-                            </td>
+                            <td>{{ lb.allocated_days|default:lb.remaining_days }}</td>
+                            <td>{{ lb.used_days|default:0 }}</td>
+                            <td><strong style="color:{% if lb.remaining_days > 5 %}var(--success){% elif lb.remaining_days > 0 %}var(--warning){% else %}var(--danger){% endif %};">{{ lb.remaining_days }} days</strong></td>
                             <td>{{ lb.last_updated|date:"d M Y"|default:"—" }}</td>
                         </tr>
                         {% endfor %}
@@ -135,9 +180,7 @@
                 </table>
             </div>
             {% else %}
-            <div style="padding: 32px; text-align: center; color: var(--text-muted);">
-                No leave balance records found for this employee.
-            </div>
+            <div style="padding: 32px; text-align: center; color: var(--text-muted);">No leave balance records found.</div>
             {% endif %}
             {% endwith %}
         </div>

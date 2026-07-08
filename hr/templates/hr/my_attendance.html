@@ -61,35 +61,32 @@
         <h1>My Attendance</h1>
         <p>Review your personal attendance history.</p>
     </div>
-    <a href="{% url 'manual_attendance' %}" class="btn btn-primary">
-        <i data-lucide="pen-line" style="width:15px;height:15px;"></i>
-        Manual Check-in
+    <a href="{% url 'tablet_kiosk_attendance' %}" class="btn btn-primary">
+        <i data-lucide="tablet" style="width:15px;height:15px;"></i>
+        Office Kiosk
     </a>
 </div>
 
 <!-- Summary stats -->
+{% with present_count=records|length %}
 <div class="stat-row">
     <div class="stat-card">
-        <div class="num" style="color:var(--success);">{{ records|length }}</div>
+        <div class="num" style="color:var(--success);">
+            {% for r in records %}{% if r.status == 'Present' or r.status == 'Late' %}{{ forloop.counter }}{% endif %}{% endfor %}
+            {# Django templates can't count inside loops directly; compute in card #}
+        </div>
         <div class="lbl">Records This Period</div>
     </div>
     <div class="stat-card">
-        {% with present=records|length %}
-        <div class="num" style="color:var(--primary);">
-            {% for r in records %}{% if r.status == 'Present' or r.status == 'Late' %}{% with x=1 %}{% endwith %}{% endif %}{% endfor %}
-            {{ records|length }}
-        </div>
-        {% endwith %}
+        <div class="num" style="color:var(--primary);">{{ records|length }}</div>
         <div class="lbl">Days Recorded</div>
     </div>
     <div class="stat-card">
-        <div class="num" style="color:var(--warning);">
-            {% for r in records %}{% if r.status == 'Late' %}<span></span>{% endif %}{% endfor %}
-            —
-        </div>
+        <div class="num" style="color:var(--warning);" id="lateCount">—</div>
         <div class="lbl">Late Arrivals</div>
     </div>
 </div>
+{% endwith %}
 
 <!-- Filters -->
 <form method="GET" class="filter-bar">

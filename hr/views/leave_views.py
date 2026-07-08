@@ -54,11 +54,13 @@ def employee_leave_manager(request):
                 if e < s:
                     error_msg = "End date cannot be before start date."
                 else:
+                    doc_file = request.FILES.get('document')
                     leave_service.submit_leave_request(employee.pk, {
                         'leave_type_id': int(leave_type_id),
                         'start_date':    s,
                         'end_date':      e,
                         'reason':        comments,
+                        'document':      doc_file,
                     })
                     messages.success(request, "Leave request submitted successfully.")
                     return redirect('employee_leave_manager')
@@ -122,8 +124,9 @@ def hr_leave_manager(request):
         records = records.filter(employee__department_id=dept_id)
     if leave_type_f:
         records = records.filter(leave_type_id=leave_type_f)
+    from django.db.models import Q
     if query:
-        records = records.filter(employee__first_name__icontains=query) | records.filter(employee__last_name__icontains=query)
+        records = records.filter(Q(employee__first_name__icontains=query) | Q(employee__last_name__icontains=query))
 
     departments = Department.objects.all()
     leave_types = leave_service.get_all_leave_types()

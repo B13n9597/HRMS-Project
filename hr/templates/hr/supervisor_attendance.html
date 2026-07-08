@@ -1,0 +1,42 @@
+{% extends 'hr/supervisor_base.html' %}
+{% block title %}Attendance — Supervisor{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left"><h1>Department Attendance</h1><p>Attendance records for your department employees.</p></div>
+</div>
+<form method="GET" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+    <input type="text" name="q" class="form-input" placeholder="Search employee..." value="{{ search_query }}" style="width:220px;">
+    <select name="month" class="form-input" style="width:140px;">
+        {% for m_num, m_name in months %}<option value="{{ m_num }}" {% if month == m_num %}selected{% endif %}>{{ m_name }}</option>{% endfor %}
+    </select>
+    <select name="year" class="form-input" style="width:100px;">
+        {% for y in years %}<option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary"><i data-lucide="search" style="width:16px;height:16px;"></i> Filter</button>
+</form>
+<div class="card">
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Date</th><th>Employee</th><th>Department</th><th>Time In</th><th>Time Out</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for r in records %}
+                <tr>
+                    <td>{{ r.date }}</td>
+                    <td>{{ r.employee.get_full_name }}</td>
+                    <td>{{ r.employee.department.name|default:"—" }}</td>
+                    <td>{{ r.time_in|time:"H:i"|default:"—" }}</td>
+                    <td>{{ r.time_out|time:"H:i"|default:"—" }}</td>
+                    <td>
+                        {% if r.status == "Present" %}<span class="badge badge-success">Present</span>
+                        {% elif r.status == "Late" %}<span class="badge badge-warning">Late</span>
+                        {% elif r.status == "Absent" %}<span class="badge badge-danger">Absent</span>
+                        {% else %}<span class="badge badge-primary">{{ r.status }}</span>{% endif %}
+                    </td>
+                </tr>
+                {% empty %}<tr class="empty-state"><td colspan="6">No attendance records found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

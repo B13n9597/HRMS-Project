@@ -298,7 +298,7 @@
                 <div class="nav-section-title">Employee Portal</div>
                 <a href="{% url 'dashboard_employee' %}" class="nav-item {% if active_page == 'dashboard_employee' or not active_page %}active{% endif %}">
                     <i data-lucide="qr-code" style="width: 18px; height: 18px;"></i>
-                    <span>Rotating Badge</span>
+                    <span>My Digital Badge</span>
                 </a>
                 <a href="{% url 'my_attendance_record' %}" class="nav-item {% if active_page == 'my_attendance' %}active{% endif %}">
                     <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
@@ -312,9 +312,13 @@
                     <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
                     <span>Leave Manager</span>
                 </a>
+                <a href="{% url 'my_kpi' %}" class="nav-item {% if active_page == 'my_kpi' %}active{% endif %}">
+                    <i data-lucide="bar-chart-3" style="width: 18px; height: 18px;"></i>
+                    <span>Performance / KPI</span>
+                </a>
                 <a href="{% url 'my_salary_slips' %}" class="nav-item {% if active_page == 'my_salary_slips' %}active{% endif %}">
                     <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i>
-                    <span>Salary & Slips</span>
+                    <span>Salary &amp; Slips</span>
                 </a>
             </nav>
 

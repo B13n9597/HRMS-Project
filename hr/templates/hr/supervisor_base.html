@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ACT HRMS — Supervisor{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --bg-base:      #f8fafc;
+            --bg-surface:   #ffffff;
+            --border-color: #e2e8f0;
+            --text-main:    #0f172a;
+            --text-muted:   #475569;
+            --text-light:   #64748b;
+
+            /* Supervisor accent — teal/emerald to visually distinguish from HR (blue) and Employee (blue) */
+            --primary:       #0d9488;
+            --primary-hover: #0f766e;
+            --primary-light: rgba(13,148,136,0.08);
+
+            --success:      #10b981;
+            --success-light:#d1fae5;
+            --success-dark: #047857;
+            --warning:      #f59e0b;
+            --warning-light:#fef3c7;
+            --danger:       #ef4444;
+            --danger-light: #fee2e2;
+            --danger-dark:  #b91c1c;
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.05);
+            --font-sans:    'Inter', sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            --transition:   all 0.25s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* ── Layout ── */
+        .sv-layout { display: flex; width: 100%; min-height: 100vh; }
+
+        /* ── Sidebar ── */
+        .sv-sidebar {
+            width: 260px;
+            flex-shrink: 0;
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 28px 20px;
+        }
+
+        .sv-brand {
+            font-family: var(--font-display);
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sv-brand-badge {
+            background: var(--primary);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            letter-spacing: .5px;
+        }
+
+        .sv-user-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--primary-light);
+            border: 1px solid rgba(13,148,136,0.15);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            margin-bottom: 28px;
+        }
+        .sv-avatar {
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            font-family: var(--font-display);
+            font-size: 15px;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .sv-user-name  { font-size: 13px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sv-user-role  { font-size: 11px; color: var(--primary); font-weight: 600; margin-top: 1px; }
+        .sv-user-dept  { font-size: 11px; color: var(--text-light); margin-top: 1px; }
+
+        /* ── Nav ── */
+        .sv-nav { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; }
+
+        .sv-nav-section {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            color: #94a3b8;
+            padding: 16px 10px 6px;
+        }
+
+        .sv-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        .sv-nav-link:hover { background: #f1f5f9; color: var(--text-main); }
+        .sv-nav-link.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+
+        .sv-sidebar-footer {
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+            margin-top: auto;
+        }
+        .sv-logout {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px;
+            color: var(--danger);
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+        .sv-logout:hover { background: var(--danger-light); }
+
+        /* ── Main content ── */
+        .sv-main {
+            flex-grow: 1;
+            padding: 40px 44px;
+            overflow-y: auto;
+        }
+
+        /* ── Common component styles (matches hr_base and employee_base) ── */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .page-header-left h1 {
+            font-family: var(--font-display);
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        .page-header-left p { font-size: 13px; color: var(--text-muted); }
+
+        .card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 14px 22px;
+            border-bottom: 1px solid var(--border-color);
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card-header h3 { font-size: 15px; font-weight: 700; color: var(--text-main); margin: 0; }
+        .card-body { padding: 22px 24px; }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 9px 18px; border-radius: var(--radius-sm);
+            font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: var(--transition);
+            border: 1px solid transparent; text-decoration: none;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--border-color); }
+        .btn-ghost:hover { background: #f1f5f9; color: var(--text-main); }
+        .btn-danger { background: var(--danger-light); color: var(--danger-dark); border-color: transparent; }
+        .btn-danger:hover { background: var(--danger); color: #fff; }
+
+        .badge { padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; display: inline-block; }
+        .badge-success { background: var(--success-light); color: var(--success-dark); }
+        .badge-warning { background: var(--warning-light); color: #92400e; }
+        .badge-danger  { background: var(--danger-light);  color: var(--danger-dark); }
+        .badge-primary { background: var(--primary-light); color: var(--primary); }
+
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px 20px; font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase; background: #f8fafc; border-bottom: 1px solid var(--border-color); }
+        td { padding: 14px 20px; font-size: 13px; color: var(--text-main); border-bottom: 1px solid var(--border-color); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+
+        .emp-name-cell { display: flex; align-items: center; gap: 10px; }
+        .emp-avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), #2dd4bf);
+            color: #fff; font-family: var(--font-display);
+            font-size: 12px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+        .form-group label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+        .form-group label .req { color: var(--danger); }
+        .form-input {
+            width: 100%; padding: 10px 13px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-size: 13px; background: #f8fafc; color: var(--text-main);
+            transition: var(--transition);
+        }
+        .form-input:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(13,148,136,.12); }
+
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        .alert { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; border: 1px solid transparent; }
+        .alert-success, .alert-info { background: var(--success-light); color: var(--success-dark); border-color: rgba(16,185,129,.25); }
+        .alert-warning  { background: var(--warning-light); color: #78350f; border-color: rgba(245,158,11,.25); }
+        .alert-error, .alert-danger { background: var(--danger-light); color: var(--danger-dark); border-color: rgba(239,68,68,.25); }
+
+        .empty-state td { text-align: center; color: var(--text-light); padding: 40px 24px; }
+
+        @media (max-width: 900px) {
+            .sv-sidebar { width: 200px; }
+            .sv-main { padding: 24px; }
+            .form-grid-2 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 700px) {
+            .sv-layout { flex-direction: column; }
+            .sv-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
+        }
+    </style>
+    {% block extra_styles %}{% endblock %}
+</head>
+<body>
+<div class="sv-layout">
+    <!-- ── Sidebar ── -->
+    <aside class="sv-sidebar">
+        <div class="sv-brand">
+            <span class="sv-brand-badge">ACT</span>
+            HRMS
+        </div>
+
+        <div class="sv-user-card">
+            <div class="sv-avatar">
+                {% if supervisor_employee %}{{ supervisor_employee.first_name|first|upper }}{{ supervisor_employee.last_name|first|upper }}
+                {% else %}{{ request.user.username|first|upper }}{% endif %}
+            </div>
+            <div style="min-width:0;">
+                <div class="sv-user-name">
+                    {% if supervisor_employee %}{{ supervisor_employee.get_full_name }}{% else %}{{ request.user.get_full_name|default:request.user.username }}{% endif %}
+                </div>
+                <div class="sv-user-role">Supervisor</div>
+                {% if supervisor_departments %}
+                <div class="sv-user-dept">
+                    {% for d in supervisor_departments %}{{ d.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <nav class="sv-nav">
+            <div class="sv-nav-section">Dashboard</div>
+            <a href="{% url 'supervisor_dashboard' %}" class="sv-nav-link {% if active_page == 'supervisor_dashboard' %}active{% endif %}">
+                <i data-lucide="layout-dashboard" style="width:16px;height:16px;flex-shrink:0;"></i> Overview
+            </a>
+
+            <div class="sv-nav-section">My Department</div>
+            <a href="{% url 'supervisor_employees' %}" class="sv-nav-link {% if active_page == 'supervisor_employees' %}active{% endif %}">
+                <i data-lucide="users" style="width:16px;height:16px;flex-shrink:0;"></i> Employees
+            </a>
+            <a href="{% url 'supervisor_attendance' %}" class="sv-nav-link {% if active_page == 'supervisor_attendance' %}active{% endif %}">
+                <i data-lucide="calendar-check" style="width:16px;height:16px;flex-shrink:0;"></i> Attendance
+            </a>
+
+            <div class="sv-nav-section">Actions</div>
+            <a href="{% url 'supervisor_leave_approvals' %}" class="sv-nav-link {% if active_page == 'supervisor_leave_approvals' %}active{% endif %}">
+                <i data-lucide="check-square" style="width:16px;height:16px;flex-shrink:0;"></i> Leave Approvals
+            </a>
+            <a href="{% url 'supervisor_kpi' %}" class="sv-nav-link {% if active_page == 'supervisor_kpi' %}active{% endif %}">
+                <i data-lucide="bar-chart-3" style="width:16px;height:16px;flex-shrink:0;"></i> KPI Evaluation
+            </a>
+            <a href="{% url 'supervisor_certificates' %}" class="sv-nav-link {% if active_page == 'supervisor_certificates' %}active{% endif %}">
+                <i data-lucide="file-badge" style="width:16px;height:16px;flex-shrink:0;"></i> Certificates
+            </a>
+        </nav>
+
+        <div class="sv-sidebar-footer">
+            <a href="/logout/" class="sv-logout">
+                <i data-lucide="log-out" style="width:15px;height:15px;"></i> Log Out
+            </a>
+        </div>
+    </aside>
+
+    <!-- ── Main ── -->
+    <main class="sv-main">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<script>
+    if (window.lucide) lucide.createIcons();
+</script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>
