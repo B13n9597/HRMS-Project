@@ -38,12 +38,37 @@ def logout_view(request):
 @login_required(login_url="/login/")
 def employee_dashboard(request):
     employee = employee_service.get_employee_for_user(request.user)
+    from hr.models import Attendance, LeaveBalance
+    from django.utils import timezone
+    # Compute attendance rate for current year
+    today = timezone.localdate()
+    year_start = today.replace(month=1, day=1)
+    if employee:
+        total_days = (today - year_start).days + 1
+        present_days = Attendance.objects.filter(
+            employee=employee,
+            date__gte=year_start,
+            date__lte=today,
+            status__in=['Present', 'Late']
+        ).count()
+        attendance_rate = round((present_days / max(total_days, 1)) * 100) if total_days else 0
+        # Leave days left (annual leave balance)
+        lb = LeaveBalance.objects.filter(employee=employee, leave_type__name__icontains='Annual').first()
+        leave_days_left = lb.remaining_days if lb and hasattr(lb, 'remaining_days') else (
+            (lb.allocated_days - lb.used_days) if lb else 20
+        )
+    else:
+        attendance_rate = 0
+        leave_days_left = 0
+
     return render(
         request,
         "hr/dashboard_employee.html",
         {
-            "employee": employee,
+            "employee":          employee,
             "attendance_records": attendance_service.get_my_attendance(request.user),
+            "attendance_rate":   attendance_rate,
+            "leave_days_left":   leave_days_left,
         },
     )
 

@@ -1,4 +1,4 @@
-# hrms/services/leave_service.py
+# hr/services/leave_service.py
 #
 # All leave business logic.
 # Views call these — no DB queries in views.
@@ -121,4 +121,4 @@ def get_leave_balance(employee_id: int) -> list:
     employee = get_object_or_404(Employee, pk=employee_id)
     return LeaveBalance.objects.filter(
         employee=employee,
-    ).select_related('leave_type')
+    ).select_related('leave_type')

@@ -372,6 +372,30 @@ class Attendance(BaseModel):
         if self.time_in and self.time_out and self.time_out < self.time_in:
             raise ValidationError('Clock-out time cannot be earlier than clock-in time.')
 
+    def calculate_status(self):
+        """
+        Derive attendance status from time_in.
+        Called after check-in is created so the status reflects punctuality.
+        Late threshold: 09:00 AM local time.
+        """
+        if not self.time_in:
+            self.status = 'Absent'
+            return
+        from django.utils import timezone as tz
+        local_in = tz.localtime(self.time_in)
+        # Late if arriving after 09:00 AM
+        if local_in.hour > 9 or (local_in.hour == 9 and local_in.minute > 0):
+            self.status = 'Late'
+        else:
+            self.status = 'Present'
+
+    def get_worked_hours(self):
+        """Return total worked hours as a float, or None if not clocked out."""
+        if self.time_in and self.time_out:
+            delta = self.time_out - self.time_in
+            return round(delta.total_seconds() / 3600, 2)
+        return None
+
     class Meta:
         unique_together = ('employee', 'date')
 

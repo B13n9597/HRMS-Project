@@ -154,36 +154,56 @@ def process_qr_scan(request) -> dict:
 # REPORTING
 # ─────────────────────────────────────────────
 
-def get_todays_attendance() -> list:
+def get_todays_attendance() -> dict:
+    """Return today's attendance records with summary counts for the Live Attendance page."""
+    from hr.models import Department
     today = timezone.localdate()
+    total_employees = Employee.objects.count()
 
-    return list(
-        Attendance.objects.filter(date=today).values(
-            'employee__first_name',
-            'employee__last_name',
-            'time_in',
-            'time_out',
-            'status',
-        )
+    records_qs = (
+        Attendance.objects
+        .filter(date=today)
+        .select_related('employee', 'employee__department')
+        .order_by('time_in')
     )
 
+    records = []
+    for r in records_qs:
+        records.append({
+            'employee_name': r.employee.get_full_name(),
+            'employee_id':   r.employee.employee_id or '',
+            'department':    r.employee.department.name if r.employee.department else '',
+            'time_in':       r.time_in.isoformat() if r.time_in else None,
+            'time_out':      r.time_out.isoformat() if r.time_out else None,
+            'status':        r.status,
+        })
 
-def get_my_attendance(user) -> list:
+    present_count = sum(1 for r in records if r['status'] == 'Present')
+    late_count    = sum(1 for r in records if r['status'] == 'Late')
+    absent_count  = max(0, total_employees - len(records))
+
+    return {
+        'records':         records,
+        'total_employees': total_employees,
+        'present_count':   present_count,
+        'late_count':      late_count,
+        'absent_count':    absent_count,
+    }
+
+
+def get_my_attendance(user, month=None, year=None, status_filter=None):
+    """Return the employee's own Attendance queryset (not dicts) for template rendering."""
     from django.shortcuts import get_object_or_404
-
     employee = get_object_or_404(Employee, user=user)
 
-    records = Attendance.objects.filter(employee=employee).order_by('-date')[:30]
-
-    return [
-        {
-            'date': r.date,
-            'time_in': r.time_in.strftime('%H:%M') if r.time_in else None,
-            'time_out': r.time_out.strftime('%H:%M') if r.time_out else None,
-            'status': r.status,
-        }
-        for r in records
-    ]
+    qs = Attendance.objects.filter(employee=employee).order_by('-date')
+    if month:
+        qs = qs.filter(date__month=month)
+    if year:
+        qs = qs.filter(date__year=year)
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    return qs[:60]
 
 
 def get_employee_attendance_report(employee_id: int) -> dict:

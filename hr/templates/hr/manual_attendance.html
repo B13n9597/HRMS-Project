@@ -1,289 +1,472 @@
 {% extends 'hr/employee_base.html' %}
 
-{% block title %}Manual Attendance{% endblock %}
+{% block title %}Manual Check-in — ACT HRMS{% endblock %}
 
 {% block extra_styles %}
 <style>
-    .attendance-hero {
-        background: linear-gradient(135deg, #025da2 0%, #0ea5e9 100%);
-        border-radius: var(--radius-lg);
-        padding: 36px 40px;
-        color: #fff;
+    .page-header {
         margin-bottom: 32px;
-        position: relative;
-        overflow: hidden;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border-color);
     }
-    .attendance-hero::before {
-        content: '';
-        position: absolute;
-        top: -60px; right: -60px;
-        width: 200px; height: 200px;
-        background: rgba(255,255,255,0.07);
-        border-radius: 50%;
-    }
-    .attendance-hero h1 {
+    .page-header h1 {
         font-family: var(--font-display);
-        font-size: 30px;
+        font-size: 28px;
         font-weight: 800;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
-    .attendance-hero p { opacity: 0.85; font-size: 15px; }
+    .page-header p { color: var(--text-muted); font-size: 14px; }
+
+    .checkin-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+        align-items: start;
+    }
+    @media (max-width: 900px) { .checkin-grid { grid-template-columns: 1fr; } }
 
     .form-card {
         background: #fff;
         border: 1px solid var(--border-color);
         border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-md);
-        overflow: hidden;
-        max-width: 700px;
+        padding: 32px;
+        box-shadow: var(--shadow-sm);
     }
-    .form-card-header {
-        padding: 20px 28px;
-        border-bottom: 1px solid var(--border-color);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        background: #f8fafc;
-    }
-    .form-card-header-icon {
-        width: 40px; height: 40px;
-        background: linear-gradient(135deg, #025da2, #0ea5e9);
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        color: #fff;
-    }
-    .form-card-header h2 {
+    .form-card h2 {
         font-family: var(--font-display);
         font-size: 18px;
         font-weight: 700;
-    }
-    .form-card-body { padding: 32px 28px; }
-
-    .field-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        margin-bottom: 20px;
-    }
-    .field-row.full { grid-template-columns: 1fr; }
-
-    .field-group { display: flex; flex-direction: column; gap: 6px; }
-    .field-group label {
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--text-muted);
-    }
-    .field-group label .req { color: var(--danger); }
-    .field-input {
-        padding: 12px 14px;
-        border: 1.5px solid var(--border-color);
-        border-radius: var(--radius-sm);
-        font-size: 14px;
-        background: #f8fafc;
-        color: var(--text-main);
-        transition: var(--transition);
-        width: 100%;
-    }
-    .field-input:focus {
-        outline: none;
-        border-color: var(--primary);
-        background: #fff;
-        box-shadow: 0 0 0 3px rgba(2,93,162,0.1);
-    }
-    .field-error {
-        font-size: 12px;
-        color: var(--danger);
-        margin-top: 2px;
-    }
-
-    .sig-hint {
-        font-size: 12px;
-        color: var(--text-light);
-        margin-top: 4px;
-        font-style: italic;
-    }
-
-    .form-footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 12px;
-        padding-top: 8px;
-        border-top: 1px solid var(--border-color);
-        margin-top: 24px;
-        padding-top: 24px;
-    }
-
-    .err-banner {
-        background: var(--danger-light);
-        color: var(--danger-dark);
-        border: 1px solid rgba(239,68,68,0.25);
-        border-radius: var(--radius-sm);
-        padding: 12px 16px;
-        font-size: 13px;
-        margin-bottom: 20px;
-    }
-    .err-banner ul { margin: 6px 0 0 18px; }
-
-    .info-box {
-        background: var(--primary-light);
-        border: 1px solid rgba(2,93,162,0.2);
-        border-radius: var(--radius-sm);
-        padding: 12px 16px;
-        font-size: 13px;
-        color: var(--primary);
-        margin-bottom: 28px;
+        margin-bottom: 24px;
         display: flex;
         align-items: center;
         gap: 10px;
+        color: var(--text-main);
     }
+    .form-card h2 .card-icon {
+        width: 36px; height: 36px;
+        background: var(--primary-light);
+        color: var(--primary);
+        border-radius: var(--radius-sm);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .form-group { margin-bottom: 20px; }
+    .form-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+    .form-input {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        font-size: 14px;
+        font-family: var(--font-sans);
+        background: #f8fafc;
+        color: var(--text-main);
+        transition: var(--transition);
+    }
+    .form-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: #fff;
+        box-shadow: 0 0 0 3px var(--primary-light);
+    }
+    .form-input[readonly] { background: #f1f5f9; color: var(--text-light); cursor: not-allowed; }
+
+    /* Employee profile snippet */
+    .employee-chip {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: var(--primary-light);
+        border: 1px solid rgba(2, 93, 162, 0.2);
+        border-radius: var(--radius-md);
+        padding: 14px 18px;
+        margin-bottom: 24px;
+    }
+    .employee-chip .avatar {
+        width: 44px; height: 44px;
+        background: var(--primary);
+        color: #fff;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font-display);
+        font-size: 16px;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+    .employee-chip .details .name { font-weight: 700; font-size: 15px; color: var(--text-main); }
+    .employee-chip .details .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Signature Canvas */
+    .sig-wrap {
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-md);
+        background: #fff;
+        position: relative;
+        overflow: hidden;
+        cursor: crosshair;
+        transition: border-color 0.2s;
+    }
+    .sig-wrap:hover { border-color: var(--primary); }
+    .sig-wrap.signing { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+    #signatureCanvas {
+        display: block;
+        width: 100%;
+        height: 200px;
+        touch-action: none;
+    }
+    .sig-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        color: #cbd5e1;
+        gap: 8px;
+        transition: opacity 0.2s;
+    }
+    .sig-placeholder p { font-size: 13px; }
+    .sig-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 8px;
+    }
+    .sig-hint { font-size: 12px; color: var(--text-light); }
+
+    .btn-clear-sig {
+        font-size: 12px;
+        padding: 6px 14px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        cursor: pointer;
+        background: #fff;
+        color: var(--text-muted);
+        display: flex; align-items: center; gap: 6px;
+        transition: var(--transition);
+    }
+    .btn-clear-sig:hover { background: var(--danger-light); color: var(--danger-dark); border-color: var(--danger); }
+
+    /* Time display */
+    .time-display {
+        background: linear-gradient(135deg, var(--primary), #0ea5e9);
+        color: #fff;
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        text-align: center;
+    }
+    .time-display .clock {
+        font-family: 'Courier New', monospace;
+        font-size: 52px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        line-height: 1;
+        margin-bottom: 8px;
+    }
+    .time-display .date-str {
+        font-size: 15px;
+        opacity: 0.85;
+        margin-bottom: 24px;
+    }
+    .time-display .tip {
+        font-size: 13px;
+        opacity: 0.75;
+        background: rgba(255,255,255,0.15);
+        border-radius: 8px;
+        padding: 10px 16px;
+    }
+
+    .btn-submit {
+        width: 100%;
+        padding: 14px;
+        font-size: 16px;
+        font-weight: 700;
+        border-radius: var(--radius-md);
+        background: var(--primary);
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        margin-top: 8px;
+        font-family: var(--font-display);
+    }
+    .btn-submit:hover { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-submit:active { transform: translateY(0); }
+
+    .error-msg { color: var(--danger-dark); font-size: 13px; margin-top: 6px; }
+    .sig-required-msg { display: none; color: var(--danger-dark); font-size: 12px; margin-top: 4px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Hero -->
-<div class="attendance-hero">
-    <h1>Manual Attendance</h1>
-    <p>Submit your attendance record for a specific date including clock-in, clock-out and your signature.</p>
+<div class="page-header">
+    <h1>
+        <i data-lucide="pen-line" style="width:28px;height:28px;color:var(--primary);vertical-align:middle;margin-right:8px;"></i>
+        Manual Check-in / Check-out
+    </h1>
+    <p>Enter your PIN and provide your signature to record attendance for today.</p>
 </div>
 
-<div class="info-box">
-    <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
-    Submitting a record for a date where attendance already exists will <strong>update</strong> that record.
-</div>
-
-<div class="form-card">
-    <div class="form-card-header">
-        <div class="form-card-header-icon">
-            <i data-lucide="pen-line" style="width:18px;height:18px;"></i>
+{% if messages %}
+    {% for message in messages %}
+        <div style="padding: 12px 18px; border-radius: var(--radius-sm); margin-bottom: 20px;
+            background: {% if 'error' in message.tags %}var(--danger-light){% else %}var(--success-light){% endif %};
+            color: {% if 'error' in message.tags %}var(--danger-dark){% else %}var(--success-dark){% endif %};
+            border: 1px solid {% if 'error' in message.tags %}rgba(239,68,68,.3){% else %}rgba(16,185,129,.3){% endif %};">
+            {{ message }}
         </div>
-        <h2>Attendance Entry</h2>
-        {% if employee %}
-        <span style="margin-left:auto;font-size:13px;color:var(--text-muted);">
-            Filing for: <strong>{{ employee.get_full_name }}</strong>
-        </span>
-        {% endif %}
-    </div>
+    {% endfor %}
+{% endif %}
 
-    <div class="form-card-body">
-        <!-- Error banner -->
-        {% if form.errors %}
-        <div class="err-banner">
-            <strong>Please fix the following:</strong>
-            <ul>
-                {% for field in form %}
-                    {% for error in field.errors %}
-                        <li><strong>{{ field.label }}:</strong> {{ error }}</li>
-                    {% endfor %}
-                {% endfor %}
-                {% for error in form.non_field_errors %}
-                    <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
+<div class="checkin-grid">
+    <!-- LEFT: Form -->
+    <div>
+        <div class="form-card">
+            <h2>
+                <span class="card-icon"><i data-lucide="user-check" style="width:18px;height:18px;"></i></span>
+                Your Identity
+            </h2>
 
-        <form method="POST" novalidate>
-            {% csrf_token %}
+            <!-- Employee chip -->
+            <div class="employee-chip">
+                <div class="avatar">{{ employee.first_name|slice:":1"|upper }}{{ employee.last_name|slice:":1"|upper }}</div>
+                <div class="details">
+                    <div class="name">{{ employee.get_full_name }}</div>
+                    <div class="sub">
+                        {{ employee.position.title|default:"Staff" }}
+                        &nbsp;·&nbsp;
+                        {{ employee.department.name|default:"General" }}
+                        &nbsp;·&nbsp;
+                        {{ employee.employee_id|default:"—" }}
+                    </div>
+                </div>
+            </div>
+
+            <form method="POST" id="attendanceForm" novalidate>
+                {% csrf_token %}
+                <!-- Hidden base64 signature -->
+                <input type="hidden" name="signature_data" id="signatureDataInput">
 
                 {% if not simple_mode %}
-                <!-- Date -->
-                <div class="field-row full">
-                    <div class="field-group">
-                        <label for="id_date">Date <span class="req">*</span></label>
-                        <input type="date" name="date" id="id_date"
-                               class="field-input {% if form.date.errors %}error{% endif %}"
-                               value="{{ form.date.value|default:'' }}" required>
-                        {% if form.date.errors %}
-                            <span class="field-error">{{ form.date.errors|join:", " }}</span>
-                        {% endif %}
-                    </div>
+                <!-- Full HR mode: choose date + time -->
+                <div class="form-group">
+                    <label class="form-label">Date *</label>
+                    <input type="date" name="date" class="form-input"
+                           value="{{ form.date.value|default:'' }}" required>
                 </div>
-
-                <!-- Time In / Time Out -->
-                <div class="field-row">
-                    <div class="field-group">
-                        <label for="id_time_in">Clock-In Time <span class="req">*</span></label>
-                        <input type="time" name="time_in" id="id_time_in"
-                               class="field-input {% if form.time_in.errors %}error{% endif %}"
-                               value="{{ form.time_in.value|default:'' }}" required>
-                        {% if form.time_in.errors %}
-                            <span class="field-error">{{ form.time_in.errors|join:", " }}</span>
-                        {% endif %}
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div class="form-group">
+                        <label class="form-label">Time In</label>
+                        <input type="time" name="time_in" class="form-input"
+                               value="{{ form.time_in.value|default:'' }}">
                     </div>
-                    <div class="field-group">
-                        <label for="id_time_out">Clock-Out Time <span class="req">*</span></label>
-                        <input type="time" name="time_out" id="id_time_out"
-                               class="field-input {% if form.time_out.errors %}error{% endif %}"
-                               value="{{ form.time_out.value|default:'' }}" required>
-                        {% if form.time_out.errors %}
-                            <span class="field-error">{{ form.time_out.errors|join:", " }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% else %}
-                <!-- Simple kiosk mode: show name only (read-only) -->
-                <div class="field-row full">
-                    <div class="field-group">
-                        <label for="id_name">Employee Name</label>
-                        <input type="text" name="name" id="id_name" readonly class="field-input" value="{{ employee.get_full_name }}">
+                    <div class="form-group">
+                        <label class="form-label">Time Out</label>
+                        <input type="time" name="time_out" class="form-input"
+                               value="{{ form.time_out.value|default:'' }}">
                     </div>
                 </div>
                 {% endif %}
 
-            <!-- PIN and Signature -->
-            <div class="field-row">
-                <div class="field-group">
-                    <label for="id_pin">Attendance PIN <span class="req">*</span></label>
-                    <input type="password" name="pin" id="id_pin"
-                           class="field-input"
-                           placeholder="Enter your 4-6 digit PIN" required>
-                    <span class="sig-hint">Required to verify your identity.</span>
+                <!-- PIN Entry -->
+                <div class="form-group">
+                    <label class="form-label">Attendance PIN *</label>
+                    <input type="password" name="pin" class="form-input"
+                           placeholder="Enter your 4–6 digit PIN"
+                           maxlength="10" autocomplete="off" required
+                           id="pinInput">
+                    {% if form.pin.errors %}
+                        <p class="error-msg">{{ form.pin.errors.0 }}</p>
+                    {% endif %}
                 </div>
-                <div class="field-group">
-                    <label for="id_signature">Signature <span class="req">*</span></label>
-                    <input type="text" name="signature" id="id_signature"
-                           class="field-input"
-                           placeholder="Type your full name as signature" required>
-                    <span class="sig-hint">Your typed name serves as your digital signature.</span>
-                </div>
-            </div>
 
-            <div class="form-footer">
-                <a href="{% url 'my_attendance_record' %}" class="btn btn-ghost">
-                    <i data-lucide="x" style="width:15px;height:15px;"></i> Cancel
-                </a>
-                <button type="submit" class="btn btn-primary" id="submitBtn">
-                    <i data-lucide="save" style="width:15px;height:15px;"></i> Submit Attendance
+                <!-- Signature Canvas -->
+                <div class="form-group">
+                    <label class="form-label">Signature *</label>
+                    <div class="sig-wrap" id="sigWrap">
+                        <canvas id="signatureCanvas" width="600" height="200"></canvas>
+                        <div class="sig-placeholder" id="sigPlaceholder">
+                            <i data-lucide="pen" style="width:28px;height:28px;"></i>
+                            <p>Draw your signature here</p>
+                        </div>
+                    </div>
+                    <div class="sig-actions">
+                        <span class="sig-hint">Use mouse or finger to sign</span>
+                        <button type="button" class="btn-clear-sig" id="clearSigBtn">
+                            <i data-lucide="rotate-ccw" style="width:12px;height:12px;"></i>
+                            Clear
+                        </button>
+                    </div>
+                    <p class="sig-required-msg" id="sigRequiredMsg">⚠ Please draw your signature before submitting.</p>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    <i data-lucide="check-circle" style="width:20px;height:20px;"></i>
+                    Submit Attendance
                 </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- RIGHT: Live Clock + Info -->
+    <div>
+        <div class="time-display">
+            <div class="clock" id="liveClock">00:00:00</div>
+            <div class="date-str" id="liveDate"></div>
+            <div class="tip">
+                <strong>Note:</strong> Attendance is recorded for today.
+                Check-in before 9:00 AM is marked <strong>Present</strong>.
+                After 9:00 AM is marked <strong>Late</strong>.
             </div>
-        </form>
+        </div>
+
+        {% if not simple_mode %}
+        <div class="form-card" style="margin-top:24px;">
+            <h2>
+                <span class="card-icon"><i data-lucide="info" style="width:18px;height:18px;"></i></span>
+                Instructions
+            </h2>
+            <ul style="font-size:14px;color:var(--text-muted);line-height:1.8;padding-left:18px;">
+                <li>Enter the correct <strong>date</strong> for the attendance record.</li>
+                <li>Fill in <strong>Time In</strong> and optionally <strong>Time Out</strong>.</li>
+                <li>Enter your <strong>attendance PIN</strong>.</li>
+                <li>Draw your <strong>signature</strong> on the pad.</li>
+                <li>Click <strong>Submit Attendance</strong>.</li>
+            </ul>
+        </div>
+        {% else %}
+        <div class="form-card" style="margin-top:24px;">
+            <h2>
+                <span class="card-icon"><i data-lucide="info" style="width:18px;height:18px;"></i></span>
+                How It Works
+            </h2>
+            <ul style="font-size:14px;color:var(--text-muted);line-height:1.8;padding-left:18px;">
+                <li>First submission of the day = <strong>Clock In</strong>.</li>
+                <li>Second submission = <strong>Clock Out</strong>.</li>
+                <li>Must use your registered <strong>Attendance PIN</strong>.</li>
+                <li>Draw your signature with mouse or touchscreen.</li>
+            </ul>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    // Live clock-out validation
-    const timeIn  = document.getElementById('id_time_in');
-    const timeOut = document.getElementById('id_time_out');
+// ─── Live Clock ──────────────────────────────────────────────
+function updateClock() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mm = String(now.getMinutes()).padStart(2,'0');
+    const ss = String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('liveClock').textContent = `${hh}:${mm}:${ss}`;
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    document.getElementById('liveDate').textContent =
+        `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
 
-    function validateTimes() {
-        if (timeIn.value && timeOut.value && timeOut.value < timeIn.value) {
-            timeOut.classList.add('error');
-            timeOut.setCustomValidity('Clock-out cannot be before clock-in.');
-        } else {
-            timeOut.classList.remove('error');
-            timeOut.setCustomValidity('');
+// ─── Signature Canvas ────────────────────────────────────────
+(function() {
+    const canvas     = document.getElementById('signatureCanvas');
+    const ctx        = canvas.getContext('2d');
+    const sigWrap    = document.getElementById('sigWrap');
+    const placeholder = document.getElementById('sigPlaceholder');
+    const clearBtn   = document.getElementById('clearSigBtn');
+    const sigInput   = document.getElementById('signatureDataInput');
+    const sigMsg     = document.getElementById('sigRequiredMsg');
+    let drawing = false;
+    let hasSignature = false;
+
+    // Scale canvas to actual display size
+    function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width  = rect.width  * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        ctx.lineWidth   = 2.5;
+        ctx.lineCap     = 'round';
+        ctx.lineJoin    = 'round';
+        ctx.strokeStyle = '#0f172a';
+    }
+    resizeCanvas();
+    window.addEventListener('resize', () => { resizeCanvas(); hasSignature = false; });
+
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        if (e.touches) {
+            return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
         }
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     }
 
-    timeIn.addEventListener('change', validateTimes);
-    timeOut.addEventListener('change', validateTimes);
+    function startDraw(e) {
+        e.preventDefault();
+        drawing = true;
+        sigWrap.classList.add('signing');
+        const pos = getPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+    }
+    function draw(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        const pos = getPos(e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        if (!hasSignature) {
+            hasSignature = true;
+            placeholder.style.opacity = '0';
+        }
+    }
+    function endDraw() {
+        drawing = false;
+        sigWrap.classList.remove('signing');
+    }
 
-    if (window.lucide) lucide.createIcons();
-});
+    canvas.addEventListener('mousedown',  startDraw);
+    canvas.addEventListener('mousemove',  draw);
+    canvas.addEventListener('mouseup',    endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove',  draw,      { passive: false });
+    canvas.addEventListener('touchend',   endDraw);
+
+    clearBtn.addEventListener('click', () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hasSignature = false;
+        placeholder.style.opacity = '1';
+        sigInput.value = '';
+        sigMsg.style.display = 'none';
+    });
+
+    // ─── Form Submission ─────────────────────────────────────
+    document.getElementById('attendanceForm').addEventListener('submit', function(e) {
+        if (!hasSignature) {
+            e.preventDefault();
+            sigMsg.style.display = 'block';
+            canvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        sigMsg.style.display = 'none';
+        // Embed signature as base64 PNG in hidden input
+        sigInput.value = canvas.toDataURL('image/png');
+    });
+})();
 </script>
 {% endblock %}

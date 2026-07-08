@@ -1,60 +1,159 @@
 {% extends 'hr/hr_base.html' %}
 
-{% block title %}Payroll Center — HR{% endblock %}
+{% block title %}Payroll Center — ACT HRMS{% endblock %}
 
 {% block extra_styles %}
 <style>
-    .page-header {
-        display: flex; justify-content: space-between; align-items: flex-end;
-        margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color);
-    }
+    .page-header { margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); }
     .page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; }
     .page-header p { color: var(--text-muted); font-size: 14px; }
-    
-    .search-bar { display: flex; gap: 8px; }
-    .search-input {
-        padding: 10px 16px; border: 1px solid var(--border-color);
-        border-radius: var(--radius-md); width: 300px; font-size: 14px;
+
+    .summary-strip {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;
+    }
+    .stat-card {
+        background: #fff; border: 1px solid var(--border-color);
+        border-radius: var(--radius-md); padding: 18px 22px; text-align: center;
+    }
+    .stat-card .num { font-family: var(--font-display); font-size: 26px; font-weight: 800; }
+    .stat-card .lbl { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+    .filter-bar {
+        background: #fff; border: 1px solid var(--border-color);
+        border-radius: var(--radius-md); padding: 14px 18px;
+        display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 20px;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-light); }
+    .filter-group input, .filter-group select {
+        padding: 9px 12px; border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm); font-size: 13px; background: #f8fafc; min-width: 130px;
+    }
+    .emp-name-cell { display: flex; align-items: center; gap: 10px; }
+    .emp-avatar {
+        width: 34px; height: 34px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), #0ea5e9);
+        color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 12px;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <div>
-        <h1>Payroll Center</h1>
-        <p>Manage employee salaries and generate slips.</p>
-    </div>
-    <form method="GET" class="search-bar">
-        <input type="text" name="q" class="search-input" placeholder="Search employee..." value="{{ search_query }}">
-        <button type="submit" class="btn btn-primary">Search</button>
-        {% if search_query %}<a href="{% url 'payroll_center' %}" class="btn btn-ghost">Clear</a>{% endif %}
-    </form>
+    <h1>Payroll Center</h1>
+    <p>Review and manage employee salary records and payment status.</p>
 </div>
 
+<!-- Summary -->
+<div class="summary-strip">
+    <div class="stat-card">
+        <div class="num">{{ records|length }}</div>
+        <div class="lbl">Total Records</div>
+    </div>
+    <div class="stat-card">
+        <div class="num" style="color:var(--primary);">ETB {{ total_gross|default:"0" }}</div>
+        <div class="lbl">Total Gross</div>
+    </div>
+    <div class="stat-card">
+        <div class="num" style="color:var(--success);">ETB {{ total_net|default:"0" }}</div>
+        <div class="lbl">Total Net</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<form method="GET" class="filter-bar">
+    <div class="filter-group">
+        <label>Search</label>
+        <input type="text" name="q" value="{{ search_query|default:'' }}" placeholder="Employee name…">
+    </div>
+    <div class="filter-group">
+        <label>Month</label>
+        <select name="month">
+            <option value="">All</option>
+            {% for num, name in months %}
+                <option value="{{ num }}" {% if month|stringformat:"s" == num|stringformat:"s" %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Year</label>
+        <select name="year">
+            <option value="">All</option>
+            {% for y in years %}
+                <option value="{{ y }}" {% if year|stringformat:"s" == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Status</label>
+        <select name="status">
+            <option value="">All</option>
+            {% for s in statuses %}
+                <option value="{{ s }}" {% if status_f == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary" style="align-self:flex-end;">
+        <i data-lucide="filter" style="width:14px;height:14px;"></i> Filter
+    </button>
+    <a href="{% url 'payroll_center' %}" class="btn btn-ghost" style="align-self:flex-end;">Reset</a>
+</form>
+
+<!-- Table -->
 <div class="card">
+    <div class="card-header">
+        <i data-lucide="banknote" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>Payroll Records</h3>
+    </div>
     <div class="table-wrap">
         <table>
             <thead>
                 <tr>
-                    <th>Employee Name</th>
+                    <th>Employee</th>
                     <th>Department</th>
-                    <th>Position</th>
-                    <th>Base Salary</th>
-                    <th>Action</th>
+                    <th>Period</th>
+                    <th>Gross Salary</th>
+                    <th>Deductions</th>
+                    <th>Net Salary</th>
+                    <th>Days Worked</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody>
-                {% for emp in employees %}
+                {% for r in records %}
                 <tr>
-                    <td><strong>{{ emp.get_full_name }}</strong></td>
-                    <td>{{ emp.department.name|default:"-" }}</td>
-                    <td>{{ emp.position.title|default:"-" }}</td>
-                    <td>$4,500.00 <span style="font-size:11px;color:gray;">(Est.)</span></td>
-                    <td><button class="btn btn-ghost btn-sm">View Slips</button></td>
+                    <td>
+                        <div class="emp-name-cell">
+                            <div class="emp-avatar">{{ r.employee.first_name|slice:":1" }}{{ r.employee.last_name|slice:":1" }}</div>
+                            <div>
+                                <div style="font-weight:600;">{{ r.employee.get_full_name }}</div>
+                                <div style="font-size:12px;color:var(--text-light);">{{ r.employee.employee_id|default:"" }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ r.employee.department.name|default:"—" }}</td>
+                    <td>{{ r.period_start|date:"M Y" }}</td>
+                    <td>ETB {{ r.gross_salary }}</td>
+                    <td style="color:var(--danger-dark);">ETB {{ r.deductions }}</td>
+                    <td style="color:var(--success-dark);font-weight:700;">ETB {{ r.net_salary }}</td>
+                    <td>{{ r.days_worked }} / {{ r.required_days }}</td>
+                    <td>
+                        <span class="badge
+                            {% if r.payment_status == 'Paid' %}badge-success
+                            {% elif r.payment_status == 'On Hold' %}badge-danger
+                            {% else %}badge-warning{% endif %}">
+                            {{ r.payment_status }}
+                        </span>
+                    </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" style="text-align:center;padding:40px;">No employees found.</td></tr>
+                <tr>
+                    <td colspan="8" style="text-align:center;padding:48px;color:var(--text-muted);">
+                        <i data-lucide="banknote" style="width:40px;height:40px;opacity:0.3;display:block;margin:0 auto 12px;"></i>
+                        No payroll records found.
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>

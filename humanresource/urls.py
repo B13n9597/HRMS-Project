@@ -41,18 +41,9 @@ urlpatterns = [
     path('employees/<int:employee_id>/update/', page_views.employee_update, name='employee_update'),
     path('employees/<int:employee_id>/delete/', page_views.employee_delete, name='employee_delete'),
     path('employees/<int:employee_id>/<str:action>/', page_views.employee_lifecycle, name='employee_lifecycle'),
-    path('attendance-logs/', page_views.attendance_logs, name='attendance_logs'),
 
-    # ── Named sidebar routes for SPA panel navigation ─────────────────────
-    # These all render the SPA index.html (handled by JS panel switching)
-    # but give Django's {% url %} tag real, resolvable route names.
-    path('live-attendance/', api_views.index_view, name='live_attendance'),
+    # Staff directory in project-level urls (delegates to hr/urls.py for the rest)
     path('staff-directory/', page_views.staff_directory_view, name='staff_directory'),
-    path('payroll-center/', api_views.index_view, name='payroll_center'),
-    path('leave-approvals/', api_views.index_view, name='leave_approvals'),
-    path('performance-kpis/', api_views.index_view, name='performance_kpis'),
-    path('candidate-screen/', api_views.index_view, name='candidate_screen'),
-    path('global-settings/', api_views.index_view, name='global_settings'),
 
     path('forgot-password/', page_views.forgot_password_view, name='forgot_password'),
     path('set-password/<uidb64>/<token>/', page_views.set_password_view, name='set_password'),

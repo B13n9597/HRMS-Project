@@ -285,35 +285,69 @@
             return (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
         }
 
-        
+        // ─── All employees cache for client-side search ────────────
+        let _allEmployees = [];
 
+        function renderEmployees(employees) {
+            const tbody = document.getElementById('employeeTableBody');
             if (employees.length === 0) {
-                tbody.innerHTML = `<tr class="empty-state"><td colspan="5">No active employees found. Use <strong>Create Employee</strong> or <strong>Upload Roster</strong> to get started.</td></tr>`;
+                tbody.innerHTML = `<tr class="empty-state"><td colspan="6">No employees found. Use <strong>Create Employee</strong> or <strong>Upload Roster</strong> to get started.</td></tr>`;
                 return;
             }
+            tbody.innerHTML = employees.map(emp => `
+                <tr>
+                    <td>
+                        <div class="emp-name-cell">
+                            <div class="emp-avatar">${initial(emp.full_name)}</div>
+                            <div>
+                                <div style="font-weight:600;">${emp.full_name}</div>
+                                <div style="font-size:12px;color:var(--text-light);">${emp.email || ''}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${emp.department || '—'}</td>
+                    <td>${emp.position || '—'}</td>
+                    <td>${statusBadge(emp.status)}</td>
+                    <td>${emp.hire_date || '—'}</td>
+                    <td>
+                        <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px;" onclick="activateEmployee(${emp.id})">Activate</button>
+                        <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="terminateEmployee(${emp.id})">Terminate</button>
+                        <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px;" onclick="promoteEmployee(${emp.id})">Promote</button>
+                        <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px;" onclick="transferEmployee(${emp.id})">Transfer</button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function loadEmployees() {
+            const tbody = document.getElementById('employeeTableBody');
+            tbody.innerHTML = `<tr class="empty-state"><td colspan="6"><i data-lucide="loader-2" style="width:18px;height:18px;animation:spin 1s linear infinite;vertical-align:middle;"></i> Loading employees…</td></tr>`;
+            lucide.createIcons();
+            const data = await apiCall('/api/employees/');
+            if (!data || !data.success) {
+                tbody.innerHTML = `<tr class="empty-state"><td colspan="6" style="color:var(--danger);">Failed to load employees. Please refresh.</td></tr>`;
+                return;
+            }
+            _allEmployees = data.data || [];
+            renderEmployees(_allEmployees);
+        }
 
         window.activateEmployee = async function(employeeId) {
-
-            const data = await apiCall(
-                `/attendance/api/employees/status/${employeeId}/`,
-                'POST',
-                { status: 'active' }
-            );
-
-            console.log("Activate response:", data);
-            alert(JSON.stringify(data));
+            if (!confirm('Activate this employee?')) return;
+            const data = await apiCall(`/api/employees/status/${employeeId}/`, 'POST', { action: 'activate' });
+            if (data && data.success) { loadEmployees(); }
+            else { alert(data ? data.error : 'Action failed.'); }
         };
        
         window.terminateEmployee = async function(employeeId) {
-
-            const data = await apiCall(
-                `/attendance/api/employees/status/${employeeId}/`,
-                'POST',
-                { status: 'terminated' }
-            );
-
-            console.log("Terminate response:", data);
-            alert(JSON.stringify(data));
+            const reason = prompt('Reason for termination (required):');
+            if (!reason) return;
+            const exitDate = prompt('Exit date (YYYY-MM-DD):', new Date().toISOString().slice(0,10));
+            if (!exitDate) return;
+            const data = await apiCall(`/api/employees/status/${employeeId}/`, 'POST', { action: 'terminate', reason, exit_date: exitDate });
+            if (data && data.success) { loadEmployees(); }
+            else { alert(data ? data.error : 'Action failed.'); }
         };
 
         window.editEmployee = function(employeeId) {
@@ -321,178 +355,34 @@
         };
 
         window.promoteEmployee = async function(employeeId) {
-
-            const newPositionId = prompt(
-            "Enter New Position ID:"
-    );
-
+            const newPositionId = prompt("Enter New Position ID:");
             if (!newPositionId) return;
-
-            const data = await apiCall(
-            `/attendance/api/employees/promote/${employeeId}/`,
-            'POST',
-           {
-                position_id: newPositionId
-            }
-        );
-
+            const data = await apiCall(`/api/employees/promote/${employeeId}/`, 'POST', { position_id: newPositionId });
             if (data && data.success) {
-            alert("Employee promoted successfully");
-            loadEmployees();
+                alert("Employee promoted successfully");
+                loadEmployees();
             } else {
-            alert(data ? data.error : "Promotion failed");
-         }
+                alert(data ? data.error : "Promotion failed");
+            }
         };
 
-
-    window.transferEmployee = async function(employeeId) {
-
-        const newDepartmentId = prompt(
-        "Enter New Department ID:"
-        );
-
-        if (!newDepartmentId) return;
-
-       const data = await apiCall(
-        `/attendance/api/employees/transfer/${employeeId}/`,
-        'POST',
-        {
-            department_id: newDepartmentId
-        }
-    );
-
-        if (data && data.success) {
-        alert("Employee transferred successfully");
-        loadEmployees();
-        } else {
-        alert(data ? data.error : "Transfer failed");
-        }
-    };
-
-    
-    window.hireCandidate = async function(applicationId) {
-
-        if (!confirm("Hire this candidate?")) {
-            return;
-        }
-
-        const response = await fetch(
-            `/attendance/api/recruitment/hire/${applicationId}/`,
-            {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
+        window.transferEmployee = async function(employeeId) {
+            const newDepartmentId = prompt("Enter New Department ID:");
+            if (!newDepartmentId) return;
+            const data = await apiCall(`/api/employees/transfer/${employeeId}/`, 'POST', { department_id: newDepartmentId });
+            if (data && data.success) {
+                alert("Employee transferred successfully");
+                loadEmployees();
+            } else {
+                alert(data ? data.error : "Transfer failed");
             }
-        );
-
-        const data = await response.json();
-
-        if (data.success) {
-            alert("Candidate hired successfully!");
-            loadRecruitmentData();
-        } else {
-        alert(data.error || "Failed to hire candidate.");
-        }
-    };
-
-    window.cancelLeave = async function(requestId) {
-
-        if (!confirm('Cancel this leave request?')) {
-            return;
-        }
-
-        const data = await apiCall(
-            `/attendance/api/leaves/cancel/${requestId}/`,
-            'POST'
-        );
-
-        if (data && data.success) {
-            alert(data.message);
-            loadLeavesCenter();
-        } else {
-            alert(data ? data.error : 'Failed to cancel request');
-        }
-    };
-
-tbody.innerHTML = employees.map(emp => `
-     <tr>
-        <td>
-            <div class="emp-name-cell">
-                <div class="emp-avatar">${initial(emp.full_name)}</div>
-                <div>
-                    <div style="font-weight:600;">${emp.full_name}</div>
-                    <div style="font-size:12px;color:var(--text-light);">${emp.email || ''}</div>
-                </div>
-            </div>
-        </td>
-        <td>${emp.department || 'â€”'}</td>
-        <td>${emp.position || 'â€”'}</td>
-        <td>${statusBadge(emp.status)}</td>
-        <td>${emp.hire_date || 'â€”'}</td>
-
-        <td>
-            <div class="btn-group">
-
-    <button class="btn btn-ghost"
-        onclick="editEmployee(${emp.id})">
-        Edit
-    </button>
-
-    <button class="btn btn-info"
-        onclick="promoteEmployee(${emp.id})">
-        Promote
-    </button>
-
-    <div class="dropdown">
-        <button class="btn btn-secondary dropdown-toggle"
-            type="button"
-            data-bs-toggle="dropdown">
-            Actions
-        </button>
-
-        <ul class="dropdown-menu">
-
-            <li>
-                <a class="dropdown-item"
-                   href="#"
-                   onclick="transferEmployee(${emp.id})">
-                    Transfer
-                </a>
-            </li>
-
-            <li>
-                <a class="dropdown-item text-success"
-                   href="#"
-                   onclick="activateEmployee(${emp.id})">
-                    Activate
-                </a>
-            </li>
-
-            <li>
-                <a class="dropdown-item text-danger"
-                   href="#"
-                   onclick="terminateEmployee(${emp.id})">
-                    Terminate
-                </a>
-            </li>
-
-        </ul>
-    </div>
-
-</div>
-        </td>
-    </tr>
-`).join('');
-
-            lucide.createIcons();
-        }
+        };
 
         loadEmployees();
 
         //  REFERENCE DATA (departments, positions, roles)
         async function loadReferenceData() {
-            const data = await apiCall('/attendance/api/reference-data/');
+            const data = await apiCall('/api/reference-data/');
             if (!data || !data.success) return;
 
             const fill = (elId, items, labelKey) => {
@@ -613,7 +503,7 @@ tbody.innerHTML = employees.map(emp => `
             submitLabel.textContent = 'Creatingâ€¦';
             createSpinner.style.display = 'block';
 
-            const data = await apiCall('/attendance/api/employees/create-hr/', 'POST', payload);
+            const data = await apiCall('/api/employees/create-hr/', 'POST', payload);
 
             submitBtn.disabled = false;
             submitLabel.textContent = 'Create Employee';
@@ -719,7 +609,7 @@ tbody.innerHTML = employees.map(emp => `
             const fd = new FormData();
             fd.append('csv_file', selectedFile);
 
-            const data = await apiUpload('/attendance/api/employees/upload-csv/', fd);
+            const data = await apiUpload('/api/employees/upload-csv/', fd);
 
             uploadBtn.disabled = false;
             uploadLabel.textContent = 'Upload Roster';

@@ -31,7 +31,7 @@ def hr_lifecycle(request):
     HR views all employees' lifecycles with search functionality.
     """
     if not is_hr(request.user):
-        return redirect('/login/')
+        return redirect('my_lifecycle')  # Redirect employees to their own lifecycle page
 
     query = request.GET.get('q', '').strip()
     

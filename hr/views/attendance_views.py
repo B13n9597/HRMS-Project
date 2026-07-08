@@ -90,60 +90,107 @@ def attendance_logs(request):
 @login_required(login_url='/login/')
 def manual_attendance(request):
     """
-    Employee manually submits attendance (date, time in, time out, signature).
+    Employee manually submits attendance (PIN + canvas signature).
+    - First submission = clock-in
+    - Second submission (same day) = clock-out
     Saves to DB and redirects to own attendance logs page.
     """
-    from hr.forms import ManualAttendanceForm, EmployeeKioskForm
-
     try:
         employee = Employee.objects.get(user=request.user)
     except Employee.DoesNotExist:
         messages.error(request, "No employee profile linked to your account.")
         return redirect('/')
 
-    # HR users keep the full manual form (date/time). Employees get a simplified
-    # kiosk-style form: enter PIN + signature (name shown/read-only), submit now.
     simple_mode = not is_hr(request.user)
 
     if request.method == 'POST':
-        if simple_mode:
-            form = EmployeeKioskForm(request.POST)
-            if form.is_valid():
-                pin_entered = form.cleaned_data['pin']
-                if pin_entered != employee.attendance_pin:
-                    messages.error(request, "Invalid Attendance PIN.")
-                    context = {'form': form, 'employee': employee, 'active_page': 'manual_attendance', 'simple_mode': True}
-                    return render(request, 'hr/manual_attendance.html', context)
+        pin_entered   = request.POST.get('pin', '').strip()
+        sig_data      = request.POST.get('signature_data', '').strip()
+        sig_text_only = request.POST.get('signature', '').strip()   # legacy fallback
 
-                sig_text = form.cleaned_data.get('signature', '')
-                from datetime import datetime
-                now = timezone.now()
-                today = timezone.localdate()
+        # Validate PIN
+        if pin_entered != (employee.attendance_pin or ''):
+            messages.error(request, "Invalid Attendance PIN. Please try again.")
+        else:
+            now   = timezone.now()
+            today = timezone.localdate()
 
-                # Create or update today's attendance: if no record → time_in, else set time_out
+            # Decode canvas base64 signature → ImageField file if present
+            sig_file = None
+            if sig_data and sig_data.startswith('data:image/'):
+                import base64, uuid as _uuid
+                from django.core.files.base import ContentFile
+                try:
+                    fmt, imgstr = sig_data.split(';base64,')
+                    ext = fmt.split('/')[-1]
+                    decoded = base64.b64decode(imgstr)
+                    sig_file = ContentFile(
+                        decoded,
+                        name=f"sig_{employee.employee_id}_{_uuid.uuid4().hex[:8]}.{ext}"
+                    )
+                except Exception:
+                    pass
+
+            if simple_mode:
+                # Simple kiosk mode: check-in then check-out today
                 obj, created = Attendance.objects.get_or_create(
                     employee=employee,
                     date=today,
-                    defaults={'time_in': now, 'status': 'Present', 'signature_text': sig_text},
+                    defaults={
+                        'time_in':       now,
+                        'status':        'Present',
+                        'signature_text': sig_text_only,
+                    },
                 )
-                if not created:
-                    if obj.time_out is None:
-                        obj.time_out = now
-                        if not obj.signature_text:
-                            obj.signature_text = sig_text
-                        obj.save()
-                        messages.success(request, f"Clock-out recorded at {now.strftime('%H:%M')}.")
-                    else:
-                        messages.info(request, "Attendance already completed for today.")
+                if created:
+                    obj.calculate_status()
+                    if sig_file:
+                        obj.signature = sig_file
+                    obj.save()
+                    messages.success(request, f"Clock-in recorded at {timezone.localtime(now).strftime('%H:%M')}.")
+                elif obj.time_out is None:
+                    obj.time_out = now
+                    if not obj.signature_text:
+                        obj.signature_text = sig_text_only
+                    if sig_file:
+                        obj.signature = sig_file
+                    obj.save()
+                    messages.success(request, f"Clock-out recorded at {timezone.localtime(now).strftime('%H:%M')}.")
                 else:
-                    messages.success(request, f"Clock-in recorded at {now.strftime('%H:%M')}.")
-                return redirect('my_attendance_record')
-        else:
-            form = ManualAttendanceForm(request.POST)
-            if form.is_valid():
-                pin_entered = form.cleaned_data['pin']
-                if pin_entered != employee.attendance_pin:
-                    messages.error(request, "Invalid Attendance PIN.")
+                    messages.info(request, "Attendance already completed for today.")
+            else:
+                # Full HR mode: allow specifying date and times
+                from hr.forms import ManualAttendanceForm
+                form = ManualAttendanceForm(request.POST)
+                if form.is_valid():
+                    date     = form.cleaned_data['date']
+                    time_in  = form.cleaned_data['time_in']
+                    time_out = form.cleaned_data.get('time_out')
+                    from datetime import datetime
+                    tz_local = timezone.get_current_timezone()
+                    dt_in  = tz_local.localize(datetime.combine(date, time_in))
+                    dt_out = tz_local.localize(datetime.combine(date, time_out)) if time_out else None
+
+                    defaults = {
+                        'time_in':        dt_in,
+                        'status':         'Present',
+                        'signature_text': sig_text_only,
+                    }
+                    if dt_out:
+                        defaults['time_out'] = dt_out
+
+                    obj, created = Attendance.objects.update_or_create(
+                        employee=employee,
+                        date=date,
+                        defaults=defaults,
+                    )
+                    obj.calculate_status()
+                    if sig_file:
+                        obj.signature = sig_file
+                    obj.save()
+                    action = 'submitted' if created else 'updated'
+                    messages.success(request, f"Attendance {action} for {date}.")
+                else:
                     context = {
                         'form':        form,
                         'employee':    employee,
@@ -152,36 +199,14 @@ def manual_attendance(request):
                     }
                     return render(request, 'hr/manual_attendance.html', context)
 
-                date     = form.cleaned_data['date']
-                time_in  = form.cleaned_data['time_in']
-                time_out = form.cleaned_data['time_out']
-                sig_text = form.cleaned_data.get('signature', '')
+            return redirect('my_attendance_record')
 
-                # Combine date + time into datetime objects (naive → aware)
-                from datetime import datetime
-                tz = timezone.get_current_timezone()
-                dt_in  = tz.localize(datetime.combine(date, time_in))
-                dt_out = tz.localize(datetime.combine(date, time_out))
-
-                # update_or_create so an existing QR-scanned record is not duplicated
-                obj, created = Attendance.objects.update_or_create(
-                    employee=employee,
-                    date=date,
-                    defaults={
-                        'time_in':        dt_in,
-                        'time_out':       dt_out,
-                        'status':         'Present',
-                        'signature_text': sig_text,
-                    },
-                )
-                action = 'submitted' if created else 'updated'
-                messages.success(request, f"Attendance {action} for {date}.")
-                return redirect('my_attendance_record')
+    # GET — show empty form
+    from hr.forms import ManualAttendanceForm, EmployeeKioskForm
+    if simple_mode:
+        form = EmployeeKioskForm(initial={'name': employee.get_full_name()})
     else:
-        if simple_mode:
-            form = EmployeeKioskForm(initial={'name': employee.get_full_name()})
-        else:
-            form = ManualAttendanceForm(initial={'date': timezone.localdate()})
+        form = ManualAttendanceForm(initial={'date': timezone.localdate()})
 
     context = {
         'form':        form,
@@ -238,11 +263,28 @@ def api_scan(request):
 
 @login_required(login_url='/login/')
 def my_attendance(request):
-    """Employee's own attendance history."""
-    history = get_my_attendance(request.user)
-
+    """Employee's own attendance history with optional month/year/status filters."""
+    month        = request.GET.get('month', '')
+    year         = request.GET.get('year', '')
+    status_f     = request.GET.get('status', '')
+    history = get_my_attendance(
+        request.user,
+        month=int(month) if month else None,
+        year=int(year) if year else None,
+        status_filter=status_f or None,
+    )
+    from django.utils import timezone as tz
     context = {
         'records':     history,
+        'month':       month or tz.localdate().month,
+        'year':        year  or tz.localdate().year,
+        'status_f':    status_f,
+        'months': [
+            (1,'January'),(2,'February'),(3,'March'),(4,'April'),
+            (5,'May'),(6,'June'),(7,'July'),(8,'August'),
+            (9,'September'),(10,'October'),(11,'November'),(12,'December')
+        ],
+        'years':    [2024, 2025, 2026],
         'active_page': 'my_attendance',
     }
     return render(request, 'hr/my_attendance.html', context)

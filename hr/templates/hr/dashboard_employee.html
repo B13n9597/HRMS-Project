@@ -91,7 +91,7 @@
             <i data-lucide="calendar-check" style="width: 28px; height: 28px;"></i>
         </div>
         <div class="stat-info">
-            <h3>98%</h3>
+            <h3>{{ attendance_rate|default:"—" }}%</h3>
             <p>Attendance Rate</p>
         </div>
     </div>
@@ -100,7 +100,7 @@
             <i data-lucide="clock" style="width: 28px; height: 28px;"></i>
         </div>
         <div class="stat-info">
-            <h3>12</h3>
+            <h3>{{ leave_days_left|default:"—" }}</h3>
             <p>Leave Days Left</p>
         </div>
     </div>
