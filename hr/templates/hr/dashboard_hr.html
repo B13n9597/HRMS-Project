@@ -76,6 +76,7 @@
                     <th>Employee</th>
                     <th>Time In</th>
                     <th>Status</th>
+                    <th>Signature</th>
                 </tr>
             </thead>
             <tbody>
@@ -87,10 +88,19 @@
                     <td>
                         <span class="badge badge-primary">{{ log.status }}</span>
                     </td>
+                    <td>
+                        {% if log.signature %}
+                            <img src="{{ log.signature.url }}" alt="Signature" style="max-width:60px;max-height:40px;cursor:pointer;" onclick="viewSignature('{{ log.signature.url }}', '{{ log.employee.get_full_name }}', '{{ log.date }}');" title="Click to view full signature">
+                        {% elif log.signature_text %}
+                            <span style="font-size:12px;padding:4px 8px;background:#f0f0f0;border-radius:4px;">{{ log.signature_text }}</span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
                 </tr>
                 {% empty %}
                 <tr class="empty-state">
-                    <td colspan="4">No attendance records found.</td>
+                    <td colspan="5">No attendance records found.</td>
                 </tr>
                 {% endfor %}
             </tbody>

@@ -43,22 +43,41 @@ def supervisor_dashboard(request):
     if not _require_supervisor(request.user):
         return redirect('/dashboard/employee/')
 
+    from django.db.models import Q
+    
     employees = get_department_employees(request.user)
     today     = timezone.localdate()
 
+    # Apply search filter
+    query = request.GET.get('q', '').strip()
+    if query:
+        employees = employees.filter(
+            Q(first_name__icontains=query) | Q(last_name__icontains=query)
+        )
+
+    # Apply status filter
+    status = request.GET.get('status', '')
+    if status:
+        employees = employees.filter(status__name__iexact=status)
+
     from hr.models import Attendance, LeaveRequest
+    # Get all unfiltered for stats
+    all_employees = get_department_employees(request.user)
     present_today  = Attendance.objects.filter(
-        employee__in=employees, date=today, status__in=['Present', 'Late']
+        employee__in=all_employees, date=today, status__in=['Present', 'Late']
     ).count()
     pending_leaves = LeaveRequest.objects.filter(
-        employee__in=employees, status='Pending'
+        employee__in=all_employees, status='Pending'
     ).count()
 
     ctx = _supervisor_context(request.user, {
         'employees':      employees,
         'present_today':  present_today,
         'pending_leaves': pending_leaves,
-        'employee_count': employees.count(),
+        'employee_count': all_employees.count(),
+        'search_query':   query,
+        'status_f':       status,
+        'statuses':       ['Active', 'On Leave', 'Terminated'],
         'active_page':    'supervisor_dashboard',
     })
     return render(request, 'hr/dashboard_supervisor.html', ctx)

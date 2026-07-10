@@ -45,6 +45,7 @@ def verify_qr_token(signed_token):
 
     from .models import Employee
 
+    signed_token = str(signed_token or '').strip()
     if not signed_token:
         return None, 'No token provided.'
 
@@ -58,6 +59,14 @@ def verify_qr_token(signed_token):
     except signing.SignatureExpired:
         return None, 'QR code expired — please refresh.'
     except signing.BadSignature:
+        # Fall back to raw UUID support for older or alternate QR formats.
+        raw_token = signed_token
+        if len(raw_token) == 36 and raw_token.count('-') == 4:
+            try:
+                employee = Employee.objects.get(qr_token=raw_token)
+                return employee, None
+            except Employee.DoesNotExist:
+                return None, 'Employee not found.'
         return None, 'Invalid QR code.'
 
     # Step 3: validate time window (anti-replay)

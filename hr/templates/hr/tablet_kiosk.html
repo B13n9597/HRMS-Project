@@ -482,7 +482,7 @@
             <i data-lucide="scan-line" style="width:24px;height:24px;"></i>
             QR Code Attendance
         </h3>
-        <p class="screen-desc">Point your QR code at the camera. Attendance is recorded automatically.</p>
+        <p class="screen-desc"><strong>Show your rotating QR badge</strong> (from your phone dashboard) to this camera. Scan once to clock in, scan again to clock out.</p>
 
         <div id="qrReaderContainer" style="width:100%;max-width:480px;margin:0 auto 20px;border-radius:var(--radius-md);overflow:hidden;border:2px solid var(--border-color);background:#000;min-height:300px;display:flex;align-items:center;justify-content:center;position:relative;">
             <video id="qrVideo" autoplay playsinline muted style="width:100%;display:block;"></video>
@@ -658,6 +658,7 @@
             }
         }
         switchTab('qr');   // QR is the default tab
+        startQRCamera();
 
         // ── QR CAMERA SCANNING ────────────────────────────────────────────────
         let qrStream = null;
@@ -732,6 +733,8 @@
 
         async function handleQRResult(token) {
             if (qrProcessing) return;
+            token = (token || '').trim();
+            if (!token) return;
             qrProcessing = true;
 
             const statusEl = document.getElementById('qrStatus');
@@ -751,16 +754,46 @@
 
                 if (data.success) {
                     const d = data.data || {};
-                    resultEl.style.cssText = 'display:block;background:var(--success-light);color:var(--success-dark);border:1px solid rgba(16,185,129,0.3);padding:16px;border-radius:8px;text-align:center;font-weight:600;font-size:15px;';
-                    resultEl.innerHTML = `${d.employee || 'Employee'} — ${d.message || 'Attendance recorded'}<br><small>${d.time || ''}</small>`;
+                    let nextMsg = 'Ready — hold next QR code in frame.';
+                    let resultStyle = 'display:block;background:var(--success-light);color:var(--success-dark);border:1px solid rgba(16,185,129,0.3);padding:16px;border-radius:8px;text-align:center;font-weight:600;font-size:15px;';
+                    
+                    if (d.result === 'time_in') {
+                        resultEl.innerHTML = `
+                            <div style="font-size:18px;font-weight:800;margin-bottom:6px;">✓ Clocked In</div>
+                            <div>${d.employee}</div>
+                            <small style="display:block;margin-top:8px;font-size:13px;opacity:0.85;border-top:1px solid rgba(16,185,129,0.2);padding-top:8px;">
+                                Time: ${d.time}
+                            </small>
+                        `;
+                        nextMsg = '👉 Scan your QR code AGAIN to clock out. Keep your phone badge ready.';
+                    } else if (d.result === 'time_out') {
+                        resultEl.innerHTML = `
+                            <div style="font-size:18px;font-weight:800;margin-bottom:6px;">✓ Clocked Out</div>
+                            <div>${d.employee}</div>
+                            <small style="display:block;margin-top:8px;font-size:13px;opacity:0.85;">
+                                Worked: ${d.hours_worked} hrs
+                            </small>
+                        `;
+                        nextMsg = 'Have a great day! Scan next employee badge or come back tomorrow.';
+                    } else if (d.result === 'already_complete') {
+                        resultStyle = 'display:block;background:var(--warning-light);color:var(--warning-dark);border:1px solid rgba(217,119,6,0.3);padding:16px;border-radius:8px;text-align:center;font-weight:600;font-size:15px;';
+                        resultEl.innerHTML = `
+                            <div style="font-size:16px;font-weight:800;margin-bottom:6px;">⚠ Already Logged</div>
+                            <div>${d.employee}</div>
+                            <small style="display:block;margin-top:8px;font-size:12px;opacity:0.85;">Attendance already recorded for today.</small>
+                        `;
+                        nextMsg = 'Ask HR if you need to re-record attendance.';
+                    }
+                    
+                    resultEl.style.cssText = resultStyle;
                     statusEl.style.color = 'var(--success-dark)';
                     statusEl.textContent = 'Attendance recorded successfully.';
 
-                    // Auto-resume scanning after 4 seconds
+                    // Auto-resume scanning after 4-5 seconds
                     setTimeout(() => {
                         resultEl.style.display = 'none';
                         statusEl.style.color   = 'var(--text-muted)';
-                        statusEl.textContent   = 'Ready — hold next QR code in frame.';
+                        statusEl.textContent   = nextMsg;
                         qrProcessing = false;
                     }, 4000);
                 } else {

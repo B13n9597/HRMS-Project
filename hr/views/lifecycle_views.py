@@ -132,12 +132,24 @@ def employee_details(request, id):
         employee=employee
     ).order_by('-year', 'period')
 
+    # Leave requests & balances (supervisor/HR view)
+    from hr.services import leave_service
+    leave_requests = leave_service.get_employee_requests(employee.id)
+    leave_balances = leave_service.get_leave_balance(employee.id)
+
+    # Payroll records
+    from hr.models import PayrollRecord
+    payroll_records = PayrollRecord.objects.filter(employee=employee).order_by('-period_start')
+
     context = {
         'employee':     employee,
         'history':      history,
         'certificates': certificates,
         'attendance':   attendance,
         'kpi_scores':   kpi_scores,
+        'leave_requests': leave_requests,
+        'leave_balances': leave_balances,
+        'payroll_records': payroll_records,
         'active_page':  'dashboard_hr',
     }
     return render(request, 'hr/employee_details.html', context)

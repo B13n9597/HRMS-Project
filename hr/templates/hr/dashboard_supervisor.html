@@ -73,13 +73,34 @@
     <div class="card-header">
         <i data-lucide="users-2" style="width:18px;height:18px;color:var(--primary);"></i>
         <h3>My Department Employees</h3>
-        <a href="{% url 'supervisor_employees' %}" class="btn btn-ghost" style="margin-left:auto;">View All</a>
     </div>
+
+    <!-- Search & Filter -->
+    <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-color);">
+        <form method="get" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            <input 
+                type="text" 
+                name="q" 
+                placeholder="Search by name..." 
+                value="{{ search_query }}" 
+                style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border-color);border-radius:var(--radius-sm);"
+            >
+            <select name="status" style="padding:8px 12px;border:1px solid var(--border-color);border-radius:var(--radius-sm);">
+                <option value="">All Statuses</option>
+                {% for s in statuses %}
+                <option value="{{ s }}" {% if status_f == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary" style="padding:8px 16px;">Filter</button>
+            <a href="{% url 'supervisor_dashboard' %}" class="btn btn-ghost" style="padding:8px 16px;">Reset</a>
+        </form>
+    </div>
+
     <div class="table-wrap">
         <table>
             <thead><tr><th>Name</th><th>Department</th><th>Position</th><th>Status</th><th>Action</th></tr></thead>
             <tbody>
-                {% for emp in employees|slice:":10" %}
+                {% for emp in employees %}
                 <tr>
                     <td>
                         <div class="emp-name-cell">
