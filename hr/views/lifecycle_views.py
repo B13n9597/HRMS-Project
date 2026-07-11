@@ -46,11 +46,12 @@ def my_lifecycle(request):
     certificates = EmployeeCertificate.objects.filter(employee=employee).order_by('-uploaded_at')
 
     context = {
-        'employee':     employee,
-        'history':      history,
-        'certificates': certificates,
-        'cert_types':   EmployeeCertificate.CERT_TYPES,
-        'active_page':  'my_lifecycle',
+        'employee':      employee,
+        'history':       history,
+        'certificates':  certificates,
+        'cert_types':    EmployeeCertificate.CERT_TYPES,
+        'active_page':   'my_lifecycle',
+        'base_template': 'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
     }
     return render(request, 'hr/my_lifecycle.html', context)
 

@@ -1,0 +1,263 @@
+{% extends base_template %}
+
+{% block title %}My Performance / KPI — ACT HRMS{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .kpi-hero {
+        background: linear-gradient(135deg, #025da2 0%, #0ea5e9 100%);
+        border-radius: var(--radius-lg);
+        padding: 32px 40px;
+        color: #fff;
+        margin-bottom: 28px;
+    }
+    .kpi-hero h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .kpi-hero p  { opacity: 0.85; font-size: 14px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; align-items: start; }
+    @media(max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+    .score-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: 14px;
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    .score-badge.high  { background: var(--success-light); color: var(--success-dark); }
+    .score-badge.low   { background: var(--danger-light);  color: var(--danger-dark); }
+
+    .form-field { margin-bottom: 16px; }
+    .form-field label {
+        display: block;
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px;
+    }
+    .form-control {
+        width: 100%; padding: 10px 14px;
+        border: 1.5px solid var(--border-color); border-radius: var(--radius-sm);
+        font-size: 14px; background: #f8fafc; transition: var(--transition);
+    }
+    .form-control:focus {
+        outline: none; border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(2,93,162,0.1); background: #fff;
+    }
+
+    .rating-row {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .rating-row:last-child { border-bottom: none; }
+    .rating-label { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+    .star-group { display: flex; gap: 6px; }
+    .star-group input[type=radio] { display: none; }
+    .star-group label {
+        font-size: 22px; cursor: pointer; color: #cbd5e1;
+        transition: color 0.15s; text-transform: none; letter-spacing: 0; font-weight: 400;
+    }
+    .star-group input[type=radio]:checked ~ label,
+    .star-group label:hover,
+    .star-group label:hover ~ label { color: #f59e0b; }
+    /* reverse sibling trick */
+    .star-group { flex-direction: row-reverse; justify-content: flex-end; }
+    .star-group label:hover,
+    .star-group label:hover ~ label { color: #f59e0b; }
+
+    .empty-kpi {
+        padding: 48px 24px; text-align: center; color: var(--text-muted);
+    }
+    .empty-kpi i { display: block; margin: 0 auto 12px; opacity: 0.3; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kpi-hero">
+    <h1>My Performance &amp; KPI</h1>
+    <p>View your evaluation history and submit a self-assessment for the current period.</p>
+</div>
+
+{% if messages %}
+    {% for m in messages %}
+    <div class="alert alert-{{ m.tags|default:'info' }}"
+         style="padding:12px 16px;border-radius:var(--radius-sm);margin-bottom:16px;
+                background:var(--primary-light);color:var(--primary);">
+        {{ m }}
+    </div>
+    {% endfor %}
+{% endif %}
+
+<div class="two-col">
+
+    <!-- ── Self-assessment form ── -->
+    <div class="card">
+        <div class="card-header">
+            <i data-lucide="clipboard-edit" style="width:18px;height:18px;color:var(--primary);"></i>
+            <h3>Submit Self-Assessment</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="self_assess">
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div class="form-field" style="margin-bottom:0;">
+                        <label>Year</label>
+                        <select name="year" class="form-control">
+                            {% for y in years %}
+                            <option value="{{ y }}">{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field" style="margin-bottom:0;">
+                        <label>Period</label>
+                        <select name="period" class="form-control">
+                            {% for val, label in periods %}
+                            <option value="{{ val }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Star ratings — each criterion 1-5 -->
+                <div style="margin-bottom:16px;">
+                    {% for field_name, display in "job_knowledge:Job Knowledge,work_quality:Work Quality,attendance:Punctuality & Attendance,teamwork:Teamwork,ethics:Ethics & Conduct"|split:"," %}
+                    {% endfor %}
+
+                    <!-- Rendered directly since template tags can't split strings -->
+                    <div class="rating-row">
+                        <span class="rating-label">Job Knowledge</span>
+                        <div class="star-group">
+                            {% for i in "54321" %}
+                            <input type="radio" name="job_knowledge" id="jk{{ i }}" value="{{ i }}">
+                            <label for="jk{{ i }}" title="{{ i }}/5">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="rating-row">
+                        <span class="rating-label">Work Quality</span>
+                        <div class="star-group">
+                            {% for i in "54321" %}
+                            <input type="radio" name="work_quality" id="wq{{ i }}" value="{{ i }}">
+                            <label for="wq{{ i }}" title="{{ i }}/5">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="rating-row">
+                        <span class="rating-label">Punctuality &amp; Attendance</span>
+                        <div class="star-group">
+                            {% for i in "54321" %}
+                            <input type="radio" name="attendance" id="at{{ i }}" value="{{ i }}">
+                            <label for="at{{ i }}" title="{{ i }}/5">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="rating-row">
+                        <span class="rating-label">Teamwork</span>
+                        <div class="star-group">
+                            {% for i in "54321" %}
+                            <input type="radio" name="teamwork" id="tw{{ i }}" value="{{ i }}">
+                            <label for="tw{{ i }}" title="{{ i }}/5">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="rating-row" style="margin-bottom:16px;">
+                        <span class="rating-label">Ethics &amp; Conduct</span>
+                        <div class="star-group">
+                            {% for i in "54321" %}
+                            <input type="radio" name="ethics" id="et{{ i }}" value="{{ i }}">
+                            <label for="et{{ i }}" title="{{ i }}/5">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label>Comments <span style="font-size:11px;color:var(--text-light);">(optional)</span></label>
+                    <textarea name="comments" class="form-control" rows="3"
+                              placeholder="Any notes about your performance this period…"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width:100%;">
+                    <i data-lucide="send" style="width:15px;height:15px;"></i>
+                    Submit Self-Assessment
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Score history ── -->
+    <div class="card">
+        <div class="card-header">
+            <i data-lucide="bar-chart-3" style="width:18px;height:18px;color:var(--primary);"></i>
+            <h3>My Evaluation History</h3>
+        </div>
+        {% if scores %}
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Period</th>
+                        <th>Type</th>
+                        <th>JK</th>
+                        <th>WQ</th>
+                        <th>Att</th>
+                        <th>TW</th>
+                        <th>Eth</th>
+                        <th>Overall</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in scores %}
+                    <tr>
+                        <td style="white-space:nowrap;">
+                            <strong>{{ s.year }}</strong>
+                            <span class="badge badge-primary" style="font-size:11px;margin-left:4px;">{{ s.period }}</span>
+                        </td>
+                        <td>
+                            {% if s.evaluation_type == 'self' %}
+                                <span class="badge badge-primary" style="font-size:11px;">Self</span>
+                            {% elif s.evaluation_type == 'supervisor' %}
+                                <span class="badge badge-warning" style="font-size:11px;">Supervisor</span>
+                            {% else %}
+                                <span class="badge badge-success" style="font-size:11px;">HR</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="score-badge {% if s.job_knowledge >= 4 %}high{% elif s.job_knowledge <= 2 %}low{% endif %}">{{ s.job_knowledge }}</span></td>
+                        <td><span class="score-badge {% if s.work_quality >= 4 %}high{% elif s.work_quality <= 2 %}low{% endif %}">{{ s.work_quality }}</span></td>
+                        <td><span class="score-badge {% if s.attendance >= 4 %}high{% elif s.attendance <= 2 %}low{% endif %}">{{ s.attendance }}</span></td>
+                        <td><span class="score-badge {% if s.teamwork >= 4 %}high{% elif s.teamwork <= 2 %}low{% endif %}">{{ s.teamwork }}</span></td>
+                        <td><span class="score-badge {% if s.ethics >= 4 %}high{% elif s.ethics <= 2 %}low{% endif %}">{{ s.ethics }}</span></td>
+                        <td>
+                            {% if s.overall_score %}
+                            <strong style="color:var(--primary);font-size:15px;">{{ s.overall_score }}</strong>
+                            <span style="font-size:11px;color:var(--text-light);">/5</span>
+                            {% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    {% if s.comments %}
+                    <tr>
+                        <td colspan="8" style="font-size:13px;color:var(--text-muted);padding-top:4px;padding-bottom:12px;background:#fafafa;">
+                            <i data-lucide="message-circle" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>
+                            {{ s.comments }}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-kpi">
+            <i data-lucide="bar-chart-3" style="width:40px;height:40px;"></i>
+            <p style="font-weight:600;color:var(--text-main);margin-bottom:4px;">No evaluations yet</p>
+            <p style="font-size:13px;">Submit your first self-assessment using the form on the left.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

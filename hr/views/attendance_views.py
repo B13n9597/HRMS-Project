@@ -311,19 +311,20 @@ def my_attendance(request):
 
     from django.utils import timezone as tz
     context = {
-        'records':      history,
-        'employee':     employee,
-        'month':        month or tz.localdate().month,
-        'year':         year  or tz.localdate().year,
-        'status_f':     status_f,
-        'search_query': query,
+        'records':         history,
+        'employee':        employee,
+        'month':           month or tz.localdate().month,
+        'year':            year  or tz.localdate().year,
+        'status_f':        status_f,
+        'search_query':    query,
         'months': [
             (1,'January'),(2,'February'),(3,'March'),(4,'April'),
             (5,'May'),(6,'June'),(7,'July'),(8,'August'),
             (9,'September'),(10,'October'),(11,'November'),(12,'December')
         ],
-        'years':    [2024, 2025, 2026],
-        'active_page': 'my_attendance',
+        'years':           [2024, 2025, 2026],
+        'active_page':     'my_attendance',
+        'base_template':   'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
     }
     return render(request, 'hr/my_attendance.html', context)
 

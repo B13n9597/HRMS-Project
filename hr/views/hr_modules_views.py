@@ -172,11 +172,12 @@ def my_kpi(request):
     summary = get_employee_kpi_summary(employee.pk)
 
     context = {
-        'employee':  employee,
-        'scores':    summary['scores'],
-        'periods':   [('H1', 'Jan–Jun'), ('H2', 'Jul–Dec')],
-        'years':     [2024, 2025, 2026],
-        'active_page': 'my_kpi',
+        'employee':      employee,
+        'scores':        summary['scores'],
+        'periods':       [('H1', 'Jan–Jun'), ('H2', 'Jul–Dec')],
+        'years':         [2024, 2025, 2026],
+        'active_page':   'my_kpi',
+        'base_template': 'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
     }
     return render(request, 'hr/my_kpi.html', context)
 
@@ -292,6 +293,7 @@ def my_salary_slips(request):
         'employee':        employee,
         'payroll_records': payroll_records,
         'active_page':     'my_salary_slips',
+        'base_template':   'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
     }
     return render(request, 'hr/my_salary_slips.html', context)
 
