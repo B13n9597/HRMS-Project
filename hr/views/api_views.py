@@ -371,7 +371,7 @@ def api_leaves(request):
         balance, created = LeaveBalance.objects.get_or_create(
             employee=employee,
             leave_type=leave_type,
-            defaults={'remaining_days': leave_type.max_days, 'last_updated': timezone.localdate()}
+            defaults={'remaining_days': leave_type.max_days}
         )
         
         if balance.remaining_days < requested_days:

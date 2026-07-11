@@ -499,6 +499,7 @@ class LeaveBalance(BaseModel):
     allocated_days = models.IntegerField(default=0)
     used_days      = models.IntegerField(default=0)
     remaining_days = models.IntegerField()
+    last_updated   = models.DateField(auto_now=True)
 
     class Meta:
         unique_together = ('employee', 'leave_type')
