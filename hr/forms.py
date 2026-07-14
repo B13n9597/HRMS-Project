@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 
-from hr.models import Department, EmployeeStatus, Position, Role
+from hr.models import Department, EmployeeCertificate, EmployeeStatus, Position, Role
 
 
 class EmployeeCreateForm(forms.Form):
@@ -116,4 +116,40 @@ class EmployeeKioskForm(forms.Form):
         required=True,
         widget=forms.TextInput(attrs={"placeholder": "Type your full name as signature"}),
     )
+
+
+class EmployeeCertificateForm(forms.ModelForm):
+    class Meta:
+        model = EmployeeCertificate
+        fields = [
+            "title",
+            "cert_type",
+            "issued_by",
+            "issued_date",
+            "expiry_date",
+            "document",
+        ]
+        widgets = {
+            "issued_date": forms.DateInput(attrs={"type": "date"}),
+            "expiry_date": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs.setdefault("class", "form-input")
+        self.fields["document"].widget.attrs.update({
+            "accept": ".pdf,.png,.jpg,.jpeg",
+            "id": "documentInput",
+        })
+        self.fields["document"].required = True
+        self.fields["title"].required = True
+
+    def clean_document(self):
+        document = self.cleaned_data.get("document")
+        if document:
+            valid_ext = (".pdf", ".png", ".jpg", ".jpeg")
+            if not document.name.lower().endswith(valid_ext):
+                raise forms.ValidationError("Upload a PDF or image file (.pdf, .png, .jpg, .jpeg).")
+        return document
 

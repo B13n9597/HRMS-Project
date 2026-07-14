@@ -64,7 +64,6 @@ def ensure_leave_balances(employee: Employee):
                 'allocated_days': allocated,
                 'used_days':      0,
                 'remaining_days': allocated,
-                'last_updated':   today,
             }
         )
         if not created:
@@ -72,8 +71,7 @@ def ensure_leave_balances(employee: Employee):
                 extra = allocated - balance.allocated_days
                 balance.allocated_days = allocated
                 balance.remaining_days = max(0, balance.remaining_days + extra)
-                balance.last_updated = today
-                balance.save(update_fields=['allocated_days', 'remaining_days', 'last_updated'])
+                balance.save(update_fields=['allocated_days', 'remaining_days'])
 
 
 def is_working_day(date) -> bool:
@@ -268,7 +266,6 @@ def approve_request(request_id: int, approver: Employee) -> LeaveRequest:
     if balance and req.requested_days:
         balance.used_days      = (balance.used_days or 0) + req.requested_days
         balance.remaining_days = max(0, balance.remaining_days - req.requested_days)
-        balance.last_updated   = timezone.localdate()
         balance.save()
 
     return req
@@ -342,7 +339,6 @@ def process_year_end_unused_leave():
             balance.remaining_days = new_allocated
 
         balance.used_days    = 0
-        balance.last_updated = timezone.localdate()
         balance.save()
         processed += 1
 

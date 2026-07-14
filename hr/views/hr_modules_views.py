@@ -138,7 +138,7 @@ def performance_kpis(request):
 
 @login_required(login_url='/login/')
 def my_kpi(request):
-    """Employee views their own KPI scores and submits self-assessment."""
+    """Employee peer evaluation page: search & evaluate peers (left), view own received evaluations (right)."""
     try:
         employee = Employee.objects.get(user=request.user)
     except Employee.DoesNotExist:
@@ -148,6 +148,30 @@ def my_kpi(request):
 
     from hr.services.kpi_service import submit_kpi_score, get_employee_kpi_summary
 
+    # Handle peer evaluation submission
+    if request.method == 'POST' and request.POST.get('action') == 'peer_evaluate':
+        today = timezone.localdate()
+        target_id = request.POST.get('target_employee_id')
+        data = {
+            'evaluation_type': 'peer',
+            'year':            request.POST.get('year', today.year),
+            'period':          request.POST.get('period', 'H1' if today.month <= 6 else 'H2'),
+            'job_knowledge':   request.POST.get('job_knowledge', 3),
+            'work_quality':    request.POST.get('work_quality', 3),
+            'attendance':      request.POST.get('attendance', 3),
+            'teamwork':        request.POST.get('teamwork', 3),
+            'ethics':          request.POST.get('ethics', 3),
+            'comments':        request.POST.get('comments', ''),
+        }
+        from django.contrib import messages
+        try:
+            submit_kpi_score(int(target_id), employee, data)
+            messages.success(request, "Peer evaluation submitted successfully.")
+        except Exception as e:
+            messages.error(request, str(e))
+        return redirect('my_kpi')
+
+    # Handle self-assessment submission (keep backward compatibility)
     if request.method == 'POST' and request.POST.get('action') == 'self_assess':
         today  = timezone.localdate()
         data = {
@@ -169,14 +193,38 @@ def my_kpi(request):
             messages.error(request, str(e))
         return redirect('my_kpi')
 
+    # Fetch data for display
+    from hr.models import BiannualKPIScore
+
+    # All employees except self (for search / peer evaluation)
+    all_employees = Employee.objects.filter(
+        is_deleted=False
+    ).exclude(pk=employee.pk).select_related('department', 'position').order_by('first_name', 'last_name')
+
+    # Evaluations received by this employee (peer + supervisor + hr)
+    received_evaluations = BiannualKPIScore.objects.filter(
+        employee=employee
+    ).exclude(evaluation_type='self').select_related('evaluator').order_by('-submitted_at')
+
+    # Self-assessment scores
     summary = get_employee_kpi_summary(employee.pk)
+    self_scores = summary['scores'].filter(evaluation_type='self')
+
+    # Peer evaluations given by this employee
+    given_evaluations = BiannualKPIScore.objects.filter(
+        evaluator=employee, evaluation_type='peer'
+    ).select_related('employee').order_by('-submitted_at')
 
     context = {
-        'employee':  employee,
-        'scores':    summary['scores'],
-        'periods':   [('H1', 'Jan–Jun'), ('H2', 'Jul–Dec')],
-        'years':     [2024, 2025, 2026],
-        'active_page': 'my_kpi',
+        'employee':              employee,
+        'all_employees':         all_employees,
+        'received_evaluations':  received_evaluations,
+        'given_evaluations':     given_evaluations,
+        'scores':                self_scores,
+        'periods':               [('H1', 'Jan–Jun'), ('H2', 'Jul–Dec')],
+        'years':                 [2024, 2025, 2026],
+        'active_page':           'my_kpi',
+        'base_template':         'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
     }
     return render(request, 'hr/my_kpi.html', context)
 
@@ -292,6 +340,7 @@ def my_salary_slips(request):
         'employee':        employee,
         'payroll_records': payroll_records,
         'active_page':     'my_salary_slips',
+        'base_template':   'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
     }
     return render(request, 'hr/my_salary_slips.html', context)
 

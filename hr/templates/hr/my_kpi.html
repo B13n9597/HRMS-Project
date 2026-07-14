@@ -1,0 +1,556 @@
+{% extends base_template %}
+
+{% block title %}Peer Evaluation — ACT HRMS{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .kpi-hero {
+        background: linear-gradient(135deg, #025da2 0%, #0ea5e9 100%);
+        border-radius: var(--radius-lg);
+        padding: 32px 40px;
+        color: #fff;
+        margin-bottom: 28px;
+    }
+    .kpi-hero h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .kpi-hero p  { opacity: 0.85; font-size: 14px; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: start; }
+    @media(max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* Search box */
+    .search-box {
+        position: relative;
+        margin-bottom: 16px;
+    }
+    .search-box input {
+        width: 100%; padding: 10px 14px 10px 38px;
+        border: 1.5px solid var(--border-color); border-radius: var(--radius-sm);
+        font-size: 14px; background: #f8fafc; transition: var(--transition);
+    }
+    .search-box input:focus {
+        outline: none; border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(2,93,162,0.1); background: #fff;
+    }
+    .search-box .search-icon {
+        position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+        color: var(--text-light); pointer-events: none;
+    }
+
+    /* Employee list */
+    .employee-list {
+        max-height: 220px; overflow-y: auto;
+        border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+        margin-bottom: 16px;
+    }
+    .employee-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 14px; cursor: pointer;
+        border-bottom: 1px solid #f1f5f9;
+        transition: var(--transition);
+    }
+    .employee-item:last-child { border-bottom: none; }
+    .employee-item:hover { background: #f1f5f9; }
+    .employee-item.selected { background: var(--primary-light); border-color: var(--primary); }
+    .employee-item .emp-avatar {
+        width: 36px; height: 36px; border-radius: 50%; background: var(--primary);
+        color: #fff; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 14px; flex-shrink: 0;
+        font-family: var(--font-display);
+    }
+    .employee-item .emp-info { flex: 1; min-width: 0; }
+    .employee-item .emp-name { font-size: 14px; font-weight: 600; color: var(--text-main); }
+    .employee-item .emp-dept { font-size: 12px; color: var(--text-light); }
+    .emp-count {
+        font-size: 12px; color: var(--text-light); margin-bottom: 8px;
+        padding: 0 4px;
+    }
+
+    /* Selected employee banner */
+    .selected-employee-banner {
+        display: none;
+        background: var(--primary-light);
+        border: 1.5px solid var(--primary);
+        border-radius: var(--radius-sm);
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        align-items: center;
+        gap: 12px;
+    }
+    .selected-employee-banner.active { display: flex; }
+    .selected-employee-banner .emp-avatar {
+        width: 40px; height: 40px; border-radius: 50%; background: var(--primary);
+        color: #fff; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 15px; flex-shrink: 0;
+        font-family: var(--font-display);
+    }
+    .selected-employee-banner .emp-info { flex: 1; }
+    .selected-employee-banner .emp-name { font-weight: 700; color: var(--primary); font-size: 15px; }
+    .selected-employee-banner .emp-dept { font-size: 12px; color: var(--text-muted); }
+    .selected-employee-banner .btn-clear {
+        background: none; border: none; cursor: pointer;
+        color: var(--text-light); font-size: 18px; padding: 4px;
+    }
+    .selected-employee-banner .btn-clear:hover { color: var(--danger); }
+
+    /* Rating form */
+    .eval-form { display: none; }
+    .eval-form.active { display: block; }
+
+    .form-field { margin-bottom: 16px; }
+    .form-field label {
+        display: block;
+        font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px;
+    }
+    .form-control {
+        width: 100%; padding: 10px 14px;
+        border: 1.5px solid var(--border-color); border-radius: var(--radius-sm);
+        font-size: 14px; background: #f8fafc; transition: var(--transition);
+    }
+    .form-control:focus {
+        outline: none; border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(2,93,162,0.1); background: #fff;
+    }
+
+    .rating-row {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+    }
+    .rating-row:last-child { border-bottom: none; }
+    .rating-label { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+    .star-group { display: flex; gap: 6px; }
+    .star-group input[type=radio] { display: none; }
+    .star-group label {
+        font-size: 22px; cursor: pointer; color: #cbd5e1;
+        transition: color 0.15s; text-transform: none; letter-spacing: 0; font-weight: 400;
+    }
+    .star-group input[type=radio]:checked ~ label,
+    .star-group label:hover,
+    .star-group label:hover ~ label { color: #f59e0b; }
+    /* reverse sibling trick */
+    .star-group { flex-direction: row-reverse; justify-content: flex-end; }
+    .star-group label:hover,
+    .star-group label:hover ~ label { color: #f59e0b; }
+
+    .empty-kpi {
+        padding: 48px 24px; text-align: center; color: var(--text-muted);
+    }
+    .empty-kpi i { display: block; margin: 0 auto 12px; opacity: 0.3; }
+
+    .score-badge {
+        display: inline-flex;
+        align-items: center; justify-content: center;
+        width: 32px; height: 32px; border-radius: 50%;
+        font-weight: 700; font-size: 14px;
+        background: var(--primary-light); color: var(--primary);
+    }
+    .score-badge.high  { background: var(--success-light); color: var(--success-dark); }
+    .score-badge.low   { background: var(--danger-light);  color: var(--danger-dark); }
+
+    /* Tabs */
+    .eval-tabs {
+        display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 16px;
+    }
+    .eval-tab {
+        padding: 10px 18px; cursor: pointer; font-size: 13px; font-weight: 600;
+        color: var(--text-light); border-bottom: 2px solid transparent;
+        margin-bottom: -2px; transition: var(--transition);
+        background: none; border-top: none; border-left: none; border-right: none;
+    }
+    .eval-tab:hover { color: var(--text-main); }
+    .eval-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .eval-tab-panel { display: none; }
+    .eval-tab-panel.active { display: block; }
+
+    /* No-select prompt */
+    .select-prompt {
+        text-align: center; padding: 40px 24px; color: var(--text-muted);
+    }
+    .select-prompt i { display: block; margin: 0 auto 12px; opacity: 0.25; }
+    .select-prompt p { font-size: 14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="kpi-hero">
+    <h1>Peer Evaluation</h1>
+    <p>Search for colleagues to evaluate, and view evaluations you've received from peers.</p>
+</div>
+
+{% if messages %}
+    {% for m in messages %}
+    <div class="alert alert-{{ m.tags|default:'info' }}"
+         style="padding:12px 16px;border-radius:var(--radius-sm);margin-bottom:16px;
+                background:var(--primary-light);color:var(--primary);">
+        {{ m }}
+    </div>
+    {% endfor %}
+{% endif %}
+
+<div class="two-col">
+
+    <!-- ══════ LEFT: Search & Evaluate ══════ -->
+    <div class="card">
+        <div class="card-header">
+            <i data-lucide="search" style="width:18px;height:18px;color:var(--primary);"></i>
+            <h3>Evaluate a Peer</h3>
+        </div>
+        <div class="card-body" style="padding:20px 24px;">
+
+            <!-- Search input -->
+            <div class="search-box">
+                <i data-lucide="search" class="search-icon" style="width:16px;height:16px;"></i>
+                <input type="text" id="empSearch" placeholder="Search employees by name or department…"
+                       autocomplete="off">
+            </div>
+
+            <!-- Employee list -->
+            <div class="emp-count" id="empCount">{{ all_employees|length }} employees available</div>
+            <div class="employee-list" id="empList">
+                {% for emp in all_employees %}
+                <div class="employee-item"
+                     data-id="{{ emp.id }}"
+                     data-name="{{ emp.get_full_name }}"
+                     data-dept="{{ emp.department.name|default:'—' }}"
+                     data-initials="{{ emp.first_name|slice:':1'|upper }}">
+                    <div class="emp-avatar">{{ emp.first_name|slice:":1"|upper }}</div>
+                    <div class="emp-info">
+                        <div class="emp-name">{{ emp.get_full_name }}</div>
+                        <div class="emp-dept">{{ emp.department.name|default:"—" }} · {{ emp.position.title|default:"—" }}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">
+                    No other employees found.
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Selected employee banner -->
+            <div class="selected-employee-banner" id="selectedBanner">
+                <div class="emp-avatar" id="selectedAvatar"></div>
+                <div class="emp-info">
+                    <div class="emp-name" id="selectedName"></div>
+                    <div class="emp-dept" id="selectedDept"></div>
+                </div>
+                <button type="button" class="btn-clear" id="clearSelection" title="Clear selection">✕</button>
+            </div>
+
+            <!-- Prompt to select -->
+            <div class="select-prompt" id="selectPrompt">
+                <i data-lucide="user-plus" style="width:40px;height:40px;"></i>
+                <p style="font-weight:600;color:var(--text-main);margin-bottom:4px;">Select an employee above</p>
+                <p style="font-size:13px;">Choose a colleague to start your peer evaluation.</p>
+            </div>
+
+            <!-- Evaluation form (hidden until employee selected) -->
+            <div class="eval-form" id="evalForm">
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="peer_evaluate">
+                    <input type="hidden" name="target_employee_id" id="targetEmployeeId" value="">
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                        <div class="form-field" style="margin-bottom:0;">
+                            <label>Year</label>
+                            <select name="year" class="form-control">
+                                {% for y in years %}
+                                <option value="{{ y }}">{{ y }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-field" style="margin-bottom:0;">
+                            <label>Period</label>
+                            <select name="period" class="form-control">
+                                {% for val, label in periods %}
+                                <option value="{{ val }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:16px;">
+                        <div class="rating-row">
+                            <span class="rating-label">Job Knowledge</span>
+                            <div class="star-group">
+                                {% for i in "54321" %}
+                                <input type="radio" name="job_knowledge" id="jk{{ i }}" value="{{ i }}">
+                                <label for="jk{{ i }}" title="{{ i }}/5">★</label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="rating-row">
+                            <span class="rating-label">Work Quality</span>
+                            <div class="star-group">
+                                {% for i in "54321" %}
+                                <input type="radio" name="work_quality" id="wq{{ i }}" value="{{ i }}">
+                                <label for="wq{{ i }}" title="{{ i }}/5">★</label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="rating-row">
+                            <span class="rating-label">Punctuality &amp; Attendance</span>
+                            <div class="star-group">
+                                {% for i in "54321" %}
+                                <input type="radio" name="attendance" id="at{{ i }}" value="{{ i }}">
+                                <label for="at{{ i }}" title="{{ i }}/5">★</label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="rating-row">
+                            <span class="rating-label">Teamwork</span>
+                            <div class="star-group">
+                                {% for i in "54321" %}
+                                <input type="radio" name="teamwork" id="tw{{ i }}" value="{{ i }}">
+                                <label for="tw{{ i }}" title="{{ i }}/5">★</label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="rating-row" style="margin-bottom:16px;">
+                            <span class="rating-label">Ethics &amp; Conduct</span>
+                            <div class="star-group">
+                                {% for i in "54321" %}
+                                <input type="radio" name="ethics" id="et{{ i }}" value="{{ i }}">
+                                <label for="et{{ i }}" title="{{ i }}/5">★</label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-field">
+                        <label>Comments <span style="font-size:11px;color:var(--text-light);">(optional)</span></label>
+                        <textarea name="comments" class="form-control" rows="3"
+                                  placeholder="Share specific feedback about this colleague…"></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width:100%;">
+                        <i data-lucide="send" style="width:15px;height:15px;"></i>
+                        Submit Peer Evaluation
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ══════ RIGHT: My Received Evaluations ══════ -->
+    <div>
+        <div class="card">
+            <div class="card-header">
+                <i data-lucide="clipboard-list" style="width:18px;height:18px;color:var(--primary);"></i>
+                <h3>My Evaluations</h3>
+            </div>
+            <div class="card-body" style="padding:0;">
+
+                <!-- Tabs: Received / Given -->
+                <div class="eval-tabs" style="padding:0 24px;">
+                    <button class="eval-tab active" data-tab="received">
+                        <i data-lucide="inbox" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                        Received
+                    </button>
+                    <button class="eval-tab" data-tab="given">
+                        <i data-lucide="send" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                        Given
+                    </button>
+                </div>
+
+                <!-- Received tab -->
+                <div class="eval-tab-panel active" id="tab-received">
+                    {% if received_evaluations %}
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Evaluator</th>
+                                    <th>Type</th>
+                                    <th>Period</th>
+                                    <th>JK</th>
+                                    <th>WQ</th>
+                                    <th>Att</th>
+                                    <th>TW</th>
+                                    <th>Eth</th>
+                                    <th>Overall</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in received_evaluations %}
+                                <tr>
+                                    <td style="font-weight:600;">{{ s.evaluator.get_full_name }}</td>
+                                    <td>
+                                        <span class="badge badge-primary" style="font-size:11px;">{{ s.evaluation_type|title }}</span>
+                                    </td>
+                                    <td style="white-space:nowrap;">
+                                        <strong>{{ s.year }}</strong>
+                                        <span class="badge badge-primary" style="font-size:11px;margin-left:4px;">{{ s.period }}</span>
+                                    </td>
+                                    <td><span class="score-badge {% if s.job_knowledge >= 4 %}high{% elif s.job_knowledge <= 2 %}low{% endif %}">{{ s.job_knowledge }}</span></td>
+                                    <td><span class="score-badge {% if s.work_quality >= 4 %}high{% elif s.work_quality <= 2 %}low{% endif %}">{{ s.work_quality }}</span></td>
+                                    <td><span class="score-badge {% if s.attendance >= 4 %}high{% elif s.attendance <= 2 %}low{% endif %}">{{ s.attendance }}</span></td>
+                                    <td><span class="score-badge {% if s.teamwork >= 4 %}high{% elif s.teamwork <= 2 %}low{% endif %}">{{ s.teamwork }}</span></td>
+                                    <td><span class="score-badge {% if s.ethics >= 4 %}high{% elif s.ethics <= 2 %}low{% endif %}">{{ s.ethics }}</span></td>
+                                    <td>
+                                        {% if s.overall_score %}
+                                        <strong style="color:var(--primary);font-size:15px;">{{ s.overall_score }}</strong>
+                                        <span style="font-size:11px;color:var(--text-light);">/5</span>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                </tr>
+                                {% if s.comments %}
+                                <tr>
+                                    <td colspan="9" style="font-size:13px;color:var(--text-muted);padding-top:4px;padding-bottom:12px;background:#fafafa;">
+                                        <i data-lucide="message-circle" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>
+                                        {{ s.comments }}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-kpi">
+                        <i data-lucide="inbox" style="width:40px;height:40px;"></i>
+                        <p style="font-weight:600;color:var(--text-main);margin-bottom:4px;">No evaluations received yet</p>
+                        <p style="font-size:13px;">When colleagues evaluate you, their feedback will appear here.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Given tab -->
+                <div class="eval-tab-panel" id="tab-given">
+                    {% if given_evaluations %}
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Period</th>
+                                    <th>JK</th>
+                                    <th>WQ</th>
+                                    <th>Att</th>
+                                    <th>TW</th>
+                                    <th>Eth</th>
+                                    <th>Overall</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in given_evaluations %}
+                                <tr>
+                                    <td style="font-weight:600;">{{ s.employee.get_full_name }}</td>
+                                    <td style="white-space:nowrap;">
+                                        <strong>{{ s.year }}</strong>
+                                        <span class="badge badge-primary" style="font-size:11px;margin-left:4px;">{{ s.period }}</span>
+                                    </td>
+                                    <td><span class="score-badge {% if s.job_knowledge >= 4 %}high{% elif s.job_knowledge <= 2 %}low{% endif %}">{{ s.job_knowledge }}</span></td>
+                                    <td><span class="score-badge {% if s.work_quality >= 4 %}high{% elif s.work_quality <= 2 %}low{% endif %}">{{ s.work_quality }}</span></td>
+                                    <td><span class="score-badge {% if s.attendance >= 4 %}high{% elif s.attendance <= 2 %}low{% endif %}">{{ s.attendance }}</span></td>
+                                    <td><span class="score-badge {% if s.teamwork >= 4 %}high{% elif s.teamwork <= 2 %}low{% endif %}">{{ s.teamwork }}</span></td>
+                                    <td><span class="score-badge {% if s.ethics >= 4 %}high{% elif s.ethics <= 2 %}low{% endif %}">{{ s.ethics }}</span></td>
+                                    <td>
+                                        {% if s.overall_score %}
+                                        <strong style="color:var(--primary);font-size:15px;">{{ s.overall_score }}</strong>
+                                        <span style="font-size:11px;color:var(--text-light);">/5</span>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                </tr>
+                                {% if s.comments %}
+                                <tr>
+                                    <td colspan="8" style="font-size:13px;color:var(--text-muted);padding-top:4px;padding-bottom:12px;background:#fafafa;">
+                                        <i data-lucide="message-circle" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>
+                                        {{ s.comments }}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-kpi">
+                        <i data-lucide="send" style="width:40px;height:40px;"></i>
+                        <p style="font-weight:600;color:var(--text-main);margin-bottom:4px;">No peer evaluations submitted yet</p>
+                        <p style="font-size:13px;">Select a colleague on the left to submit your first peer evaluation.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput   = document.getElementById('empSearch');
+    const empList       = document.getElementById('empList');
+    const empItems      = empList.querySelectorAll('.employee-item');
+    const empCount      = document.getElementById('empCount');
+    const selectPrompt  = document.getElementById('selectPrompt');
+    const evalForm      = document.getElementById('evalForm');
+    const selectedBanner = document.getElementById('selectedBanner');
+    const targetInput   = document.getElementById('targetEmployeeId');
+
+    // ── Search filter ──
+    searchInput.addEventListener('input', () => {
+        const q = searchInput.value.toLowerCase().trim();
+        let visible = 0;
+        empItems.forEach(item => {
+            const name = item.dataset.name.toLowerCase();
+            const dept = item.dataset.dept.toLowerCase();
+            const show = name.includes(q) || dept.includes(q);
+            item.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        empCount.textContent = visible + ' employee' + (visible !== 1 ? 's' : '') + ' found';
+    });
+
+    // ── Select employee ──
+    empItems.forEach(item => {
+        item.addEventListener('click', () => {
+            // Deselect others
+            empItems.forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+
+            // Set form values
+            targetInput.value = item.dataset.id;
+            document.getElementById('selectedAvatar').textContent = item.dataset.initials;
+            document.getElementById('selectedName').textContent = item.dataset.name;
+            document.getElementById('selectedDept').textContent = item.dataset.dept;
+
+            // Show form, hide prompt
+            selectedBanner.classList.add('active');
+            evalForm.classList.add('active');
+            selectPrompt.style.display = 'none';
+
+            // Re-create icons in the form
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        });
+    });
+
+    // ── Clear selection ──
+    document.getElementById('clearSelection').addEventListener('click', () => {
+        empItems.forEach(el => el.classList.remove('selected'));
+        targetInput.value = '';
+        selectedBanner.classList.remove('active');
+        evalForm.classList.remove('active');
+        selectPrompt.style.display = '';
+    });
+
+    // ── Tabs ──
+    document.querySelectorAll('.eval-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.eval-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.eval-tab-panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+        });
+    });
+
+    // Re-init lucide icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+});
+</script>
+{% endblock %}

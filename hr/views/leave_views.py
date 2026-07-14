@@ -102,14 +102,15 @@ def employee_leave_manager(request):
     }
 
     context = {
-        'employee':     employee,
-        'leave_types':  leave_types,
-        'my_requests':  my_requests,
-        'my_balances':  my_balances,
-        'status_badge': status_badge,
-        'error_msg':    error_msg,
-        'active_page':  'employee_leave_manager',
-        'today':        timezone.localdate().isoformat(),
+        'employee':        employee,
+        'leave_types':     leave_types,
+        'my_requests':     my_requests,
+        'my_balances':     my_balances,
+        'status_badge':    status_badge,
+        'error_msg':       error_msg,
+        'active_page':     'employee_leave_manager',
+        'today':           timezone.localdate().isoformat(),
+        'base_template':   'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
     }
     return render(request, 'hr/employee_leave_manager.html', context)
 

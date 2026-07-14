@@ -46,6 +46,8 @@ def submit_kpi_score(employee_id: int, evaluator: Employee, data: dict) -> Biann
 
     if eval_type == 'self' and employee != evaluator:
         raise ValidationError("You can only submit a self-assessment for yourself.")
+    if eval_type == 'peer' and employee == evaluator:
+        raise ValidationError("You cannot submit a peer evaluation for yourself.")
 
     scores = {}
     for field in ('job_knowledge', 'work_quality', 'attendance', 'teamwork', 'ethics'):

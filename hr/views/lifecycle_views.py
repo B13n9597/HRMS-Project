@@ -7,6 +7,7 @@ from django.db.models import Q
 
 from hr.views.attendance_views import is_hr
 from hr.models import Employee, EmployeeHistory, EmployeeCertificate
+from hr.forms import EmployeeCertificateForm
 
 
 @login_required(login_url='/login/')
@@ -19,38 +20,28 @@ def my_lifecycle(request):
         return redirect('/')
 
     # Handle certificate upload
+    form = EmployeeCertificateForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and request.POST.get('action') == 'upload_cert':
-        title      = request.POST.get('title', '').strip()
-        cert_type  = request.POST.get('cert_type', 'other')
-        issued_by  = request.POST.get('issued_by', '').strip()
-        issued_date = request.POST.get('issued_date') or None
-        expiry_date = request.POST.get('expiry_date') or None
-        doc_file   = request.FILES.get('document')
-
-        if not title:
-            messages.error(request, "Certificate title is required.")
-        else:
-            EmployeeCertificate.objects.create(
-                employee    = employee,
-                title       = title,
-                cert_type   = cert_type,
-                issued_by   = issued_by,
-                issued_date = issued_date or None,
-                expiry_date = expiry_date or None,
-                document    = doc_file,
-            )
+        if form.is_valid():
+            certificate = form.save(commit=False)
+            certificate.employee = employee
+            certificate.save()
             messages.success(request, "Certificate uploaded successfully.")
-        return redirect('my_lifecycle')
+            return redirect('my_lifecycle')
+        else:
+            messages.error(request, "Please fix the errors below before uploading.")
 
     history      = EmployeeHistory.objects.filter(employee=employee).order_by('-start_date')
     certificates = EmployeeCertificate.objects.filter(employee=employee).order_by('-uploaded_at')
 
     context = {
-        'employee':     employee,
-        'history':      history,
-        'certificates': certificates,
-        'cert_types':   EmployeeCertificate.CERT_TYPES,
-        'active_page':  'my_lifecycle',
+        'employee':      employee,
+        'history':       history,
+        'certificates':  certificates,
+        'form':          form,
+        'cert_types':    EmployeeCertificate.CERT_TYPES,
+        'active_page':   'my_lifecycle',
+        'base_template': 'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
     }
     return render(request, 'hr/my_lifecycle.html', context)
 

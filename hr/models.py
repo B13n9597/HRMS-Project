@@ -499,6 +499,7 @@ class LeaveBalance(BaseModel):
     allocated_days = models.IntegerField(default=0)
     used_days      = models.IntegerField(default=0)
     remaining_days = models.IntegerField()
+    last_updated   = models.DateField(auto_now=True)
 
     class Meta:
         unique_together = ('employee', 'leave_type')
@@ -1014,7 +1015,7 @@ class PayrollRecord(BaseModel):
 class BiannualKPIScore(BaseModel):
     PERIOD_CHOICES = [('H1', 'Jan-Jun'), ('H2', 'Jul-Dec')]
     SCORE_CHOICES  = [(i, str(i)) for i in range(1, 6)]
-    EVAL_TYPE      = [('self', 'Self'), ('supervisor', 'Supervisor'), ('hr', 'HR')]
+    EVAL_TYPE      = [('self', 'Self'), ('peer', 'Peer'), ('supervisor', 'Supervisor'), ('hr', 'HR')]
 
     employee        = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='kpi_scores')
     evaluator       = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='kpi_scores_given')

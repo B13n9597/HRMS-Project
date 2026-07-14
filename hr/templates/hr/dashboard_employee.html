@@ -104,6 +104,24 @@
             <p>Leave Days Left</p>
         </div>
     </div>
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--warning-light); color: var(--warning-dark);">
+            <i data-lucide="award" style="width: 28px; height: 28px;"></i>
+        </div>
+        <div class="stat-info">
+            <h3>{% if current_kpi %}{{ current_kpi.overall_score|floatformat:2 }} / 5{% else %}&mdash;{% endif %}</h3>
+            <p>
+              {% if current_kpi %}
+                {{ current_kpi.evaluation_type|capfirst }} KPI
+                <span style="display:block;font-size:12px;color:var(--text-light);">
+                  {{ current_kpi.year }} {{ current_kpi.period }}
+                </span>
+              {% else %}
+                <a href="{% url 'my_kpi' %}" style="color:inherit; text-decoration:underline;">Submit self-assessment</a>
+              {% endif %}
+            </p>
+        </div>
+    </div>
 </div>
 
 <div class="qr-card">

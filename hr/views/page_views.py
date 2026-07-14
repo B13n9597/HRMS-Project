@@ -9,6 +9,7 @@ from django.shortcuts import redirect, render
 from hr.forms import BulkEmployeeUploadForm, EmployeeCreateForm
 from hr.models import Attendance, LeaveRequest
 from hr.services import attendance_service, employee_service
+from hr.services.kpi_service import current_biannual_period, get_employee_kpi_summary
 
 
 def login_view(request):
@@ -61,6 +62,14 @@ def employee_dashboard(request):
         attendance_rate = 0
         leave_days_left = 0
 
+    current_kpi = None
+    if employee:
+        kpi_summary = get_employee_kpi_summary(employee.pk)
+        year, period = current_biannual_period()
+        current_kpi = kpi_summary["scores"].filter(year=year, period=period).order_by("-submitted_at").first()
+        if not current_kpi:
+            current_kpi = kpi_summary["scores"].first()
+
     return render(
         request,
         "hr/dashboard_employee.html",
@@ -69,6 +78,7 @@ def employee_dashboard(request):
             "attendance_records": attendance_service.get_my_attendance(request.user),
             "attendance_rate":   attendance_rate,
             "leave_days_left":   leave_days_left,
+            "current_kpi":      current_kpi,
         },
     )
 

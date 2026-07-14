@@ -1,5 +1,5 @@
-{% extends 'hr/employee_base.html' %}
-{% block title %}My Lifecycle{% endblock %}
+{% extends base_template %}
+{% block title %}My Profile — ACT HRMS{% endblock %}
 
 {% block extra_styles %}
 <style>
@@ -66,6 +66,11 @@
   opacity: 0;
   cursor: pointer;
 }
+  .field-error {
+    color: #dc2626;
+    font-size: 12px;
+    margin-top: 6px;
+  }
 </style>
 {% endblock %}
 
@@ -78,7 +83,6 @@
 {% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}" style="margin-bottom:16px;padding:12px 16px;border-radius:var(--radius-sm);">{{ m }}</div>{% endfor %}{% endif %}
 
 <div class="two-col">
-
   <!-- Left: Timeline from DB -->
   <div>
     <div class="card">
@@ -134,34 +138,55 @@
         <form method="POST" enctype="multipart/form-data" novalidate>
           {% csrf_token %}
           <input type="hidden" name="action" value="upload_cert">
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger" style="margin-bottom:16px;padding:12px 16px;border-radius:var(--radius-sm);">
+            {{ form.non_field_errors }}
+          </div>
+          {% endif %}
+
           <div class="form-group" style="margin-bottom:12px;">
             <label>Title <span class="req">*</span></label>
-            <input type="text" name="title" class="form-input" placeholder="e.g. BSc Computer Science" required>
+            {{ form.title }}
+            {% for err in form.title.errors %}
+              <div class="field-error">{{ err }}</div>
+            {% endfor %}
           </div>
+
           <div class="form-grid-2" style="margin-bottom:12px;">
             <div class="form-group">
               <label>Type</label>
-              <select name="cert_type" class="form-input">
-                {% for val, display in cert_types %}
-                <option value="{{ val }}">{{ display }}</option>
-                {% endfor %}
-              </select>
+              {{ form.cert_type }}
+              {% for err in form.cert_type.errors %}
+                <div class="field-error">{{ err }}</div>
+              {% endfor %}
             </div>
             <div class="form-group">
               <label>Issued By</label>
-              <input type="text" name="issued_by" class="form-input" placeholder="Institution name">
+              {{ form.issued_by }}
+              {% for err in form.issued_by.errors %}
+                <div class="field-error">{{ err }}</div>
+              {% endfor %}
             </div>
           </div>
+
           <div class="form-grid-2" style="margin-bottom:12px;">
             <div class="form-group">
               <label>Issue Date</label>
-              <input type="date" name="issued_date" class="form-input">
+              {{ form.issued_date }}
+              {% for err in form.issued_date.errors %}
+                <div class="field-error">{{ err }}</div>
+              {% endfor %}
             </div>
             <div class="form-group">
               <label>Expiry Date</label>
-              <input type="date" name="expiry_date" class="form-input">
+              {{ form.expiry_date }}
+              {% for err in form.expiry_date.errors %}
+                <div class="field-error">{{ err }}</div>
+              {% endfor %}
             </div>
           </div>
+
           <div class="form-group" style="margin-bottom:14px;">
             <label>Document <span style="font-size:11px;color:var(--text-light);">(PDF or image)</span></label>
             <div class="upload-zone" id="uploadZone">
@@ -172,9 +197,13 @@
               <span class="upload-zone-button">
                 <i data-lucide="upload" style="width:14px;height:14px;"></i> Browse
               </span>
-              <input id="documentInput" type="file" name="document" accept=".pdf,.png,.jpg,.jpeg">
+              {{ form.document }}
             </div>
+            {% for err in form.document.errors %}
+              <div class="field-error">{{ err }}</div>
+            {% endfor %}
           </div>
+
           <button type="submit" class="btn btn-primary" style="width:100%;">
             <i data-lucide="upload" style="width:15px;height:15px;"></i> Upload Certificate
           </button>
