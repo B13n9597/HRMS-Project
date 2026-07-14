@@ -256,19 +256,128 @@
 
         .empty-state td { text-align: center; color: var(--text-light); padding: 40px 24px; }
 
-        @media (max-width: 900px) {
-            .sv-sidebar { width: 200px; }
-            .sv-main { padding: 24px; }
-            .form-grid-2 { grid-template-columns: 1fr; }
+        /* Mobile Sticky Header & Drawer Layout styling */
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            align-items: center;
+            padding: 0 16px;
+            z-index: 150;
+            box-shadow: var(--shadow-sm);
         }
-        @media (max-width: 700px) {
-            .sv-layout { flex-direction: column; }
-            .sv-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); }
+        .mobile-menu-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+        .mobile-menu-btn:hover {
+            background-color: #f1f5f9;
+        }
+        .mobile-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 18px;
+            color: var(--primary);
+            margin-left: 8px;
+        }
+        .logo-box {
+            background-color: var(--primary);
+            color: #ffffff;
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(2px);
+            z-index: 199;
+            transition: var(--transition);
+        }
+        .sidebar-overlay.active {
+            display: block;
+        }
+        body.no-scroll {
+            overflow: hidden;
+        }
+
+        @media (max-width: 900px) {
+            .mobile-header {
+                display: flex;
+            }
+            .sv-sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                height: 100vh;
+                width: 260px;
+                z-index: 200;
+                border-right: 1px solid var(--border-color);
+                border-bottom: none;
+                padding: 28px 20px;
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: var(--shadow-lg);
+            }
+            .sv-sidebar.open {
+                transform: translateX(0);
+            }
+            .sv-main {
+                padding: 84px 16px 32px;
+                width: 100%;
+            }
+            .form-grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .page-header {
+                flex-direction: column;
+                gap: 12px;
+                align-items: stretch;
+            }
+            .action-row {
+                width: 100%;
+                gap: 8px;
+            }
+            .action-row .btn {
+                flex: 1;
+                justify-content: center;
+            }
         }
     </style>
     {% block extra_styles %}{% endblock %}
 </head>
 <body>
+    <header class="mobile-header">
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Navigation Menu">
+            <i data-lucide="menu" style="width:24px;height:24px;"></i>
+        </button>
+        <div class="mobile-brand">
+            <span class="logo-box">ACT</span>
+            <span>HRMS</span>
+        </div>
+    </header>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
 <div class="sv-layout">
     <!-- ── Sidebar ── -->
     <aside class="sv-sidebar">
@@ -357,6 +466,37 @@
 
 <script>
     if (window.lucide) lucide.createIcons();
+    
+    // Mobile Menu Drawer Toggle Logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.querySelector('.sv-sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+        if (mobileMenuBtn && sidebar && sidebarOverlay) {
+            function toggleMenu() {
+                sidebar.classList.toggle('open');
+                sidebarOverlay.classList.toggle('active');
+                document.body.classList.toggle('no-scroll');
+            }
+            
+            function closeMenu() {
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('active');
+                document.body.classList.remove('no-scroll');
+            }
+
+            mobileMenuBtn.addEventListener('click', toggleMenu);
+            sidebarOverlay.addEventListener('click', closeMenu);
+
+            // Close menu if window is resized above mobile breakpoint
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 900) {
+                    closeMenu();
+                }
+            });
+        }
+    });
     
     // Signature viewer modal functions
     function viewSignature(imageUrl, employeeName, attendanceDate) {
