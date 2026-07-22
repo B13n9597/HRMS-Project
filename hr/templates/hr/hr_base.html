@@ -102,13 +102,66 @@
             font-weight: 800;
         }
 
+        /* ── Collapsible nav sections ───────────────────────────────── */
+        .nav-section {
+            margin-top: 4px;
+        }
+
         .nav-section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: var(--text-light);
-            margin: 20px 0 8px;
+            margin: 16px 0 4px;
+            padding: 6px 4px;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            user-select: none;
+            transition: var(--transition);
+        }
+
+        .nav-section-title:hover {
+            color: var(--primary);
+            background: var(--primary-light);
+            padding-left: 8px;
+        }
+
+        .nav-section-title .section-label {
+            flex: 1;
+        }
+
+        .nav-section-chevron {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.6;
+        }
+
+        .nav-section-title.open .nav-section-chevron {
+            transform: rotate(180deg);
+            opacity: 1;
+        }
+
+        .nav-section-title.open {
+            color: var(--primary);
+        }
+
+        .nav-section-items {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity  0.25s ease;
+            opacity: 0;
+        }
+
+        .nav-section-items.open {
+            max-height: 600px;
+            opacity: 1;
         }
 
         .nav-link {
@@ -733,87 +786,214 @@
             <i data-lucide="layout-dashboard" style="width:18px;height:18px;"></i> Dashboard
         </a>
 
-        <div class="nav-section-title">My Workspace</div>
-        <a href="{% url 'my_lifecycle' %}" class="nav-link {% if active_page == 'my_lifecycle' %}active{% endif %}">
-            <i data-lucide="user" style="width:18px;height:18px;"></i> My Profile
-        </a>
-        <a href="{% url 'my_attendance_record' %}" class="nav-link {% if active_page == 'my_attendance' %}active{% endif %}">
-            <i data-lucide="user-check" style="width:18px;height:18px;"></i> My Attendance
-        </a>
-        <a href="{% url 'employee_leave_manager' %}" class="nav-link {% if active_page == 'employee_leave_manager' %}active{% endif %}">
-            <i data-lucide="calendar" style="width:18px;height:18px;"></i> My Leave
-        </a>
-        <a href="{% url 'my_salary_slips' %}" class="nav-link {% if active_page == 'my_salary_slips' %}active{% endif %}">
-            <i data-lucide="file-text" style="width:18px;height:18px;"></i> My Payslips
-        </a>
+        <!-- MY WORKSPACE -->
+        <div class="nav-section">
+            <div class="nav-section-title {% if active_page in 'my_lifecycle,my_attendance,employee_leave_manager,my_salary_slips' %}open{% endif %}"
+                 data-section="workspace">
+                <span class="section-label">My Workspace</span>
+                <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+            <div class="nav-section-items {% if active_page in 'my_lifecycle,my_attendance,employee_leave_manager,my_salary_slips' %}open{% endif %}"
+                 id="section-workspace">
+                <a href="{% url 'my_lifecycle' %}" class="nav-link {% if active_page == 'my_lifecycle' %}active{% endif %}">
+                    <i data-lucide="user" style="width:18px;height:18px;"></i> My Profile
+                </a>
+                <a href="{% url 'my_attendance_record' %}" class="nav-link {% if active_page == 'my_attendance' %}active{% endif %}">
+                    <i data-lucide="user-check" style="width:18px;height:18px;"></i> My Attendance
+                </a>
+                <a href="{% url 'employee_leave_manager' %}" class="nav-link {% if active_page == 'employee_leave_manager' %}active{% endif %}">
+                    <i data-lucide="calendar" style="width:18px;height:18px;"></i> My Leave
+                </a>
+                <a href="{% url 'my_salary_slips' %}" class="nav-link {% if active_page == 'my_salary_slips' %}active{% endif %}">
+                    <i data-lucide="file-text" style="width:18px;height:18px;"></i> My Payslips
+                </a>
+            </div>
+        </div>
 
-        <div class="nav-section-title">Attendance</div>
-        <a href="{% url 'live_attendance' %}" class="nav-link {% if active_page == 'live_attendance' %}active{% endif %}">
-            <i data-lucide="activity" style="width:18px;height:18px;"></i> Live Attendance
-        </a>
-        <a href="{% url 'attendance_logs' %}" class="nav-link {% if active_page == 'attendance_logs' %}active{% endif %}">
-            <i data-lucide="clock" style="width:18px;height:18px;"></i> Attendance Logs
-        </a>
-        <a href="{% url 'tablet_kiosk_attendance' %}" class="nav-link {% if active_page == 'tablet_kiosk' %}active{% endif %}">
-            <i data-lucide="tablet" style="width:18px;height:18px;"></i> Office Kiosk
-        </a>
+        <!-- ATTENDANCE -->
+        <div class="nav-section">
+            <div class="nav-section-title {% if active_page in 'live_attendance,attendance_logs,tablet_kiosk' %}open{% endif %}"
+                 data-section="attendance">
+                <span class="section-label">Attendance</span>
+                <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+            <div class="nav-section-items {% if active_page in 'live_attendance,attendance_logs,tablet_kiosk' %}open{% endif %}"
+                 id="section-attendance">
+                <a href="{% url 'live_attendance' %}" class="nav-link {% if active_page == 'live_attendance' %}active{% endif %}">
+                    <i data-lucide="activity" style="width:18px;height:18px;"></i> Live Attendance
+                </a>
+                <a href="{% url 'attendance_logs' %}" class="nav-link {% if active_page == 'attendance_logs' %}active{% endif %}">
+                    <i data-lucide="clock" style="width:18px;height:18px;"></i> Attendance Logs
+                </a>
+                <a href="{% url 'tablet_kiosk_attendance' %}" class="nav-link {% if active_page == 'tablet_kiosk' %}active{% endif %}">
+                    <i data-lucide="tablet" style="width:18px;height:18px;"></i> Office Kiosk
+                </a>
+            </div>
+        </div>
 
-        <div class="nav-section-title">Leave</div>
-        <a href="{% url 'hr_leave_manager' %}" class="nav-link {% if active_page == 'hr_leave_manager' %}active{% endif %}">
-            <i data-lucide="layout-list" style="width:18px;height:18px;"></i> Leave Requests
-        </a>
-        <a href="{% url 'hr_leave_approvals' %}" class="nav-link {% if active_page == 'hr_leave_approvals' %}active{% endif %}">
-            <i data-lucide="check-square" style="width:18px;height:18px;"></i> Leave Approvals
-        </a>
-        <a href="{% url 'leave_reports' %}" class="nav-link {% if active_page == 'leave_reports' %}active{% endif %}">
-            <i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i> Leave Reports
-        </a>
+        <!-- LEAVE -->
+        <div class="nav-section">
+            <div class="nav-section-title {% if active_page in 'hr_leave_manager,hr_leave_approvals,leave_reports' %}open{% endif %}"
+                 data-section="leave">
+                <span class="section-label">Leave</span>
+                <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+            <div class="nav-section-items {% if active_page in 'hr_leave_manager,hr_leave_approvals,leave_reports' %}open{% endif %}"
+                 id="section-leave">
+                <a href="{% url 'hr_leave_manager' %}" class="nav-link {% if active_page == 'hr_leave_manager' %}active{% endif %}">
+                    <i data-lucide="layout-list" style="width:18px;height:18px;"></i> Leave Requests
+                </a>
+                <a href="{% url 'hr_leave_approvals' %}" class="nav-link {% if active_page == 'hr_leave_approvals' %}active{% endif %}">
+                    <i data-lucide="check-square" style="width:18px;height:18px;"></i> Leave Approvals
+                </a>
+                <a href="{% url 'leave_reports' %}" class="nav-link {% if active_page == 'leave_reports' %}active{% endif %}">
+                    <i data-lucide="bar-chart-2" style="width:18px;height:18px;"></i> Leave Reports
+                </a>
+            </div>
+        </div>
 
-        <div class="nav-section-title">Employees</div>
-        <a href="{% url 'staff_directory' %}" class="nav-link {% if active_page == 'staff_directory' %}active{% endif %}">
-            <i data-lucide="users" style="width:18px;height:18px;"></i> Staff Directory
-        </a>
-        <a href="{% url 'hr_lifecycle' %}" class="nav-link {% if active_page == 'hr_lifecycle' %}active{% endif %}">
-            <i data-lucide="git-branch" style="width:18px;height:18px;"></i> Employee Lifecycle
-        </a>
-        <a href="{% url 'departments' %}" class="nav-link {% if active_page == 'departments' %}active{% endif %}">
-            <i data-lucide="building-2" style="width:18px;height:18px;"></i> Departments
-        </a>
-        <a href="{% url 'candidate_screen' %}" class="nav-link {% if active_page == 'candidate_screen' %}active{% endif %}">
-            <i data-lucide="briefcase" style="width:18px;height:18px;"></i> Recruitment
-        </a>
+        <!-- EMPLOYEES -->
+        <div class="nav-section">
+            <div class="nav-section-title {% if active_page in 'staff_directory,hr_lifecycle,departments,candidate_screen' %}open{% endif %}"
+                 data-section="employees">
+                <span class="section-label">Employees</span>
+                <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+            <div class="nav-section-items {% if active_page in 'staff_directory,hr_lifecycle,departments,candidate_screen' %}open{% endif %}"
+                 id="section-employees">
+                <a href="{% url 'staff_directory' %}" class="nav-link {% if active_page == 'staff_directory' %}active{% endif %}">
+                    <i data-lucide="users" style="width:18px;height:18px;"></i> Staff Directory
+                </a>
+                <a href="{% url 'hr_lifecycle' %}" class="nav-link {% if active_page == 'hr_lifecycle' %}active{% endif %}">
+                    <i data-lucide="git-branch" style="width:18px;height:18px;"></i> Employee Lifecycle
+                </a>
+                <a href="{% url 'departments' %}" class="nav-link {% if active_page == 'departments' %}active{% endif %}">
+                    <i data-lucide="building-2" style="width:18px;height:18px;"></i> Departments
+                </a>
+                <a href="{% url 'candidate_screen' %}" class="nav-link {% if active_page == 'candidate_screen' %}active{% endif %}">
+                    <i data-lucide="briefcase" style="width:18px;height:18px;"></i> Recruitment
+                </a>
+            </div>
+        </div>
 
-        <div class="nav-section-title">Performance</div>
-        <a href="{% url 'performance_kpis' %}" class="nav-link {% if active_page == 'performance_kpis' %}active{% endif %}">
-            <i data-lucide="bar-chart-3" style="width:18px;height:18px;"></i> Performance
-        </a>
-        <a href="{% url 'training' %}" class="nav-link {% if active_page == 'training' %}active{% endif %}">
-            <i data-lucide="graduation-cap" style="width:18px;height:18px;"></i> Training
-        </a>
+        <!-- PERFORMANCE -->
+        <div class="nav-section">
+            <div class="nav-section-title {% if active_page in 'performance_kpis,training,career_development' %}open{% endif %}"
+                 data-section="performance">
+                <span class="section-label">Employee Development</span>
+                <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+            <div class="nav-section-items {% if active_page in 'performance_kpis,training,career_development' %}open{% endif %}"
+                 id="section-performance">
+                <a href="{% url 'performance_kpis' %}" class="nav-link {% if active_page == 'performance_kpis' %}active{% endif %}">
+                    <i data-lucide="bar-chart-3" style="width:18px;height:18px;"></i> Performance
+                </a>
+                <a href="{% url 'training' %}" class="nav-link {% if active_page == 'training' %}active{% endif %}">
+                    <i data-lucide="graduation-cap" style="width:18px;height:18px;"></i> Training &amp; CPD
+                </a>
+                <a href="{% url 'career_development' %}" class="nav-link {% if active_page == 'career_development' %}active{% endif %}">
+                    <i data-lucide="briefcase-business" style="width:18px;height:18px;"></i> Career Development
+                </a>
+            </div>
+        </div>
 
-        <div class="nav-section-title">Payroll</div>
-        <a href="{% url 'finance_dashboard' %}" class="nav-link {% if active_page == 'finance_dashboard' %}active{% endif %}">
-            <i data-lucide="landmark" style="width:18px;height:18px;"></i> Payroll Center
-        </a>
-        <a href="{% url 'my_salary_slips' %}" class="nav-link {% if active_page == 'salary_slips_hr' %}active{% endif %}">
-            <i data-lucide="file-text" style="width:18px;height:18px;"></i> Salary Slips
-        </a>
+        <div class="nav-section">
+            <div class="nav-section-title {% if active_page in 'hr_discipline_cases,hr_grievances' %}open{% endif %}"
+                 data-section="relations">
+                <span class="section-label">Employee Relations</span>
+                <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+            <div class="nav-section-items {% if active_page in 'hr_discipline_cases,hr_grievances' %}open{% endif %}"
+                 id="section-relations">
+                <a href="{% url 'hr_discipline_cases' %}" class="nav-link {% if active_page == 'hr_discipline_cases' %}active{% endif %}">
+                    <i data-lucide="shield-alert" style="width:18px;height:18px;"></i> Discipline Cases
+                </a>
+                <a href="{% url 'hr_grievances' %}" class="nav-link {% if active_page == 'hr_grievances' %}active{% endif %}">
+                    <i data-lucide="file-warning" style="width:18px;height:18px;"></i> Grievances
+                </a>
+            </div>
+        </div>
 
-        <div class="nav-section-title">Reports</div>
-        <a href="{% url 'hr_reports' %}" class="nav-link {% if active_page == 'hr_reports' %}active{% endif %}">
-            <i data-lucide="clipboard-list" style="width:18px;height:18px;"></i> HR Reports
-        </a>
-        <a href="{% url 'dashboard_dean' %}" class="nav-link {% if active_page == 'analytics' %}active{% endif %}">
-            <i data-lucide="trending-up" style="width:18px;height:18px;"></i> Analytics
-        </a>
+        <!-- PAYROLL -->
+        <div class="nav-section">
+            <div class="nav-section-title {% if active_page in 'finance_dashboard,salary_slips_hr,my_salary_slips' %}open{% endif %}"
+                 data-section="payroll">
+                <span class="section-label">Payroll</span>
+                <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+            <div class="nav-section-items {% if active_page in 'finance_dashboard,salary_slips_hr,my_salary_slips' %}open{% endif %}"
+                 id="section-payroll">
+                <a href="{% url 'finance_dashboard' %}" class="nav-link {% if active_page == 'finance_dashboard' %}active{% endif %}">
+                    <i data-lucide="landmark" style="width:18px;height:18px;"></i> Payroll Center
+                </a>
+                <a href="{% url 'my_salary_slips' %}" class="nav-link {% if active_page == 'salary_slips_hr' %}active{% endif %}">
+                    <i data-lucide="file-text" style="width:18px;height:18px;"></i> Salary Slips
+                </a>
+            </div>
+        </div>
 
-        <div class="nav-section-title">System</div>
-        <a href="{% url 'global_settings' %}" class="nav-link {% if active_page == 'global_settings' %}active{% endif %}">
-            <i data-lucide="sliders" style="width:18px;height:18px;"></i> Global Settings
-        </a>
-        <a href="{% url 'roles_permissions' %}" class="nav-link {% if active_page == 'roles_permissions' %}active{% endif %}">
-            <i data-lucide="shield" style="width:18px;height:18px;"></i> Roles &amp; Permissions
-        </a>
+        <!-- REPORTS -->
+        <div class="nav-section">
+            <div class="nav-section-title {% if active_page in 'hr_reports,analytics' %}open{% endif %}"
+                 data-section="reports">
+                <span class="section-label">Reports</span>
+                <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+            <div class="nav-section-items {% if active_page in 'hr_reports,analytics' %}open{% endif %}"
+                 id="section-reports">
+                <a href="{% url 'hr_reports' %}" class="nav-link {% if active_page == 'hr_reports' %}active{% endif %}">
+                    <i data-lucide="clipboard-list" style="width:18px;height:18px;"></i> HR Reports
+                </a>
+                <a href="{% url 'dashboard_dean' %}" class="nav-link {% if active_page == 'analytics' %}active{% endif %}">
+                    <i data-lucide="trending-up" style="width:18px;height:18px;"></i> Analytics
+                </a>
+            </div>
+        </div>
+
+        <!-- SYSTEM -->
+        <div class="nav-section">
+            <div class="nav-section-title {% if active_page in 'global_settings,roles_permissions' %}open{% endif %}"
+                 data-section="system">
+                <span class="section-label">System</span>
+                <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+            <div class="nav-section-items {% if active_page in 'global_settings,roles_permissions' %}open{% endif %}"
+                 id="section-system">
+                <a href="{% url 'global_settings' %}" class="nav-link {% if active_page == 'global_settings' %}active{% endif %}">
+                    <i data-lucide="sliders" style="width:18px;height:18px;"></i> Global Settings
+                </a>
+                <a href="{% url 'roles_permissions' %}" class="nav-link {% if active_page == 'roles_permissions' %}active{% endif %}">
+                    <i data-lucide="shield" style="width:18px;height:18px;"></i> Roles &amp; Permissions
+                </a>
+            </div>
+        </div>
 
         <a href="{% url 'logout' %}" class="nav-link nav-link-logout">
             <i data-lucide="log-out" style="width:18px;height:18px;"></i> Log Out
@@ -851,8 +1031,35 @@
             lucide.createIcons();
         }
         
-        // Mobile Menu Drawer Toggle Logic
+        // Mobile Menu Drawer Toggle & Collapsible Sidebar Logic
         document.addEventListener('DOMContentLoaded', () => {
+            // Collapsible Sidebar Nav Sections (Accordion style)
+            const navSectionTitles = document.querySelectorAll('.sidebar .nav-section-title');
+            navSectionTitles.forEach(title => {
+                title.addEventListener('click', () => {
+                    const navSection = title.closest('.nav-section');
+                    const items = navSection ? navSection.querySelector('.nav-section-items') : null;
+                    if (!items) return;
+
+                    const isOpen = title.classList.contains('open');
+
+                    // Close all section dropdowns
+                    navSectionTitles.forEach(t => {
+                        t.classList.remove('open');
+                        const otherItems = t.closest('.nav-section')?.querySelector('.nav-section-items');
+                        if (otherItems) {
+                            otherItems.classList.remove('open');
+                        }
+                    });
+
+                    // If the clicked section was not already open, open it
+                    if (!isOpen) {
+                        title.classList.add('open');
+                        items.classList.add('open');
+                    }
+                });
+            });
+
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
             const sidebar = document.querySelector('.sidebar');
             const sidebarOverlay = document.getElementById('sidebarOverlay');

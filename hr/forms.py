@@ -1,7 +1,17 @@
 from django import forms
 from django.contrib.auth.models import User
 
-from hr.models import Department, EmployeeCertificate, EmployeeStatus, Position, Role
+from hr.models import (
+    Department,
+    DisciplinaryIncident,
+    Employee,
+    EmployeeCertificate,
+    EmployeeStatus,
+    Grievance,
+    Position,
+    Role,
+    TrainingRequest,
+)
 
 
 class EmployeeCreateForm(forms.Form):
@@ -116,6 +126,150 @@ class EmployeeKioskForm(forms.Form):
         required=True,
         widget=forms.TextInput(attrs={"placeholder": "Type your full name as signature"}),
     )
+
+
+class TrainingRequestForm(forms.ModelForm):
+    class Meta:
+        model = TrainingRequest
+        fields = [
+            "title",
+            "provider",
+            "type",
+            "start_date",
+            "end_date",
+            "cost",
+            "funding_source",
+            "business_justification",
+            "supporting_document",
+        ]
+        widgets = {
+            "start_date": forms.DateInput(attrs={"type": "date"}),
+            "end_date": forms.DateInput(attrs={"type": "date"}),
+            "business_justification": forms.Textarea(attrs={"rows": 4}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-input")
+        self.fields["supporting_document"].required = False
+
+
+class SupervisorTrainingRequestForm(forms.ModelForm):
+    employee = forms.ModelChoiceField(queryset=Employee.objects.none(), label="Employee")
+
+    class Meta:
+        model = TrainingRequest
+        fields = [
+            "employee",
+            "title",
+            "provider",
+            "type",
+            "start_date",
+            "end_date",
+            "cost",
+            "funding_source",
+            "business_justification",
+            "required_skills",
+            "supporting_document",
+        ]
+        widgets = {
+            "start_date": forms.DateInput(attrs={"type": "date"}),
+            "end_date": forms.DateInput(attrs={"type": "date"}),
+            "business_justification": forms.Textarea(attrs={"rows": 4}),
+            "required_skills": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        supervised_employees = kwargs.pop("supervised_employees", None)
+        super().__init__(*args, **kwargs)
+        if supervised_employees is not None:
+            self.fields["employee"].queryset = supervised_employees.order_by("last_name", "first_name")
+        else:
+            self.fields["employee"].queryset = Employee.objects.none()
+        self.fields["supporting_document"].required = False
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-input")
+
+
+class TrainingCompletionForm(forms.ModelForm):
+    class Meta:
+        model = TrainingRequest
+        fields = [
+            "completion_date",
+            "cpd_points",
+            "certificate",
+            "skills_learned",
+            "knowledge_transfer_method",
+            "feedback",
+            "satisfaction_rating",
+        ]
+        widgets = {
+            "completion_date": forms.DateInput(attrs={"type": "date"}),
+            "skills_learned": forms.Textarea(attrs={"rows": 3}),
+            "knowledge_transfer_method": forms.TextInput(attrs={"placeholder": "Presentation / Team briefing / SOP update"}),
+            "feedback": forms.Textarea(attrs={"rows": 4}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-input")
+
+
+class GrievanceForm(forms.ModelForm):
+    class Meta:
+        model = Grievance
+        fields = [
+            "category",
+            "subject",
+            "description",
+            "incident_date",
+            "desired_resolution",
+            "confidential",
+            "evidence",
+        ]
+        widgets = {
+            "incident_date": forms.DateInput(attrs={"type": "date"}),
+            "description": forms.Textarea(attrs={"rows": 4}),
+            "desired_resolution": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-input")
+
+
+class DisciplinaryIncidentForm(forms.ModelForm):
+    class Meta:
+        model = DisciplinaryIncident
+        fields = [
+            "incident_date",
+            "category",
+            "description",
+            "employee_response",
+            "offense_number",
+            "evidence_attachment",
+            "investigation_notes",
+            "action_taken",
+            "decision_reason",
+            "effective_date",
+            "status",
+        ]
+        widgets = {
+            "incident_date": forms.DateInput(attrs={"type": "date"}),
+            "effective_date": forms.DateInput(attrs={"type": "date"}),
+            "description": forms.Textarea(attrs={"rows": 4}),
+            "employee_response": forms.Textarea(attrs={"rows": 3}),
+            "investigation_notes": forms.Textarea(attrs={"rows": 4}),
+            "decision_reason": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs.setdefault("class", "form-input")
 
 
 class EmployeeCertificateForm(forms.ModelForm):

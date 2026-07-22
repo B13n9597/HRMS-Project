@@ -1,0 +1,153 @@
+{% extends 'hr/hr_base.html' %}
+{% block title %}Discipline Management — ACT HRMS{% endblock %}
+{% block content %}
+<style>
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
+    .stat-tile { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; }
+    .stat-tile .label { font-size: 11px; color: var(--text-light); text-transform: uppercase; font-weight: 700; }
+    .stat-tile .value { font-family: var(--font-display); font-size: 24px; font-weight: 800; margin-top: 4px; }
+    .section-stack { display: grid; gap: 10px; }
+    .section-unit { background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; }
+    .section-unit strong { display: block; margin-bottom: 4px; font-size: 11px; color: var(--text-light); text-transform: uppercase; }
+</style>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Discipline Management</h1>
+        <p>Manage disciplinary incidents, decisions, and employee acknowledgments.</p>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-tile"><div class="label">Reported</div><div class="value">{% for item in incidents %}{% if item.status == 'Reported' %}1{% endif %}{% endfor %}</div></div>
+    <div class="stat-tile"><div class="label">Under Investigation</div><div class="value">{% for item in incidents %}{% if item.status == 'Under Investigation' %}1{% endif %}{% endfor %}</div></div>
+    <div class="stat-tile"><div class="label">Pending Decision</div><div class="value">{% for item in incidents %}{% if item.status == 'Decision' %}1{% endif %}{% endfor %}</div></div>
+    <div class="stat-tile"><div class="label">Resolved</div><div class="value">{% for item in incidents %}{% if item.status == 'Closed' %}1{% endif %}{% endfor %}</div></div>
+</div>
+
+<div class="card" style="margin-bottom: 22px;">
+    <div class="card-header">
+        <h3>Record Incident</h3>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="create_incident">
+            <div class="form-grid-2">
+                <div class="form-field">
+                    <label for="{{ form.employee_id.id_for_label }}">Employee</label>
+                    {{ form.employee_id }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.incident_date.id_for_label }}">Incident Date</label>
+                    {{ form.incident_date }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.category.id_for_label }}">Category</label>
+                    {{ form.category }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.offense_number.id_for_label }}">Offense Number</label>
+                    {{ form.offense_number }}
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1;">
+                    <label for="{{ form.description.id_for_label }}">Description</label>
+                    {{ form.description }}
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1;">
+                    <label for="{{ form.investigation_notes.id_for_label }}">Investigation Notes</label>
+                    {{ form.investigation_notes }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.employee_response.id_for_label }}">Employee Response</label>
+                    {{ form.employee_response }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.evidence_attachment.id_for_label }}">Evidence</label>
+                    {{ form.evidence_attachment }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.action_taken.id_for_label }}">Action Taken</label>
+                    {{ form.action_taken }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.decision_reason.id_for_label }}">Decision Reason</label>
+                    {{ form.decision_reason }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.effective_date.id_for_label }}">Effective Date</label>
+                    {{ form.effective_date }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ form.status.id_for_label }}">Status</label>
+                    {{ form.status }}
+                </div>
+            </div>
+            <div class="form-actions" style="margin-top: 18px;">
+                <button class="btn btn-primary" type="submit">Save Incident</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Open Cases</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Incident</th>
+                        <th>Date</th>
+                        <th>Offense</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in incidents %}
+                    <tr>
+                        <td>{{ item.employee.get_full_name }}</td>
+                        <td>{{ item.department.name|default:'-' }}</td>
+                        <td>{{ item.category }}</td>
+                        <td>{{ item.incident_date }}</td>
+                        <td>{{ item.offense_number|default:'-' }}</td>
+                        <td>
+                            {% if item.status == 'Closed' %}
+                                <span class="badge badge-success">{{ item.status }}</span>
+                            {% elif item.status == 'Under Investigation' or item.status == 'Decision' %}
+                                <span class="badge badge-warning">{{ item.status }}</span>
+                            {% elif item.status == 'Appeal' %}
+                                <span class="badge badge-primary">Appealed</span>
+                            {% else %}
+                                <span class="badge badge-primary">{{ item.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <details>
+                                <summary class="btn btn-ghost">View Case</summary>
+                                <div class="review-detail" style="margin-top: 10px;">
+                                    <div class="section-stack">
+                                        <div class="section-unit"><strong>Incident Details</strong>{{ item.description }}</div>
+                                        <div class="section-unit"><strong>Employee Response</strong>{{ item.employee_response|default:'-' }}</div>
+                                        <div class="section-unit"><strong>Investigation</strong>{{ item.investigation_notes|default:'-' }}</div>
+                                        <div class="section-unit"><strong>Decision</strong>{{ item.decision_reason|default:'-' }}</div>
+                                        <div class="section-unit"><strong>Acknowledgment</strong>{{ item.action_taken|default:'-' }}</div>
+                                        <div class="section-unit"><strong>Appeal</strong>{% if item.status == 'Appeal' %}Appeal is currently active{% else %}No active appeal{% endif %}</div>
+                                    </div>
+                                </div>
+                            </details>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" style="text-align:center;">No discipline cases recorded.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

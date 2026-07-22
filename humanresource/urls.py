@@ -36,6 +36,12 @@ urlpatterns = [
          supervisor_views.supervisor_kpi, name='supervisor_kpi'),
     path('dashboard/supervisor/certificates/',
          supervisor_views.supervisor_certificates, name='supervisor_certificates'),
+    path('dashboard/supervisor/training-requests/',
+         supervisor_views.supervisor_training_requests, name='supervisor_training_requests'),
+    path('dashboard/supervisor/discipline-reports/',
+         supervisor_views.supervisor_discipline_reports, name='supervisor_discipline_reports'),
+    path('dashboard/supervisor/hiring-request/',
+         supervisor_views.supervisor_hiring_request, name='supervisor_hiring_request'),
 
     # ── Employee management (legacy form-based pages) ──────────────
     path('employees/',

@@ -152,14 +152,65 @@
             flex-grow: 1;
         }
 
+        .nav-section {
+            margin-top: 4px;
+        }
+
         .nav-section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             font-size: 11px;
             font-weight: 700;
             color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.75px;
-            margin-bottom: 8px;
-            padding-left: 12px;
+            margin: 12px 0 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            user-select: none;
+            transition: var(--transition);
+        }
+
+        .nav-section-title:hover {
+            color: var(--primary);
+            background: var(--primary-light);
+            padding-left: 16px;
+        }
+
+        .nav-section-title .section-label {
+            flex: 1;
+        }
+
+        .nav-section-chevron {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.6;
+        }
+
+        .nav-section-title.open .nav-section-chevron {
+            transform: rotate(180deg);
+            opacity: 1;
+        }
+
+        .nav-section-title.open {
+            color: var(--primary);
+        }
+
+        .nav-section-items {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity  0.25s ease;
+            opacity: 0;
+        }
+
+        .nav-section-items.open {
+            max-height: 500px;
+            opacity: 1;
         }
 
         .nav-item {
@@ -395,31 +446,53 @@
             </div>
 
             <nav class="sidebar-nav">
-                <div class="nav-section-title">Employee Portal</div>
                 <a href="{% url 'dashboard_employee' %}" class="nav-item {% if active_page == 'dashboard_employee' or not active_page %}active{% endif %}">
                     <i data-lucide="qr-code" style="width: 18px; height: 18px;"></i>
                     <span>My Digital Badge</span>
                 </a>
-                <a href="{% url 'my_attendance_record' %}" class="nav-item {% if active_page == 'my_attendance' %}active{% endif %}">
-                    <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
-                    <span>Attendance Logs</span>
-                </a>
-                <a href="{% url 'my_lifecycle' %}" class="nav-item {% if active_page == 'my_lifecycle' %}active{% endif %}">
-                    <i data-lucide="user-check" style="width: 18px; height: 18px;"></i>
-                    <span>My Lifecycle</span>
-                </a>
-                <a href="{% url 'employee_leave_manager' %}" class="nav-item {% if active_page == 'employee_leave_manager' %}active{% endif %}">
-                    <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
-                    <span>Leave Manager</span>
-                </a>
-                <a href="{% url 'my_kpi' %}" class="nav-item {% if active_page == 'my_kpi' %}active{% endif %}">
-                    <i data-lucide="users" style="width: 18px; height: 18px;"></i>
-                    <span>Peer Evaluation</span>
-                </a>
-                <a href="{% url 'my_salary_slips' %}" class="nav-item {% if active_page == 'my_salary_slips' %}active{% endif %}">
-                    <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i>
-                    <span>Salary &amp; Slips</span>
-                </a>
+
+                <!-- MY WORKSPACE -->
+                <div class="nav-section">
+                    <div class="nav-section-title {% if active_page in 'my_lifecycle,my_attendance,employee_leave_manager,my_salary_slips,my_kpi,my_training,my_grievances' %}open{% endif %}"
+                         data-section="workspace">
+                        <span class="section-label">My Workspace</span>
+                        <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="nav-section-items {% if active_page in 'my_lifecycle,my_attendance,employee_leave_manager,my_salary_slips,my_kpi,my_training,my_grievances' %}open{% endif %}"
+                         id="section-workspace">
+                        <a href="{% url 'my_lifecycle' %}" class="nav-item {% if active_page == 'my_lifecycle' %}active{% endif %}">
+                            <i data-lucide="user" style="width: 18px; height: 18px;"></i>
+                            <span>My Profile</span>
+                        </a>
+                        <a href="{% url 'my_attendance_record' %}" class="nav-item {% if active_page == 'my_attendance' %}active{% endif %}">
+                            <i data-lucide="calendar" style="width: 18px; height: 18px;"></i>
+                            <span>My Attendance</span>
+                        </a>
+                        <a href="{% url 'employee_leave_manager' %}" class="nav-item {% if active_page == 'employee_leave_manager' %}active{% endif %}">
+                            <i data-lucide="clock" style="width: 18px; height: 18px;"></i>
+                            <span>My Leave</span>
+                        </a>
+                        <a href="{% url 'my_salary_slips' %}" class="nav-item {% if active_page == 'my_salary_slips' %}active{% endif %}">
+                            <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i>
+                            <span>My Payslips</span>
+                        </a>
+                        <a href="{% url 'my_kpi' %}" class="nav-item {% if active_page == 'my_kpi' %}active{% endif %}">
+                            <i data-lucide="award" style="width: 18px; height: 18px;"></i>
+                            <span>My Career / Performance</span>
+                        </a>
+                        <a href="{% url 'my_training' %}" class="nav-item {% if active_page == 'my_training' %}active{% endif %}">
+                            <i data-lucide="graduation-cap" style="width: 18px; height: 18px;"></i>
+                            <span>My Training</span>
+                        </a>
+                        <a href="{% url 'my_grievances' %}" class="nav-item {% if active_page == 'my_grievances' %}active{% endif %}">
+                            <i data-lucide="shield-alert" style="width: 18px; height: 18px;"></i>
+                            <span>My Grievances</span>
+                        </a>
+                    </div>
+                </div>
             </nav>
 
             <div class="sidebar-footer">
@@ -462,8 +535,35 @@
     <script>
         lucide.createIcons();
         
-        // Mobile Menu Drawer Toggle Logic
+        // Mobile Menu Drawer Toggle & Collapsible Sidebar Logic
         document.addEventListener('DOMContentLoaded', () => {
+            // Collapsible Sidebar Nav Sections (Accordion style)
+            const navSectionTitles = document.querySelectorAll('.portal-sidebar .nav-section-title');
+            navSectionTitles.forEach(title => {
+                title.addEventListener('click', () => {
+                    const navSection = title.closest('.nav-section');
+                    const items = navSection ? navSection.querySelector('.nav-section-items') : null;
+                    if (!items) return;
+
+                    const isOpen = title.classList.contains('open');
+
+                    // Close all section dropdowns
+                    navSectionTitles.forEach(t => {
+                        t.classList.remove('open');
+                        const otherItems = t.closest('.nav-section')?.querySelector('.nav-section-items');
+                        if (otherItems) {
+                            otherItems.classList.remove('open');
+                        }
+                    });
+
+                    // If the clicked section was not already open, open it
+                    if (!isOpen) {
+                        title.classList.add('open');
+                        items.classList.add('open');
+                    }
+                });
+            });
+
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
             const sidebar = document.querySelector('.portal-sidebar');
             const sidebarOverlay = document.getElementById('sidebarOverlay');

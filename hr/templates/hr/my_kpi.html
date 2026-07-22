@@ -99,13 +99,13 @@
     .form-field { margin-bottom: 16px; }
     .form-field label {
         display: block;
-        font-size: 11px; font-weight: 700; text-transform: uppercase;
-        letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 6px;
+        font-size: 13px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 8px;
     }
     .form-control {
-        width: 100%; padding: 10px 14px;
+        width: 100%; padding: 12px 16px;
         border: 1.5px solid var(--border-color); border-radius: var(--radius-sm);
-        font-size: 14px; background: #f8fafc; transition: var(--transition);
+        font-size: 15px; background: #f8fafc; transition: var(--transition);
     }
     .form-control:focus {
         outline: none; border-color: var(--primary);
@@ -114,14 +114,14 @@
 
     .rating-row {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 10px 0; border-bottom: 1px solid #f1f5f9;
+        padding: 18px 0; border-bottom: 1px solid #f1f5f9;
     }
     .rating-row:last-child { border-bottom: none; }
-    .rating-label { font-size: 14px; color: var(--text-muted); font-weight: 500; }
-    .star-group { display: flex; gap: 6px; }
+    .rating-label { font-size: 16px; color: var(--text-muted); font-weight: 600; }
+    .star-group { display: flex; gap: 8px; }
     .star-group input[type=radio] { display: none; }
     .star-group label {
-        font-size: 22px; cursor: pointer; color: #cbd5e1;
+        font-size: 28px; cursor: pointer; color: #cbd5e1;
         transition: color 0.15s; text-transform: none; letter-spacing: 0; font-weight: 400;
     }
     .star-group input[type=radio]:checked ~ label,
@@ -140,12 +140,27 @@
     .score-badge {
         display: inline-flex;
         align-items: center; justify-content: center;
-        width: 32px; height: 32px; border-radius: 50%;
-        font-weight: 700; font-size: 14px;
+        width: 44px; height: 44px; border-radius: 50%;
+        font-weight: 700; font-size: 16px;
         background: var(--primary-light); color: var(--primary);
     }
     .score-badge.high  { background: var(--success-light); color: var(--success-dark); }
     .score-badge.low   { background: var(--danger-light);  color: var(--danger-dark); }
+
+    /* Enhance table sizing */
+    table { width: 100%; border-collapse: collapse; }
+    table th {
+        font-size: 13px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.05em; padding: 16px 12px;
+        background: #f8fafc; border-bottom: 2px solid var(--border-color);
+        text-align: left; color: var(--text-muted);
+    }
+    table td {
+        padding: 14px 12px; border-bottom: 1px solid var(--border-color);
+        font-size: 15px; color: var(--text-main);
+    }
+    table tbody tr:hover { background: #f8fafc; }
+    table tbody tr td:first-child { font-weight: 600; }
 
     /* Tabs */
     .eval-tabs {

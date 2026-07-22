@@ -1,0 +1,140 @@
+{% extends 'hr/supervisor_base.html' %}
+{% block title %}Request New Employee — Supervisor{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Request New Employee</h1>
+        <p>Submit staffing and recruitment requests for your department to HR.</p>
+    </div>
+</div>
+
+<!-- Hiring Request Form -->
+<div class="card" style="margin-bottom: 28px;">
+    <div class="card-header">
+        <i data-lucide="user-plus" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>New Staffing Request</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label>Department <span class="req">*</span></label>
+                    <input type="text" class="form-input" value="{{ supervisor_dept.name|default:'My Department' }}" readonly style="background:#f1f5f9;cursor:not-allowed;">
+                    <input type="hidden" name="department_id" value="{{ supervisor_dept.id }}">
+                </div>
+
+                <div class="form-group">
+                    <label>Position Needed <span class="req">*</span></label>
+                    <input type="text" name="position_title" class="form-input" placeholder="e.g. Senior Software Engineer" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Number Needed <span class="req">*</span></label>
+                    <input type="number" name="number_needed" class="form-input" min="1" value="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Employment Type <span class="req">*</span></label>
+                    <select name="employment_type" class="form-input" required>
+                        {% for et in employment_types %}
+                            <option value="{{ et }}">{{ et }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Preferred Start Date <span class="req">*</span></label>
+                    <input type="date" name="preferred_start_date" class="form-input" required style="max-width: 300px;">
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Required Skills</label>
+                    <textarea name="required_skills" class="form-input" rows="2" placeholder="e.g. Python, Django, PostgreSQL, Team leadership"></textarea>
+                </div>
+
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Reason / Justification <span class="req">*</span></label>
+                    <textarea name="reason" class="form-input" rows="3" placeholder="Provide detailed justification for this hiring request..." required></textarea>
+                </div>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+                <button type="submit" class="btn btn-primary">
+                    <i data-lucide="send" style="width:16px;height:16px;"></i> Submit Request to HR
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Request History Table -->
+<div class="card">
+    <div class="card-header">
+        <i data-lucide="history" style="width:18px;height:18px;color:var(--primary);"></i>
+        <h3>Hiring Request History</h3>
+        <span style="margin-left:auto;font-size:13px;color:var(--text-light);">{{ hiring_requests.count }} total</span>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Position</th>
+                    <th>Dept</th>
+                    <th>Count</th>
+                    <th>Type</th>
+                    <th>Start Date</th>
+                    <th>Request Date</th>
+                    <th>Status</th>
+                    <th>HR Review &amp; Comments</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in hiring_requests %}
+                <tr>
+                    <td>
+                        <strong style="color:var(--text-main);">{{ req.position_title }}</strong>
+                        {% if req.required_skills %}
+                            <div style="font-size:12px;color:var(--text-light);margin-top:2px;">Skills: {{ req.required_skills|truncatechars:40 }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ req.department.name }}</td>
+                    <td><span class="badge badge-primary">{{ req.number_needed }}</span></td>
+                    <td>{{ req.employment_type }}</td>
+                    <td>{{ req.preferred_start_date|date:"d M Y" }}</td>
+                    <td>{{ req.request_date|date:"d M Y H:i" }}</td>
+                    <td>
+                        {% if req.status == 'Pending' %}
+                            <span class="badge badge-warning" style="color:#78350f;">Pending</span>
+                        {% elif req.status == 'Approved' %}
+                            <span class="badge badge-success">Approved</span>
+                        {% elif req.status == 'Rejected' %}
+                            <span class="badge badge-danger">Rejected</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if req.status != 'Pending' %}
+                            <div style="font-size:13px;font-weight:500;">
+                                Reviewed by {{ req.reviewed_by.get_full_name|default:"HR" }} on {{ req.decision_date|date:"d M Y" }}
+                            </div>
+                            {% if req.hr_comment %}
+                                <div style="font-size:12px;color:var(--text-muted);font-style:italic;margin-top:2px;">
+                                    "{{ req.hr_comment }}"
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <span style="font-size:12px;color:var(--text-light);font-style:italic;">Awaiting HR review</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr class="empty-state">
+                    <td colspan="8">No hiring requests submitted yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

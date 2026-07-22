@@ -1,0 +1,65 @@
+{% extends 'hr/supervisor_base.html' %}
+{% block title %}Team Discipline & Incident Reports — ACT HRMS{% endblock %}
+{% block content %}
+<style>
+    .inline-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+    .soft-note { background: #f8fafc; border: 1px solid var(--border-color); padding: 12px 14px; border-radius: var(--radius-sm); color: var(--text-muted); font-size: 12px; }
+</style>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Team Discipline & Incident Reports</h1>
+        <p>Review incidents for employees in your supervised departments.</p>
+    </div>
+</div>
+
+<div class="inline-actions">
+    <div class="soft-note">Supervisor access is limited to employees you supervise.</div>
+    <button class="btn btn-secondary" type="button">Report Incident</button>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Incident Overview</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Incident</th>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in incidents %}
+                    <tr>
+                        <td>{{ item.employee.get_full_name }}</td>
+                        <td>{{ item.description|truncatechars:70 }}</td>
+                        <td>{{ item.incident_date }}</td>
+                        <td>{{ item.category }}</td>
+                        <td>
+                            {% if item.status == 'Closed' %}
+                                <span class="badge badge-success">Closed</span>
+                            {% elif item.status == 'Under Investigation' or item.status == 'Decision' %}
+                                <span class="badge badge-warning">{{ item.status }}</span>
+                            {% elif item.status == 'Appeal' %}
+                                <span class="badge badge-primary">Appealed</span>
+                            {% else %}
+                                <span class="badge badge-primary">{{ item.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td><a href="#" class="btn btn-ghost">View</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" style="text-align:center;">No incident reports found for your team.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

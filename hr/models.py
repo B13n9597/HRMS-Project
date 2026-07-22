@@ -924,6 +924,182 @@ class EmployeeCertificate(BaseModel):
 
 
 # ============================================================
+#  TRAINING & CPD MODULE
+# ============================================================
+
+class TrainingRequest(BaseModel):
+    TYPE_CHOICES = [
+        ('In-House', 'In-House'),
+        ('External', 'External'),
+        ('Overseas', 'Overseas'),
+        ('Online', 'Online'),
+    ]
+    STATUS_CHOICES = [
+        ('Submitted', 'Submitted'),
+        ('Supervisor Review', 'Supervisor Review'),
+        ('Supervisor Rejected', 'Supervisor Rejected'),
+        ('HR Review', 'HR Review'),
+        ('HR Rejected', 'HR Rejected'),
+        ('Approved', 'Approved'),
+        ('Completed', 'Completed'),
+    ]
+    REQUEST_SOURCE_CHOICES = [
+        ('Employee', 'Employee Requested'),
+        ('Supervisor', 'Supervisor Recommended'),
+    ]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='training_requests')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='training_requests')
+    title = models.CharField(max_length=200)
+    provider = models.CharField(max_length=200)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='In-House')
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
+    cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    funding_source = models.CharField(max_length=200, blank=True, default='')
+    business_justification = models.TextField(blank=True, default='')
+    required_skills = models.TextField(blank=True, default='')
+    supporting_document = models.FileField(upload_to='training_documents/', null=True, blank=True)
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='Submitted')
+    request_source = models.CharField(max_length=20, choices=REQUEST_SOURCE_CHOICES, default='Employee')
+    requested_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='training_requests_initiated')
+    request_date = models.DateTimeField(auto_now_add=True)
+    supervisor = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='training_requests_reviewed')
+    supervisor_comment = models.TextField(blank=True, default='')
+    supervisor_decision_date = models.DateTimeField(null=True, blank=True)
+    hr_comment = models.TextField(blank=True, default='')
+    hr_decision_date = models.DateTimeField(null=True, blank=True)
+    completion_date = models.DateTimeField(null=True, blank=True)
+    cpd_points = models.PositiveIntegerField(default=0)
+    certificate = models.FileField(upload_to='training_certificates/', null=True, blank=True)
+    skills_learned = models.TextField(blank=True, default='')
+    knowledge_transfer_method = models.CharField(max_length=200, blank=True, default='')
+    feedback = models.TextField(blank=True, default='')
+    satisfaction_rating = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-request_date']
+
+    @property
+    def annual_cpd_progress(self):
+        year = timezone.localdate().year
+        completed_points = TrainingRequest.objects.filter(
+            employee=self.employee,
+            status='Completed',
+            completion_date__year=year,
+            is_deleted=False,
+        ).aggregate(models.Sum('cpd_points'))['cpd_points__sum'] or 0
+        return completed_points
+
+    def __str__(self):
+        return f"{self.employee.get_full_name()} - {self.title} ({self.status})"
+
+
+# ============================================================
+#  DISCIPLINE / EMPLOYEE RELATIONS
+# ============================================================
+
+class DisciplinaryIncident(BaseModel):
+    ACTION_CHOICES = [
+        ('No Action', 'No Action'),
+        ('Verbal Warning', 'Verbal Warning'),
+        ('Written Warning', 'Written Warning'),
+        ('Final Warning', 'Final Warning'),
+        ('Suspension', 'Suspension'),
+        ('Demotion', 'Demotion'),
+        ('Dismissal', 'Dismissal'),
+    ]
+    STATUS_CHOICES = [
+        ('Reported', 'Reported'),
+        ('Under Investigation', 'Under Investigation'),
+        ('Decision', 'Decision'),
+        ('Employee Acknowledgment', 'Employee Acknowledgment'),
+        ('Appeal', 'Appeal'),
+        ('Closed', 'Closed'),
+    ]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='disciplinary_incidents')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='disciplinary_incidents')
+    incident_date = models.DateField()
+    date_reported = models.DateField(auto_now_add=True)
+    reporting_supervisor = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='reported_incidents')
+    category = models.CharField(max_length=100)
+    description = models.TextField()
+    evidence_attachment = models.FileField(upload_to='discipline_evidence/', null=True, blank=True)
+    employee_response = models.TextField(blank=True, default='')
+    offense_number = models.CharField(max_length=50, blank=True, default='')
+    investigation_notes = models.TextField(blank=True, default='')
+    status = models.CharField(max_length=40, choices=STATUS_CHOICES, default='Reported')
+    action_taken = models.CharField(max_length=40, choices=ACTION_CHOICES, default='No Action')
+    decision_reason = models.TextField(blank=True, default='')
+    effective_date = models.DateField(null=True, blank=True)
+    decided_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='decided_incidents')
+    decision_date = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-incident_date']
+
+    def __str__(self):
+        return f"{self.employee.get_full_name()} - {self.category}"
+
+
+class DisciplinaryAppeal(BaseModel):
+    STATUS_CHOICES = [
+        ('Submitted', 'Submitted'),
+        ('Under Review', 'Under Review'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+        ('Closed', 'Closed'),
+    ]
+    incident = models.ForeignKey(DisciplinaryIncident, on_delete=models.CASCADE, related_name='appeals')
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='disciplinary_appeals')
+    appeal_reason = models.TextField()
+    appeal_date = models.DateField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Submitted')
+    reviewer = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='appeal_reviews')
+    decision_comment = models.TextField(blank=True, default='')
+    decision_date = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-appeal_date']
+
+    def __str__(self):
+        return f"Appeal for {self.incident}"
+
+
+class Grievance(BaseModel):
+    STATUS_CHOICES = [
+        ('Submitted', 'Submitted'),
+        ('Under Review', 'Under Review'),
+        ('Investigation', 'Investigation'),
+        ('Action Required', 'Action Required'),
+        ('Resolved', 'Resolved'),
+        ('Closed', 'Closed'),
+    ]
+    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='grievances')
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='grievances')
+    category = models.CharField(max_length=100)
+    subject = models.CharField(max_length=200)
+    description = models.TextField()
+    incident_date = models.DateField(null=True, blank=True)
+    evidence = models.FileField(upload_to='grievance_evidence/', null=True, blank=True)
+    desired_resolution = models.TextField(blank=True, default='')
+    confidential = models.BooleanField(default=False)
+    status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='Submitted')
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    assigned_investigator = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_grievances')
+    investigation_notes = models.TextField(blank=True, default='')
+    findings = models.TextField(blank=True, default='')
+    corrective_action = models.TextField(blank=True, default='')
+    response = models.TextField(blank=True, default='')
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-submitted_at']
+
+    def __str__(self):
+        return f"{self.employee.get_full_name()} - {self.subject}"
+
+
+# ============================================================
 #  HOLIDAY CALENDAR
 # ============================================================
 
@@ -1041,3 +1217,56 @@ class BiannualKPIScore(BaseModel):
 
     def __str__(self):
         return f"{self.employee.get_full_name()} {self.evaluation_type} {self.year}/{self.period}"
+
+
+# ============================================================
+#  SUPERVISOR HIRING REQUEST
+# ============================================================
+
+class HiringRequest(BaseModel):
+    STATUS_CHOICES = [
+        ('Pending',  'Pending'),
+        ('Approved', 'Approved'),
+        ('Rejected', 'Rejected'),
+    ]
+
+    EMPLOYMENT_TYPES = [
+        ('Full-Time',  'Full-Time'),
+        ('Part-Time',  'Part-Time'),
+        ('Contract',   'Contract'),
+        ('Internship', 'Internship'),
+        ('Temporary',  'Temporary'),
+    ]
+
+    requested_by = models.ForeignKey(
+        Employee, on_delete=models.CASCADE, related_name='hiring_requests'
+    )
+    department = models.ForeignKey(
+        Department, on_delete=models.CASCADE, related_name='hiring_requests'
+    )
+    position_title       = models.CharField(max_length=100)
+    number_needed        = models.PositiveIntegerField(default=1)
+    employment_type      = models.CharField(max_length=50, choices=EMPLOYMENT_TYPES, default='Full-Time')
+    reason               = models.TextField()
+    required_skills      = models.TextField(blank=True, default='')
+    preferred_start_date = models.DateField()
+
+    request_date = models.DateTimeField(auto_now_add=True)
+    status       = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+
+    reviewed_by   = models.ForeignKey(
+        Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_hiring_requests'
+    )
+    decision_date = models.DateTimeField(null=True, blank=True)
+    hr_comment    = models.TextField(blank=True, default='')
+
+    created_vacancy = models.ForeignKey(
+        'JobPosting', on_delete=models.SET_NULL, null=True, blank=True, related_name='hiring_requests'
+    )
+
+    class Meta:
+        ordering = ['-request_date']
+
+    def __str__(self):
+        return f"{self.position_title} - {self.department.name} ({self.status})"
+

@@ -114,13 +114,65 @@
         /* ── Nav ── */
         .sv-nav { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; }
 
-        .sv-nav-section {
+        .sv-nav-section-wrap {
+            margin-top: 4px;
+        }
+
+        .sv-nav-section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .8px;
             color: #94a3b8;
-            padding: 16px 10px 6px;
+            margin: 12px 0 4px;
+            padding: 6px 10px;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            user-select: none;
+            transition: var(--transition);
+        }
+
+        .sv-nav-section-title:hover {
+            color: var(--primary);
+            background: var(--primary-light);
+            padding-left: 14px;
+        }
+
+        .sv-nav-section-title .section-label {
+            flex: 1;
+        }
+
+        .sv-nav-section-chevron {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0.6;
+        }
+
+        .sv-nav-section-title.open .sv-nav-section-chevron {
+            transform: rotate(180deg);
+            opacity: 1;
+        }
+
+        .sv-nav-section-title.open {
+            color: var(--primary);
+        }
+
+        .sv-nav-section-items {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity  0.25s ease;
+            opacity: 0;
+        }
+
+        .sv-nav-section-items.open {
+            max-height: 500px;
+            opacity: 1;
         }
 
         .sv-nav-link {
@@ -405,29 +457,72 @@
         </div>
 
         <nav class="sv-nav">
-            <div class="sv-nav-section">Dashboard</div>
             <a href="{% url 'supervisor_dashboard' %}" class="sv-nav-link {% if active_page == 'supervisor_dashboard' %}active{% endif %}">
                 <i data-lucide="layout-dashboard" style="width:16px;height:16px;flex-shrink:0;"></i> Overview
             </a>
 
-            <div class="sv-nav-section">My Department</div>
-            <a href="{% url 'supervisor_employees' %}" class="sv-nav-link {% if active_page == 'supervisor_employees' %}active{% endif %}">
-                <i data-lucide="users" style="width:16px;height:16px;flex-shrink:0;"></i> Employees
-            </a>
-            <a href="{% url 'supervisor_attendance' %}" class="sv-nav-link {% if active_page == 'supervisor_attendance' %}active{% endif %}">
-                <i data-lucide="calendar-check" style="width:16px;height:16px;flex-shrink:0;"></i> Attendance
-            </a>
+            <!-- MY WORKSPACE -->
+            <div class="sv-nav-section-wrap">
+                <div class="sv-nav-section-title {% if active_page in 'my_lifecycle,my_attendance,employee_leave_manager,my_salary_slips' %}open{% endif %}"
+                     data-section="workspace">
+                    <span class="section-label">My Workspace</span>
+                    <svg class="sv-nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="sv-nav-section-items {% if active_page in 'my_lifecycle,my_attendance,employee_leave_manager,my_salary_slips' %}open{% endif %}"
+                     id="section-workspace">
+                    <a href="{% url 'my_lifecycle' %}" class="sv-nav-link {% if active_page == 'my_lifecycle' %}active{% endif %}">
+                        <i data-lucide="user" style="width:16px;height:16px;flex-shrink:0;"></i> My Profile
+                    </a>
+                    <a href="{% url 'my_attendance_record' %}" class="sv-nav-link {% if active_page == 'my_attendance' %}active{% endif %}">
+                        <i data-lucide="user-check" style="width:16px;height:16px;flex-shrink:0;"></i> My Attendance
+                    </a>
+                    <a href="{% url 'employee_leave_manager' %}" class="sv-nav-link {% if active_page == 'employee_leave_manager' %}active{% endif %}">
+                        <i data-lucide="calendar" style="width:16px;height:16px;flex-shrink:0;"></i> My Leave
+                    </a>
+                    <a href="{% url 'my_salary_slips' %}" class="sv-nav-link {% if active_page == 'my_salary_slips' %}active{% endif %}">
+                        <i data-lucide="file-text" style="width:16px;height:16px;flex-shrink:0;"></i> My Payslips
+                    </a>
+                </div>
+            </div>
 
-            <div class="sv-nav-section">Actions</div>
-            <a href="{% url 'supervisor_leave_approvals' %}" class="sv-nav-link {% if active_page == 'supervisor_leave_approvals' %}active{% endif %}">
-                <i data-lucide="check-square" style="width:16px;height:16px;flex-shrink:0;"></i> Leave Approvals
-            </a>
-            <a href="{% url 'supervisor_kpi' %}" class="sv-nav-link {% if active_page == 'supervisor_kpi' %}active{% endif %}">
-                <i data-lucide="bar-chart-3" style="width:16px;height:16px;flex-shrink:0;"></i> KPI Evaluation
-            </a>
-            <a href="{% url 'supervisor_certificates' %}" class="sv-nav-link {% if active_page == 'supervisor_certificates' %}active{% endif %}">
-                <i data-lucide="file-badge" style="width:16px;height:16px;flex-shrink:0;"></i> Certificates
-            </a>
+            <!-- MY TEAM -->
+            <div class="sv-nav-section-wrap">
+                <div class="sv-nav-section-title {% if active_page in 'supervisor_employees,supervisor_attendance,supervisor_leave_approvals,supervisor_kpi,supervisor_certificates,supervisor_training_requests,supervisor_discipline_reports,supervisor_hiring_request' %}open{% endif %}"
+                     data-section="team">
+                    <span class="section-label">My Team</span>
+                    <svg class="sv-nav-section-chevron" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </div>
+                <div class="sv-nav-section-items {% if active_page in 'supervisor_employees,supervisor_attendance,supervisor_leave_approvals,supervisor_kpi,supervisor_certificates,supervisor_training_requests,supervisor_discipline_reports,supervisor_hiring_request' %}open{% endif %}"
+                     id="section-team">
+                    <a href="{% url 'supervisor_employees' %}" class="sv-nav-link {% if active_page == 'supervisor_employees' %}active{% endif %}">
+                        <i data-lucide="users" style="width:16px;height:16px;flex-shrink:0;"></i> Team Members
+                    </a>
+                    <a href="{% url 'supervisor_attendance' %}" class="sv-nav-link {% if active_page == 'supervisor_attendance' %}active{% endif %}">
+                        <i data-lucide="calendar-check" style="width:16px;height:16px;flex-shrink:0;"></i> Team Attendance
+                    </a>
+                    <a href="{% url 'supervisor_leave_approvals' %}" class="sv-nav-link {% if active_page == 'supervisor_leave_approvals' %}active{% endif %}">
+                        <i data-lucide="check-square" style="width:16px;height:16px;flex-shrink:0;"></i> Team Leave Requests
+                    </a>
+                    <a href="{% url 'supervisor_kpi' %}" class="sv-nav-link {% if active_page == 'supervisor_kpi' %}active{% endif %}">
+                        <i data-lucide="bar-chart-3" style="width:16px;height:16px;flex-shrink:0;"></i> Team Performance
+                    </a>
+                    <a href="{% url 'supervisor_training_requests' %}" class="sv-nav-link {% if active_page == 'supervisor_training_requests' %}active{% endif %}">
+                        <i data-lucide="file-badge" style="width:16px;height:16px;flex-shrink:0;"></i> Training Requests
+                    </a>
+                    <a href="{% url 'supervisor_discipline_reports' %}" class="sv-nav-link {% if active_page == 'supervisor_discipline_reports' %}active{% endif %}">
+                        <i data-lucide="shield-alert" style="width:16px;height:16px;flex-shrink:0;"></i> Discipline / Incident Reports
+                    </a>
+                    <a href="{% url 'supervisor_hiring_request' %}" class="sv-nav-link {% if active_page == 'supervisor_hiring_request' %}active{% endif %}">
+                        <i data-lucide="user-plus" style="width:16px;height:16px;flex-shrink:0;"></i> Request New Employee
+                    </a>
+                </div>
+            </div>
         </nav>
 
         <div class="sv-sidebar-footer">
@@ -467,8 +562,35 @@
 <script>
     if (window.lucide) lucide.createIcons();
     
-    // Mobile Menu Drawer Toggle Logic
+    // Mobile Menu Drawer Toggle & Collapsible Sidebar Logic
     document.addEventListener('DOMContentLoaded', () => {
+        // Collapsible Sidebar Nav Sections (Accordion style)
+        const svNavSectionTitles = document.querySelectorAll('.sv-sidebar .sv-nav-section-title');
+        svNavSectionTitles.forEach(title => {
+            title.addEventListener('click', () => {
+                const navSection = title.closest('.sv-nav-section-wrap');
+                const items = navSection ? navSection.querySelector('.sv-nav-section-items') : null;
+                if (!items) return;
+
+                const isOpen = title.classList.contains('open');
+
+                // Close all section dropdowns
+                svNavSectionTitles.forEach(t => {
+                    t.classList.remove('open');
+                    const otherItems = t.closest('.sv-nav-section-wrap')?.querySelector('.sv-nav-section-items');
+                    if (otherItems) {
+                        otherItems.classList.remove('open');
+                    }
+                });
+
+                // If the clicked section was not already open, open it
+                if (!isOpen) {
+                    title.classList.add('open');
+                    items.classList.add('open');
+                }
+            });
+        });
+
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const sidebar = document.querySelector('.sv-sidebar');
         const sidebarOverlay = document.getElementById('sidebarOverlay');

@@ -1,0 +1,190 @@
+{% extends 'hr/supervisor_base.html' %}
+{% block title %}Team Training Requests — ACT HRMS{% endblock %}
+{% block content %}
+<style>
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
+    .stat-chip { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 16px; }
+    .stat-chip .label { font-size: 11px; color: var(--text-light); text-transform: uppercase; font-weight: 700; }
+    .stat-chip .value { font-family: var(--font-display); font-size: 24px; font-weight: 800; margin-top: 4px; }
+    .review-detail { border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #f8fafc; padding: 14px; margin-top: 10px; }
+    .review-detail h4 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); margin: 0 0 10px; }
+    .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .detail-box { background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; }
+    .detail-box strong { display: block; font-size: 11px; color: var(--text-light); text-transform: uppercase; margin-bottom: 4px; }
+    @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; } }
+</style>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Team Training Requests</h1>
+        <p>Review and act on training requests for employees you supervise.</p>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<div class="stats-grid">
+    <div class="stat-chip">
+        <div class="label">Pending Review</div>
+        <div class="value">{{ requests|length }}</div>
+    </div>
+    <div class="stat-chip">
+        <div class="label">Recommended</div>
+        <div class="value">{% for item in requests %}{% if item.status == 'HR Review' %}1{% endif %}{% endfor %}</div>
+    </div>
+    <div class="stat-chip">
+        <div class="label">Rejected</div>
+        <div class="value">{% for item in requests %}{% if item.status == 'Supervisor Rejected' %}1{% endif %}{% endfor %}</div>
+    </div>
+    <div class="stat-chip">
+        <div class="label">Completed</div>
+        <div class="value">{% for item in requests %}{% if item.status == 'Completed' %}1{% endif %}{% endfor %}</div>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom: 22px;">
+    <div class="card-header">
+        <h3>Request Training for Employee</h3>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="request_training_for_employee">
+            <div class="form-grid-2">
+                <div class="form-field">
+                    <label for="{{ request_form.employee.id_for_label }}">{{ request_form.employee.label }}</label>
+                    {{ request_form.employee }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ request_form.title.id_for_label }}">{{ request_form.title.label }}</label>
+                    {{ request_form.title }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ request_form.provider.id_for_label }}">{{ request_form.provider.label }}</label>
+                    {{ request_form.provider }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ request_form.type.id_for_label }}">{{ request_form.type.label }}</label>
+                    {{ request_form.type }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ request_form.start_date.id_for_label }}">{{ request_form.start_date.label }}</label>
+                    {{ request_form.start_date }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ request_form.end_date.id_for_label }}">{{ request_form.end_date.label }}</label>
+                    {{ request_form.end_date }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ request_form.cost.id_for_label }}">{{ request_form.cost.label }}</label>
+                    {{ request_form.cost }}
+                </div>
+                <div class="form-field">
+                    <label for="{{ request_form.funding_source.id_for_label }}">{{ request_form.funding_source.label }}</label>
+                    {{ request_form.funding_source }}
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1;">
+                    <label for="{{ request_form.business_justification.id_for_label }}">{{ request_form.business_justification.label }}</label>
+                    {{ request_form.business_justification }}
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1;">
+                    <label for="{{ request_form.required_skills.id_for_label }}">{{ request_form.required_skills.label }}</label>
+                    {{ request_form.required_skills }}
+                </div>
+                <div class="form-field" style="grid-column: 1 / -1;">
+                    <label for="{{ request_form.supporting_document.id_for_label }}">{{ request_form.supporting_document.label }}</label>
+                    {{ request_form.supporting_document }}
+                </div>
+            </div>
+            <div class="form-actions" style="margin-top: 18px;">
+                <button class="btn btn-primary" type="submit">Submit Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Team Requests</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Training</th>
+                        <th>Requested By</th>
+                        <th>Source</th>
+                        <th>Provider</th>
+                        <th>Dates</th>
+                        <th>Cost</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in requests %}
+                    <tr>
+                        <td>{{ item.employee.get_full_name }}</td>
+                        <td>{{ item.title }}</td>
+                        <td>{{ item.requested_by.get_full_name|default:'-' }}</td>
+                        <td>{{ item.get_request_source_display|default:'-' }}</td>
+                        <td>{{ item.provider }}</td>
+                        <td>{{ item.start_date|default:'-' }} → {{ item.end_date|default:'-' }}</td>
+                        <td>{{ item.cost }}</td>
+                        <td>
+                            {% if item.status == 'Completed' %}
+                                <span class="badge badge-success">{{ item.status }}</span>
+                            {% elif item.status == 'Supervisor Rejected' or item.status == 'HR Rejected' %}
+                                <span class="badge badge-danger">{{ item.status }}</span>
+                            {% elif item.status == 'HR Review' %}
+                                <span class="badge badge-primary">{{ item.status }}</span>
+                            {% else %}
+                                <span class="badge badge-warning">{{ item.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <details>
+                                <summary class="btn btn-ghost">View Details</summary>
+                                <div class="review-detail">
+                                    <h4>Requested Training Details</h4>
+                                    <div class="detail-grid">
+                                        <div class="detail-box"><strong>Employee</strong>{{ item.employee.get_full_name }}</div>
+                                        <div class="detail-box"><strong>Department</strong>{{ item.department.name|default:'-' }}</div>
+                                        <div class="detail-box"><strong>Training</strong>{{ item.title }}</div>
+                                        <div class="detail-box"><strong>Provider</strong>{{ item.provider }}</div>
+                                        <div class="detail-box"><strong>Dates</strong>{{ item.start_date|default:'-' }} → {{ item.end_date|default:'-' }}</div>
+                                        <div class="detail-box"><strong>Cost</strong>{{ item.cost }}</div>
+                                        <div class="detail-box"><strong>Funding Source</strong>{{ item.funding_source|default:'-' }}</div>
+                                        <div class="detail-box"><strong>Supporting Document</strong>{% if item.supporting_document %}<a href="{{ item.supporting_document.url }}" target="_blank">View</a>{% else %}-{% endif %}</div>
+                                        <div class="detail-box" style="grid-column: 1 / -1;"><strong>Business Justification</strong>{{ item.business_justification|default:'-' }}</div>
+                                    </div>
+                                    <form method="post" style="margin-top: 14px;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="request_id" value="{{ item.id }}">
+                                        <div class="form-field">
+                                            <label for="comment-{{ item.id }}">Supervisor Comment</label>
+                                            <textarea id="comment-{{ item.id }}" name="comment" rows="3" class="form-input" placeholder="Recommendation or rejection comment is required"></textarea>
+                                        </div>
+                                        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                                            <button class="btn btn-primary" type="submit" name="action" value="approve">Recommend / Approve</button>
+                                            <button class="btn btn-danger" type="submit" name="action" value="reject">Reject</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </details>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" style="text-align:center;">No training requests found for your supervised team.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

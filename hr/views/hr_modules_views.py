@@ -5,13 +5,17 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 
+from django.db.models import Q
+
 from hr.views.attendance_views import is_hr
 from hr.models import (
     Employee, Payroll, PayrollRecord, PerformanceEvaluation,
     Application, SystemSetting, BiannualKPIScore, EmployeeCertificate,
+    TrainingRequest, DisciplinaryIncident, Grievance, Department,
 )
 from hr.services import leave_service
 from hr.services.setting_service import get_settings_grouped_list, save_settings, seed_defaults
+from hr.forms import TrainingRequestForm, GrievanceForm, DisciplinaryIncidentForm, TrainingCompletionForm
 
 
 @login_required(login_url='/login/')
@@ -234,24 +238,77 @@ def candidate_screen(request):
     if not is_hr(request.user):
         return redirect('/dashboard/employee/')
 
-    # Handle pipeline status change
+    from hr.services.employee_service import get_employee_for_user
+    hr_emp = get_employee_for_user(request.user)
+
     if request.method == 'POST':
-        app_id    = request.POST.get('application_id')
-        new_status = request.POST.get('new_status')
-        if app_id and new_status:
+        action = request.POST.get('action')
+
+        if action in ('approve_hiring_request', 'reject_hiring_request'):
+            req_id     = request.POST.get('hiring_request_id')
+            hr_comment = request.POST.get('hr_comment', '').strip()
+
+            if not hr_comment:
+                messages.error(request, "HR comment/reason is mandatory when approving or rejecting a hiring request.")
+                return redirect('candidate_screen')
+
             try:
-                app = Application.objects.get(pk=app_id)
-                app.status = new_status
-                app.save(update_fields=['status'])
-                # Run auto-screening when moving to Screening stage
-                if new_status == 'Screening':
-                    app.run_auto_screening()
-                messages.success(request, f"Application status updated to {new_status}.")
-            except Application.DoesNotExist:
-                messages.error(request, "Application not found.")
+                from hr.models import HiringRequest
+                h_req = HiringRequest.objects.get(pk=req_id)
+                new_status = 'Approved' if action == 'approve_hiring_request' else 'Rejected'
+                
+                h_req.status        = new_status
+                h_req.hr_comment    = hr_comment
+                h_req.reviewed_by   = hr_emp
+                h_req.decision_date = timezone.now()
+                h_req.save()
+
+                if new_status == 'Approved':
+                    messages.success(request, f"Hiring request for '{h_req.position_title}' approved.")
+                else:
+                    messages.warning(request, f"Hiring request for '{h_req.position_title}' rejected.")
             except Exception as e:
-                messages.error(request, str(e))
-        return redirect('candidate_screen')
+                messages.error(request, f"Error updating hiring request: {e}")
+            return redirect('candidate_screen')
+
+        elif action == 'create_vacancy_from_request':
+            req_id = request.POST.get('hiring_request_id')
+            try:
+                from hr.models import HiringRequest, JobPosting
+                h_req = HiringRequest.objects.get(pk=req_id)
+                if h_req.status == 'Approved' and not h_req.created_vacancy:
+                    vacancy = JobPosting.objects.create(
+                        title=h_req.position_title,
+                        department=h_req.department,
+                        description=f"Employment Type: {h_req.employment_type}\nReason: {h_req.reason}\nNumber Needed: {h_req.number_needed}",
+                        posted_date=timezone.localdate(),
+                        closing_date=h_req.preferred_start_date,
+                        required_skills=h_req.required_skills,
+                    )
+                    h_req.created_vacancy = vacancy
+                    h_req.save(update_fields=['created_vacancy'])
+                    messages.success(request, f"Job Vacancy created for '{h_req.position_title}'.")
+            except Exception as e:
+                messages.error(request, f"Error creating vacancy: {e}")
+            return redirect('candidate_screen')
+
+        else:
+            # Handle pipeline status change
+            app_id     = request.POST.get('application_id')
+            new_status = request.POST.get('new_status')
+            if app_id and new_status:
+                try:
+                    app = Application.objects.get(pk=app_id)
+                    app.status = new_status
+                    app.save(update_fields=['status'])
+                    if new_status == 'Screening':
+                        app.run_auto_screening()
+                    messages.success(request, f"Application status updated to {new_status}.")
+                except Application.DoesNotExist:
+                    messages.error(request, "Application not found.")
+                except Exception as e:
+                    messages.error(request, str(e))
+            return redirect('candidate_screen')
 
     query    = request.GET.get('q', '').strip()
     status_f = request.GET.get('status', '')
@@ -273,10 +330,12 @@ def candidate_screen(request):
     if dept_id:
         candidates = candidates.filter(job__department_id=dept_id)
 
-    from hr.models import Department
-    departments = Department.objects.all()
+    from hr.models import Department, HiringRequest
+    departments     = Department.objects.all()
+    hiring_requests = HiringRequest.objects.select_related(
+        'requested_by', 'department', 'reviewed_by', 'created_vacancy'
+    ).order_by('-request_date')
 
-    # Pipeline counts
     pipeline_counts = {
         'Applied':       candidates.filter(status='Applied').count(),
         'Screening':     candidates.filter(status__in=['Screening','Qualified','Rejected_Auto']).count(),
@@ -288,6 +347,7 @@ def candidate_screen(request):
     context = {
         'candidates':      candidates,
         'departments':     departments,
+        'hiring_requests': hiring_requests,
         'pipeline_counts': pipeline_counts,
         'search_query':    query,
         'status_f':        status_f,
@@ -360,12 +420,260 @@ def departments_view(request):
 
 
 @login_required(login_url='/login/')
+def my_training_view(request):
+    """Employee training and CPD portal."""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        return redirect('/dashboard/employee/')
+
+    if request.method == 'POST' and request.POST.get('action') == 'request_training':
+        form = TrainingRequestForm(request.POST, request.FILES)
+        if form.is_valid():
+            record = form.save(commit=False)
+            record.employee = employee
+            record.department = employee.department
+            record.request_source = 'Employee'
+            record.requested_by = employee
+            record.status = 'Supervisor Review'
+            record.save()
+            messages.success(request, 'Training request submitted successfully and sent for supervisor review.')
+            return redirect('my_training')
+        messages.error(request, 'Please review the training request form and try again.')
+    elif request.method == 'POST' and request.POST.get('action') == 'submit_completion':
+        training = get_object_or_404(TrainingRequest, pk=request.POST.get('request_id'), employee=employee)
+        completion_form = TrainingCompletionForm(request.POST, request.FILES, instance=training)
+        if completion_form.is_valid():
+            completion_form.save()
+            training.status = 'Completed'
+            training.save(update_fields=['status', 'completion_date', 'cpd_points', 'certificate', 'skills_learned', 'knowledge_transfer_method', 'feedback', 'satisfaction_rating'])
+            messages.success(request, 'Training completion details submitted successfully.')
+            return redirect('my_training')
+        messages.error(request, 'Please complete the training feedback form correctly.')
+    else:
+        form = TrainingRequestForm()
+
+    requests = TrainingRequest.objects.filter(employee=employee, is_deleted=False).select_related('department').order_by('-request_date')
+    completed = requests.filter(status='Completed')
+    total_cpd = sum(item.cpd_points for item in completed)
+    academic_target = 60 if 'academic' in (employee.position.title if employee.position else '').lower() else None
+    remaining_cpd = academic_target - total_cpd if academic_target else 0
+    requests_with_forms = []
+    for request_item in requests:
+        requests_with_forms.append((request_item, TrainingCompletionForm(instance=request_item)))
+
+    context = {
+        'employee': employee,
+        'form': form,
+        'requests': requests,
+        'requests_with_forms': requests_with_forms,
+        'completed_requests': completed,
+        'total_cpd': total_cpd,
+        'academic_target': academic_target,
+        'remaining_cpd': remaining_cpd,
+        'active_page': 'my_training',
+        'base_template': 'hr/employee_base.html',
+    }
+    return render(request, 'hr/my_training.html', context)
+
+
+@login_required(login_url='/login/')
+def my_grievances_view(request):
+    """Employee grievance submission page with record history."""
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        return redirect('/dashboard/employee/')
+
+    if request.method == 'POST' and request.POST.get('action') == 'submit_grievance':
+        form = GrievanceForm(request.POST, request.FILES)
+        if form.is_valid():
+            grievance = form.save(commit=False)
+            grievance.employee = employee
+            grievance.department = employee.department
+            grievance.save()
+            messages.success(request, 'Grievance submitted successfully.')
+            return redirect('my_grievances')
+    else:
+        form = GrievanceForm()
+
+    grievances = Grievance.objects.filter(employee=employee, is_deleted=False).order_by('-submitted_at')
+    context = {
+        'employee': employee,
+        'form': form,
+        'grievances': grievances,
+        'active_page': 'my_grievances',
+        'base_template': 'hr/employee_base.html',
+    }
+    return render(request, 'hr/my_grievances.html', context)
+
+
+@login_required(login_url='/login/')
 def training_view(request):
-    """Training placeholder page."""
+    """HR training and CPD management page."""
     if not is_hr(request.user):
         return redirect('/dashboard/employee/')
-    context = {'active_page': 'training'}
+
+    if request.method == 'POST' and request.POST.get('action') == 'hr_decision':
+        request_id = request.POST.get('request_id')
+        action = request.POST.get('decision')
+        hr_comment = request.POST.get('hr_comment', '').strip()
+        if not request_id or not action:
+            messages.error(request, 'Missing training request or decision.')
+            return redirect('training')
+        if not hr_comment:
+            messages.error(request, 'A decision comment is required for HR approval or rejection.')
+            return redirect('training')
+        training = get_object_or_404(TrainingRequest, pk=request_id)
+        training.hr_comment = hr_comment
+        training.hr_decision_date = timezone.now()
+        training.status = 'Approved' if action == 'approve' else 'HR Rejected'
+        training.save()
+        messages.success(request, 'HR decision recorded.')
+        return redirect('training')
+
+    if request.method == 'POST' and request.POST.get('action') == 'complete_training':
+        form = TrainingCompletionForm(request.POST, request.FILES)
+        if not form.is_valid():
+            messages.error(request, 'Please complete all required completion fields.')
+        else:
+            training = get_object_or_404(TrainingRequest, pk=request.POST.get('request_id'))
+            training.completion_date = form.cleaned_data['completion_date'] or timezone.now()
+            training.cpd_points = form.cleaned_data['cpd_points'] or 0
+            training.certificate = form.cleaned_data['certificate']
+            training.skills_learned = form.cleaned_data['skills_learned']
+            training.knowledge_transfer_method = form.cleaned_data['knowledge_transfer_method']
+            training.feedback = form.cleaned_data['feedback']
+            training.satisfaction_rating = form.cleaned_data['satisfaction_rating']
+            training.status = 'Completed'
+            training.save()
+            messages.success(request, 'Training completion recorded and CPD points updated.')
+        return redirect('training')
+
+    query = request.GET.get('q', '').strip()
+    dept_id = request.GET.get('department_id', '')
+    year = request.GET.get('year', str(timezone.localdate().year))
+    status_f = request.GET.get('status', '')
+
+    requests = TrainingRequest.objects.select_related('employee', 'employee__department', 'department').filter(is_deleted=False).order_by('-request_date')
+    if query:
+        requests = requests.filter(
+            Q(title__icontains=query) |
+            Q(employee__first_name__icontains=query) |
+            Q(employee__last_name__icontains=query)
+        )
+    if dept_id:
+        requests = requests.filter(department_id=dept_id)
+    if year:
+        requests = requests.filter(start_date__year=year)
+    if status_f:
+        requests = requests.filter(status=status_f)
+
+    departments = Department.objects.order_by('name')
+    employees = Employee.objects.select_related('department').order_by('last_name', 'first_name')
+    completed_requests = requests.filter(status='Completed')
+    approved_count = requests.filter(status='Approved').count()
+    completed_count = completed_requests.count()
+    total_training_cost = sum((item.cost or 0) for item in requests)
+    completed_satisfaction = [item.satisfaction_rating for item in completed_requests if item.satisfaction_rating not in (None, '')]
+    average_satisfaction_rating = round(sum(completed_satisfaction) / len(completed_satisfaction), 2) if completed_satisfaction else 0
+    below_cpd_target_count = requests.filter(cpd_points__lt=60).count()
+
+    context = {
+        'requests': requests,
+        'departments': departments,
+        'employees': employees,
+        'search_query': query,
+        'dept_id': dept_id,
+        'year': year,
+        'status_f': status_f,
+        'years': [2024, 2025, 2026],
+        'statuses': ['Submitted', 'Supervisor Review', 'Supervisor Rejected', 'HR Review', 'HR Rejected', 'Approved', 'Completed'],
+        'approved_count': approved_count,
+        'completed_count': completed_count,
+        'total_training_cost': total_training_cost,
+        'average_satisfaction_rating': average_satisfaction_rating,
+        'below_cpd_target_count': below_cpd_target_count,
+        'active_page': 'training',
+    }
     return render(request, 'hr/training.html', context)
+
+
+@login_required(login_url='/login/')
+def hr_discipline_cases(request):
+    """HR discipline and incident case management."""
+    if not is_hr(request.user):
+        return redirect('/dashboard/employee/')
+
+    if request.method == 'POST' and request.POST.get('action') == 'create_incident':
+        employee_id = request.POST.get('employee_id')
+        if not employee_id:
+            messages.error(request, 'Please select an employee before recording the incident.')
+            return redirect('hr_discipline_cases')
+        employee = get_object_or_404(Employee, pk=employee_id)
+        form = DisciplinaryIncidentForm(request.POST, request.FILES)
+        if form.is_valid():
+            incident = form.save(commit=False)
+            incident.employee = employee
+            incident.department = employee.department
+            incident.reporting_supervisor = get_object_or_404(Employee, pk=request.POST.get('reporting_supervisor_id')) if request.POST.get('reporting_supervisor_id') else None
+            incident.save()
+            messages.success(request, 'Disciplinary incident recorded.')
+            return redirect('hr_discipline_cases')
+        messages.error(request, 'Please review the incident form entries.')
+    else:
+        form = DisciplinaryIncidentForm()
+
+    incidents = DisciplinaryIncident.objects.select_related('employee', 'employee__department', 'reporting_supervisor', 'decided_by').filter(is_deleted=False).order_by('-incident_date')
+    employees = Employee.objects.select_related('department').order_by('last_name', 'first_name')
+    context = {
+        'form': form,
+        'incidents': incidents,
+        'employees': employees,
+        'active_page': 'hr_discipline_cases',
+    }
+    return render(request, 'hr/hr_discipline_cases.html', context)
+
+
+@login_required(login_url='/login/')
+def hr_grievances(request):
+    """HR grievance review and resolution page."""
+    if not is_hr(request.user):
+        return redirect('/dashboard/employee/')
+
+    if request.method == 'POST' and request.POST.get('action') == 'update_grievance':
+        grievance = get_object_or_404(Grievance, pk=request.POST.get('grievance_id'))
+        grievance.status = request.POST.get('status', grievance.status)
+        grievance.assigned_investigator_id = request.POST.get('assigned_investigator_id') or None
+        grievance.investigation_notes = request.POST.get('investigation_notes', '')
+        grievance.findings = request.POST.get('findings', '')
+        grievance.corrective_action = request.POST.get('corrective_action', '')
+        grievance.response = request.POST.get('response', '')
+        grievance.resolved_at = timezone.now() if grievance.status in {'Resolved', 'Closed'} else None
+        grievance.save()
+        messages.success(request, 'Grievance updated successfully.')
+        return redirect('hr_grievances')
+
+    grievances = Grievance.objects.select_related('employee', 'employee__department', 'assigned_investigator').filter(is_deleted=False).order_by('-submitted_at')
+    employees = Employee.objects.select_related('department').order_by('last_name', 'first_name')
+    context = {
+        'grievances': grievances,
+        'employees': employees,
+        'active_page': 'hr_grievances',
+    }
+    return render(request, 'hr/hr_grievances.html', context)
+
+
+@login_required(login_url='/login/')
+def career_development_view(request):
+    """Simple career development dashboard for HR and employees."""
+    if not is_hr(request.user):
+        return redirect('/dashboard/employee/')
+
+    context = {
+        'active_page': 'career_development',
+    }
+    return render(request, 'hr/career_development.html', context)
 
 
 @login_required(login_url='/login/')

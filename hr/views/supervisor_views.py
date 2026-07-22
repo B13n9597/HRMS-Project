@@ -5,9 +5,11 @@
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
+from django.db.models import Q
 
+from hr.forms import SupervisorTrainingRequestForm
 from hr.services.employee_service import (
     can_supervise, get_supervised_departments, get_department_employees,
     get_employee_for_user, get_role_key, ROLE_SUPERVISOR,
@@ -266,6 +268,119 @@ def supervisor_kpi(request):
     return render(request, 'hr/supervisor_kpi.html', ctx)
 
 
+# ── Training Requests ─────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def supervisor_training_requests(request):
+    if not _require_supervisor(request.user):
+        return redirect('/dashboard/employee/')
+
+    from hr.models import TrainingRequest
+
+    employees = get_department_employees(request.user)
+    requests = (
+        TrainingRequest.objects
+        .filter(employee__in=employees, is_deleted=False)
+        .select_related('employee', 'employee__department', 'department', 'supervisor')
+        .order_by('-request_date')
+    )
+
+    status_f = request.GET.get('status', '')
+    query = request.GET.get('q', '').strip()
+    if status_f:
+        requests = requests.filter(status=status_f)
+    if query:
+        requests = requests.filter(
+            Q(employee__first_name__icontains=query) |
+            Q(employee__last_name__icontains=query) |
+            Q(title__icontains=query)
+        )
+
+    supervisor_emp = get_employee_for_user(request.user)
+    request_form = SupervisorTrainingRequestForm(supervised_employees=employees)
+
+    if request.method == 'POST' and request.POST.get('action') == 'request_training_for_employee':
+        request_form = SupervisorTrainingRequestForm(request.POST, request.FILES, supervised_employees=employees)
+        if request_form.is_valid():
+            selected_employee = request_form.cleaned_data['employee']
+            if selected_employee not in employees:
+                messages.error(request, 'You can only request training for employees you supervise.')
+                return redirect('supervisor_training_requests')
+            training = request_form.save(commit=False)
+            training.employee = selected_employee
+            training.department = selected_employee.department
+            training.request_source = 'Supervisor'
+            training.requested_by = supervisor_emp
+            training.supervisor = supervisor_emp
+            training.status = 'HR Review'
+            training.save()
+            messages.success(request, 'Training request created and sent to HR for review.')
+            return redirect('supervisor_training_requests')
+        messages.error(request, 'Please review the supervisory training request form and try again.')
+        return redirect('supervisor_training_requests')
+
+    if request.method == 'POST':
+        request_id = request.POST.get('request_id')
+        action = request.POST.get('action')
+        comment = request.POST.get('comment', '').strip()
+        if not request_id or not action:
+            messages.error(request, 'Missing request or action.')
+            return redirect('supervisor_training_requests')
+        if not comment:
+            messages.error(request, 'A comment is required when approving or rejecting a training request.')
+            return redirect('supervisor_training_requests')
+
+        training = get_object_or_404(TrainingRequest, pk=request_id, employee__in=employees)
+        training.supervisor = supervisor_emp
+        training.supervisor_comment = comment
+        training.supervisor_decision_date = timezone.now()
+        training.status = 'HR Review' if action == 'approve' else 'Supervisor Rejected'
+        training.save()
+        messages.success(request, 'Training request decision recorded.')
+        return redirect('supervisor_training_requests')
+
+    ctx = _supervisor_context(request.user, {
+        'requests': requests,
+        'request_form': request_form,
+        'search_query': query,
+        'status_f': status_f,
+        'statuses': ['Submitted', 'Supervisor Review', 'Supervisor Rejected', 'HR Review', 'HR Rejected', 'Approved', 'Completed'],
+        'active_page': 'supervisor_training_requests',
+    })
+    return render(request, 'hr/supervisor_training_requests.html', ctx)
+
+
+@login_required(login_url='/login/')
+def supervisor_discipline_reports(request):
+    if not _require_supervisor(request.user):
+        return redirect('/dashboard/employee/')
+
+    from hr.models import DisciplinaryIncident
+
+    employees = get_department_employees(request.user)
+    incidents = (
+        DisciplinaryIncident.objects
+        .filter(employee__in=employees, is_deleted=False)
+        .select_related('employee', 'employee__department', 'reporting_supervisor', 'decided_by')
+        .order_by('-incident_date')
+    )
+
+    query = request.GET.get('q', '').strip()
+    if query:
+        incidents = incidents.filter(
+            Q(employee__first_name__icontains=query) |
+            Q(employee__last_name__icontains=query) |
+            Q(category__icontains=query)
+        )
+
+    ctx = _supervisor_context(request.user, {
+        'incidents': incidents,
+        'search_query': query,
+        'active_page': 'supervisor_discipline_reports',
+    })
+    return render(request, 'hr/supervisor_discipline_reports.html', ctx)
+
+
 # ── Certificates ───────────────────────────────────────────────────────────
 
 @login_required(login_url='/login/')
@@ -298,3 +413,73 @@ def supervisor_certificates(request):
         'active_page':  'supervisor_certificates',
     })
     return render(request, 'hr/supervisor_certificates.html', ctx)
+
+
+# ── Hiring Request ─────────────────────────────────────────────────────────
+
+@login_required(login_url='/login/')
+def supervisor_hiring_request(request):
+    if not _require_supervisor(request.user):
+        return redirect('/dashboard/employee/')
+
+    supervisor_emp   = get_employee_for_user(request.user)
+    supervised_depts = get_supervised_departments(request.user)
+    
+    dept = supervised_depts.first() if supervised_depts.exists() else (supervisor_emp.department if supervisor_emp else None)
+
+    if request.method == 'POST':
+        position_title       = request.POST.get('position_title', '').strip()
+        number_needed        = request.POST.get('number_needed', 1)
+        employment_type      = request.POST.get('employment_type', 'Full-Time')
+        reason               = request.POST.get('reason', '').strip()
+        required_skills      = request.POST.get('required_skills', '').strip()
+        preferred_start_date = request.POST.get('preferred_start_date', '')
+        selected_dept_id     = request.POST.get('department_id', '')
+
+        if selected_dept_id and supervised_depts.filter(id=selected_dept_id).exists():
+            dept = supervised_depts.get(id=selected_dept_id)
+
+        if not supervisor_emp or not dept:
+            messages.error(request, "Unable to determine your department.")
+            return redirect('supervisor_hiring_request')
+
+        if not position_title or not reason or not preferred_start_date:
+            messages.error(request, "Please fill in all required fields (Position, Reason, Preferred Start Date).")
+        else:
+            try:
+                from hr.models import HiringRequest
+                HiringRequest.objects.create(
+                    requested_by=supervisor_emp,
+                    department=dept,
+                    position_title=position_title,
+                    number_needed=int(number_needed),
+                    employment_type=employment_type,
+                    reason=reason,
+                    required_skills=required_skills,
+                    preferred_start_date=preferred_start_date,
+                    status='Pending',
+                )
+                messages.success(request, "Employee hiring request submitted to HR successfully.")
+                return redirect('supervisor_hiring_request')
+            except Exception as e:
+                messages.error(request, f"Error submitting hiring request: {e}")
+
+    from hr.models import HiringRequest, Position
+    dept_ids = list(supervised_depts.values_list('id', flat=True))
+    if supervisor_emp and supervisor_emp.department_id and supervisor_emp.department_id not in dept_ids:
+        dept_ids.append(supervisor_emp.department_id)
+
+    hiring_requests = HiringRequest.objects.filter(
+        department_id__in=dept_ids
+    ).select_related('requested_by', 'department', 'reviewed_by').order_by('-request_date')
+
+    positions = Position.objects.filter(is_deleted=False)
+
+    ctx = _supervisor_context(request.user, {
+        'hiring_requests':  hiring_requests,
+        'supervisor_dept':  dept,
+        'positions':        positions,
+        'employment_types': ['Full-Time', 'Part-Time', 'Contract', 'Internship', 'Temporary'],
+        'active_page':      'supervisor_hiring_request',
+    })
+    return render(request, 'hr/supervisor_hiring_request.html', ctx)

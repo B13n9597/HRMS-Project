@@ -1,15 +1,176 @@
 {% extends 'hr/hr_base.html' %}
-{% block title %}Training — ACT HRMS{% endblock %}
+{% block title %}Training & CPD Management — ACT HRMS{% endblock %}
 {% block content %}
+<style>
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
+    .stat-tile { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; }
+    .stat-tile .label { font-size: 11px; color: var(--text-light); text-transform: uppercase; font-weight: 700; }
+    .stat-tile .value { font-family: var(--font-display); font-size: 24px; font-weight: 800; margin-top: 4px; }
+    .filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .detail-card { background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; }
+    .detail-card strong { display: block; margin-bottom: 4px; color: var(--text-light); font-size: 11px; text-transform: uppercase; }
+    @media (max-width: 900px) { .filter-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 640px) { .filter-grid, .detail-grid { grid-template-columns: 1fr; } }
+</style>
 <div class="page-header">
     <div class="page-header-left">
-        <h1>Training</h1>
-        <p>Manage employee training programs and records.</p>
+        <h1>Training & CPD Management</h1>
+        <p>Review all employee training requests, completion evidence, CPD points, and certification status.</p>
     </div>
 </div>
-<div class="card" style="text-align:center;padding:60px 20px;">
-    <i data-lucide="graduation-cap" style="width:48px;height:48px;color:var(--text-light);margin-bottom:16px;display:block;margin-left:auto;margin-right:auto;"></i>
-    <h3 style="font-family:var(--font-display);font-size:20px;margin-bottom:8px;">Training Module</h3>
-    <p style="color:var(--text-muted);">Training program management will be available here. Configure training sessions, track completion, and manage certifications.</p>
+
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+    {% endfor %}
+{% endif %}
+
+<div class="stats-grid">
+    <div class="stat-tile"><div class="label">Pending Requests</div><div class="value">{{ requests|length }}</div></div>
+    <div class="stat-tile"><div class="label">Approved Training</div><div class="value">{{ approved_count }}</div></div>
+    <div class="stat-tile"><div class="label">Completed Training</div><div class="value">{{ completed_count }}</div></div>
+    <div class="stat-tile"><div class="label">Total Training Cost</div><div class="value">{{ total_training_cost }}</div></div>
+    <div class="stat-tile"><div class="label">Average Satisfaction</div><div class="value">{{ average_satisfaction_rating }}</div></div>
+    <div class="stat-tile"><div class="label">Below CPD Target</div><div class="value">{{ below_cpd_target_count }}</div></div>
+</div>
+
+<div class="card" style="margin-bottom: 22px;">
+    <div class="card-header">
+        <h3>Filters</h3>
+    </div>
+    <div class="card-body">
+        <form method="get" class="filter-grid">
+            <div class="form-field">
+                <label for="employee-filter">Employee</label>
+                <select id="employee-filter" name="q" class="form-input">
+                    <option value="">All employees</option>
+                    {% for employee in employees %}
+                        <option value="{{ employee.first_name }} {{ employee.last_name }}" {% if search_query == employee.first_name|add:' '|add:employee.last_name %}selected{% endif %}>{{ employee.get_full_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="department-filter">Department</label>
+                <select id="department-filter" name="department_id" class="form-input">
+                    <option value="">All departments</option>
+                    {% for department in departments %}
+                        <option value="{{ department.id }}" {% if dept_id == department.id|stringformat:'s' %}selected{% endif %}>{{ department.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="year-filter">Year</label>
+                <select id="year-filter" name="year" class="form-input">
+                    <option value="">All years</option>
+                    {% for y in years %}
+                        <option value="{{ y }}" {% if year == y|stringformat:'s' %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="status-filter">Status</label>
+                <select id="status-filter" name="status" class="form-input">
+                    <option value="">All statuses</option>
+                    {% for status in statuses %}
+                        <option value="{{ status }}" {% if status_f == status %}selected{% endif %}>{{ status }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-actions" style="grid-column: 1 / -1;">
+                <button class="btn btn-primary" type="submit">Apply Filters</button>
+                <a href="{% url 'training' %}" class="btn btn-ghost">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Training Requests</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Training</th>
+                        <th>Requested By</th>
+                        <th>Source</th>
+                        <th>Provider</th>
+                        <th>Dates</th>
+                        <th>Cost</th>
+                        <th>CPD</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in requests %}
+                    <tr>
+                        <td>{{ item.employee.get_full_name }}</td>
+                        <td>{{ item.department.name|default:'-' }}</td>
+                        <td>{{ item.title }}</td>
+                        <td>{{ item.requested_by.get_full_name|default:'-' }}</td>
+                        <td>{{ item.get_request_source_display|default:'-' }}</td>
+                        <td>{{ item.provider }}</td>
+                        <td>{{ item.start_date|default:'-' }} → {{ item.end_date|default:'-' }}</td>
+                        <td>{{ item.cost }}</td>
+                        <td>{{ item.cpd_points }}</td>
+                        <td>
+                            {% if item.status == 'Completed' %}<span class="badge badge-success">{{ item.status }}</span>
+                            {% elif item.status == 'Approved' %}<span class="badge badge-primary">{{ item.status }}</span>
+                            {% elif item.status == 'HR Rejected' or item.status == 'Supervisor Rejected' %}<span class="badge badge-danger">{{ item.status }}</span>
+                            {% else %}<span class="badge badge-warning">{{ item.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <details>
+                                <summary class="btn btn-ghost">Review</summary>
+                                <div class="review-detail">
+                                    <h4>Training Review Details</h4>
+                                    <div class="detail-grid">
+                                        <div class="detail-card"><strong>Employee</strong>{{ item.employee.get_full_name }}</div>
+                                        <div class="detail-card"><strong>Department</strong>{{ item.department.name|default:'-' }}</div>
+                                        <div class="detail-card"><strong>Supervisor</strong>{{ item.supervisor.get_full_name|default:'-' }}</div>
+                                        <div class="detail-card"><strong>Training</strong>{{ item.title }}</div>
+                                        <div class="detail-card"><strong>Provider</strong>{{ item.provider }}</div>
+                                        <div class="detail-card"><strong>Dates</strong>{{ item.start_date|default:'-' }} → {{ item.end_date|default:'-' }}</div>
+                                        <div class="detail-card" style="grid-column: 1 / -1;"><strong>Business Justification</strong>{{ item.business_justification|default:'-' }}</div>
+                                        <div class="detail-card"><strong>Supervisor Recommendation</strong>{{ item.supervisor_comment|default:'-' }}</div>
+                                        <div class="detail-card"><strong>Supporting Document</strong>{% if item.supporting_document %}<a href="{{ item.supporting_document.url }}" target="_blank">View file</a>{% else %}-{% endif %}</div>
+                                        {% if item.status == 'Completed' %}
+                                        <div class="detail-card"><strong>Certificate</strong>{% if item.certificate %}<a href="{{ item.certificate.url }}" target="_blank">Download</a>{% else %}-{% endif %}</div>
+                                        <div class="detail-card"><strong>CPD Points</strong>{{ item.cpd_points }}</div>
+                                        <div class="detail-card" style="grid-column: 1 / -1;"><strong>Feedback</strong>{{ item.feedback|default:'-' }}</div>
+                                        <div class="detail-card"><strong>Satisfaction Rating</strong>{{ item.satisfaction_rating|default:'-' }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <form method="post" style="margin-top: 14px;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="action" value="hr_decision">
+                                        <input type="hidden" name="request_id" value="{{ item.id }}">
+                                        <div class="form-field">
+                                            <label for="hr-comment-{{ item.id }}">HR Comment</label>
+                                            <textarea id="hr-comment-{{ item.id }}" name="hr_comment" rows="3" class="form-input" placeholder="Decision comment is required"></textarea>
+                                        </div>
+                                        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+                                            <button class="btn btn-primary" type="submit" name="decision" value="approve">Approve</button>
+                                            <button class="btn btn-danger" type="submit" name="decision" value="reject">Reject</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </details>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="11" style="text-align:center;">No training records found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 {% endblock %}

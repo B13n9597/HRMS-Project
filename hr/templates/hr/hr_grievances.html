@@ -1,0 +1,90 @@
+{% extends 'hr/hr_base.html' %}
+{% block title %}Grievance Management — ACT HRMS{% endblock %}
+{% block content %}
+<style>
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
+    .stat-tile { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; }
+    .stat-tile .label { font-size: 11px; color: var(--text-light); text-transform: uppercase; font-weight: 700; }
+    .stat-tile .value { font-family: var(--font-display); font-size: 24px; font-weight: 800; margin-top: 4px; }
+    .section-stack { display: grid; gap: 10px; }
+    .section-unit { background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px; }
+    .section-unit strong { display: block; margin-bottom: 4px; font-size: 11px; color: var(--text-light); text-transform: uppercase; }
+</style>
+<div class="page-header">
+    <div class="page-header-left">
+        <h1>Grievance Management</h1>
+        <p>Review, assign investigators, record findings, and resolve employee grievances.</p>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-tile"><div class="label">New</div><div class="value">{% for item in grievances %}{% if item.status == 'Submitted' %}1{% endif %}{% endfor %}</div></div>
+    <div class="stat-tile"><div class="label">Under Review</div><div class="value">{% for item in grievances %}{% if item.status == 'Under Review' %}1{% endif %}{% endfor %}</div></div>
+    <div class="stat-tile"><div class="label">Investigation</div><div class="value">{% for item in grievances %}{% if item.status == 'Investigation' %}1{% endif %}{% endfor %}</div></div>
+    <div class="stat-tile"><div class="label">Action Required</div><div class="value">{% for item in grievances %}{% if item.status == 'Action Required' %}1{% endif %}{% endfor %}</div></div>
+    <div class="stat-tile"><div class="label">Resolved</div><div class="value">{% for item in grievances %}{% if item.status == 'Resolved' or item.status == 'Closed' %}1{% endif %}{% endfor %}</div></div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Grievance Register</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Subject</th>
+                        <th>Category</th>
+                        <th>Submitted</th>
+                        <th>Confidential</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in grievances %}
+                    <tr>
+                        <td>{{ item.employee.get_full_name }}</td>
+                        <td>{{ item.subject }}</td>
+                        <td>{{ item.category }}</td>
+                        <td>{{ item.submitted_at|date:'Y-m-d' }}</td>
+                        <td>{% if item.confidential %}<span class="badge badge-warning">CONFIDENTIAL</span>{% else %}<span class="badge badge-success">Open</span>{% endif %}</td>
+                        <td>
+                            {% if item.status == 'Resolved' or item.status == 'Closed' %}
+                                <span class="badge badge-success">{{ item.status }}</span>
+                            {% elif item.status == 'Action Required' or item.status == 'Investigation' %}
+                                <span class="badge badge-warning">{{ item.status }}</span>
+                            {% else %}
+                                <span class="badge badge-primary">{{ item.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.assigned_investigator.get_full_name|default:'-' }}</td>
+                        <td>
+                            <details>
+                                <summary class="btn btn-ghost">Review</summary>
+                                <div class="review-detail" style="margin-top: 10px;">
+                                    <div class="section-stack">
+                                        <div class="section-unit"><strong>Grievance</strong>{{ item.subject }}<br>{{ item.description }}</div>
+                                        <div class="section-unit"><strong>Employee Request</strong>{{ item.desired_resolution|default:'-' }}</div>
+                                        <div class="section-unit"><strong>Investigation</strong>{{ item.investigation_notes|default:'-' }}</div>
+                                        <div class="section-unit"><strong>Findings</strong>{{ item.findings|default:'-' }}</div>
+                                        <div class="section-unit"><strong>Corrective Action</strong>{{ item.corrective_action|default:'-' }}</div>
+                                        <div class="section-unit"><strong>HR Response</strong>{{ item.response|default:'-' }}</div>
+                                        <div class="section-unit"><strong>Resolution</strong>{{ item.resolved_at|date:'Y-m-d'|default:'Pending' }}</div>
+                                    </div>
+                                </div>
+                            </details>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" style="text-align:center;">No grievances recorded.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

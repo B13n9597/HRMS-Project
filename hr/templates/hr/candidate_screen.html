@@ -1,5 +1,5 @@
 {% extends 'hr/hr_base.html' %}
-{% block title %}Candidate Screening — HR{% endblock %}
+{% block title %}Candidate Screening &amp; Hiring Requests — HR{% endblock %}
 
 {% block extra_styles %}
 <style>
@@ -14,12 +14,113 @@
 {% block content %}
 <div class="page-header">
   <div class="page-header-left">
-    <h1>Candidate Screening</h1>
-    <p>Recruitment pipeline: Application → Screening → Interview → Selection</p>
+    <h1>Recruitment &amp; Staffing Management</h1>
+    <p>Manage candidate applications, screening pipeline, and supervisor hiring requests.</p>
   </div>
 </div>
 
 {% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags|default:'info' }}">{{ m }}</div>{% endfor %}{% endif %}
+
+<!-- Supervisor Hiring Requests Section -->
+<div class="card" style="margin-bottom: 32px;">
+  <div class="card-header">
+    <i data-lucide="user-plus" style="width:18px;height:18px;color:var(--primary);"></i>
+    <h3>Supervisor Hiring Requests</h3>
+    <span style="margin-left:auto;font-size:13px;color:var(--text-light);">{{ hiring_requests.count }} total</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Supervisor</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Count</th>
+          <th>Type</th>
+          <th>Reason &amp; Skills</th>
+          <th>Preferred Start</th>
+          <th>Request Date</th>
+          <th>Status</th>
+          <th>HR Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in hiring_requests %}
+        <tr>
+          <td><strong>{{ req.requested_by.get_full_name }}</strong></td>
+          <td>{{ req.department.name }}</td>
+          <td><strong style="color:var(--text-main);">{{ req.position_title }}</strong></td>
+          <td><span class="badge badge-primary">{{ req.number_needed }}</span></td>
+          <td>{{ req.employment_type }}</td>
+          <td style="max-width:240px;">
+            <div style="font-size:13px;color:var(--text-main);">{{ req.reason }}</div>
+            {% if req.required_skills %}
+              <div style="font-size:11px;color:var(--text-light);margin-top:2px;">Skills: {{ req.required_skills }}</div>
+            {% endif %}
+          </td>
+          <td>{{ req.preferred_start_date|date:"d M Y" }}</td>
+          <td>{{ req.request_date|date:"d M Y H:i" }}</td>
+          <td>
+            {% if req.status == 'Pending' %}
+              <span class="badge badge-warning" style="color:#78350f;">Pending</span>
+            {% elif req.status == 'Approved' %}
+              <span class="badge badge-success">Approved</span>
+            {% elif req.status == 'Rejected' %}
+              <span class="badge badge-danger">Rejected</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if req.status == 'Pending' %}
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button type="button" class="btn btn-primary" style="font-size:11px;padding:4px 8px;"
+                        onclick="openHiringModal({{ req.id }}, 'approve_hiring_request', 'Approve Hiring Request', 'Approve hiring request for {{ req.position_title }} ({{ req.department.name }})', 'Approve Request', 'btn-primary')">
+                  Approve
+                </button>
+                <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;color:var(--danger);"
+                        onclick="openHiringModal({{ req.id }}, 'reject_hiring_request', 'Reject Hiring Request', 'Reject hiring request for {{ req.position_title }} ({{ req.department.name }})', 'Reject Request', 'btn-danger')">
+                  Reject
+                </button>
+              </div>
+            {% elif req.status == 'Approved' %}
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                {% if req.created_vacancy %}
+                  <span class="badge badge-success" style="width:fit-content;">✓ Vacancy Created</span>
+                {% else %}
+                  <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_vacancy_from_request">
+                    <input type="hidden" name="hiring_request_id" value="{{ req.id }}">
+                    <button type="submit" class="btn btn-primary" style="font-size:11px;padding:4px 8px;">
+                      <i data-lucide="plus" style="width:12px;height:12px;"></i> Create Vacancy
+                    </button>
+                  </form>
+                {% endif %}
+                {% if req.hr_comment %}
+                  <div style="font-size:11px;color:var(--text-muted);font-style:italic;">"{{ req.hr_comment }}"</div>
+                {% endif %}
+              </div>
+            {% elif req.status == 'Rejected' %}
+              <div style="font-size:11px;color:var(--text-muted);">
+                <strong>Rejected</strong> on {{ req.decision_date|date:"d M Y" }}
+                {% if req.hr_comment %}
+                  <div style="font-style:italic;">"{{ req.hr_comment }}"</div>
+                {% endif %}
+              </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr class="empty-state">
+          <td colspan="10">No supervisor hiring requests found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Candidate Screening Pipeline -->
+<h2 style="font-family:var(--font-display);font-size:20px;font-weight:700;margin-bottom:16px;">Candidate Applications &amp; Screening</h2>
 
 <!-- Pipeline counts -->
 <div class="pipeline-grid">
@@ -127,4 +228,53 @@
     </table>
   </div>
 </div>
+
+<!-- Approve / Reject Modal -->
+<div id="hiringRequestModal" class="modal-overlay">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-head">
+      <div class="modal-head-left">
+        <div class="modal-icon" id="hrModalIcon"><i data-lucide="check-circle" style="width:20px;height:20px;"></i></div>
+        <div class="modal-title" id="hrModalTitle">Review Hiring Request</div>
+      </div>
+      <button type="button" class="modal-close" onclick="closeHiringModal()">✕</button>
+    </div>
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" id="hrModalAction" value="">
+      <input type="hidden" name="hiring_request_id" id="hrModalReqId" value="">
+      
+      <div class="modal-body">
+        <p id="hrModalSub" style="font-size:14px;color:var(--text-muted);margin-bottom:16px;"></p>
+        
+        <div class="form-group">
+          <label id="hrCommentLabel">HR Comment / Reason <span class="req">*</span></label>
+          <textarea name="hr_comment" class="form-input" rows="4" placeholder="Enter reason or comments for this decision..." required></textarea>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeHiringModal()">Cancel</button>
+        <button type="submit" class="btn" id="hrModalSubmitBtn">Submit Decision</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openHiringModal(reqId, action, title, subtitle, btnText, btnClass) {
+  document.getElementById('hrModalReqId').value = reqId;
+  document.getElementById('hrModalAction').value = action;
+  document.getElementById('hrModalTitle').textContent = title;
+  document.getElementById('hrModalSub').textContent = subtitle;
+  const btn = document.getElementById('hrModalSubmitBtn');
+  btn.textContent = btnText;
+  btn.className = 'btn ' + btnClass;
+  document.getElementById('hiringRequestModal').classList.add('open');
+}
+
+function closeHiringModal() {
+  document.getElementById('hiringRequestModal').classList.remove('open');
+}
+</script>
 {% endblock %}
