@@ -97,6 +97,7 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD', default=''),
         'HOST':     config('DB_HOST',     default='aws-0-eu-west-1.pooler.supabase.com'),
         'PORT':     config('DB_PORT',     default='5432'),
+        'CONN_MAX_AGE': 600,
         'OPTIONS': {
             # keeps Supabase connection alive through the pooler
             'connect_timeout': 10,

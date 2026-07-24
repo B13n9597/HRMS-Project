@@ -19,9 +19,11 @@ urlpatterns = [
     path('tablet-kiosk/',             api_views.tablet_kiosk_view,   name='tablet_kiosk'),
 
     # ── Role Dashboards ────────────────────────────────────────────
-    path('dashboard/employee/', page_views.employee_dashboard, name='dashboard_employee'),
-    path('dashboard/hr/',       page_views.hr_dashboard,       name='dashboard_hr'),
-    path('dashboard/dean/',     page_views.dean_dashboard,     name='dashboard_dean'),
+    path('dashboard/employee/',            page_views.employee_dashboard,            name='dashboard_employee'),
+    path('dashboard/hr/',                  page_views.hr_dashboard,                  name='dashboard_hr'),
+    path('dashboard/dean/',                page_views.dean_dashboard,                name='dashboard_dean'),
+    path('dashboard/president/',           page_views.president_dashboard,           name='dashboard_president'),
+    path('dashboard/discipline-training/', page_views.discipline_training_dashboard, name='dashboard_discipline_training'),
 
     # ── Supervisor Dashboard (defined here to avoid prefix collision) ─
     path('dashboard/supervisor/',

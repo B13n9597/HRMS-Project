@@ -9,18 +9,20 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
-            --act-blue-gradient: linear-gradient(180deg, #025da2 0%, #013a66 100%);
+            --act-blue-gradient: linear-gradient(135deg, #026bb8 0%, #025da2 50%, #013a66 100%);
             --act-text-dark: #1e293b;
         }
         body {
             font-family: 'Outfit', sans-serif;
             min-height: 100vh;
-            background-color: #ffffff;
+            background-color: #f8fafc;
         }
         .login-shell {
             min-height: 100vh;
             display: grid;
             grid-template-columns: 1fr 1fr;
+            background-color: #f8fafc;
+            position: relative;
         }
         .brand-panel {
             background: var(--act-blue-gradient);
@@ -30,6 +32,17 @@
             flex-direction: column;
             justify-content: space-between;
             position: relative;
+            z-index: 1;
+            box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.15);
+        }
+        .brand-panel::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 1px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%);
         }
         .brand-mark {
             display: inline-flex;
@@ -45,17 +58,26 @@
             border-radius: 0.5rem;
             padding: 0.25rem 0.6rem;
             font-weight: 800;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         .form-panel {
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 4rem;
-            background: #ffffff;
+            background: #f8fafc;
+            position: relative;
+            z-index: 2;
         }
         .login-card {
             width: 100%;
-            max-width: 400px;
+            max-width: 440px;
+            background: #ffffff;
+            padding: 3rem 2.5rem;
+            border-radius: 1.25rem;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .input-group-custom {
             position: relative;
@@ -111,11 +133,13 @@
             justify-content: center;
             gap: 0.5rem;
             transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(2, 93, 162, 0.2);
         }
         .btn-act:hover {
             background-color: #01477d;
             color: #ffffff;
             transform: translateY(-1px);
+            box-shadow: 0 6px 12px -2px rgba(2, 93, 162, 0.3);
         }
         
         /* Small styling touch for link transitions */
@@ -137,9 +161,17 @@
             .brand-panel {
                 padding: 3rem 2rem;
                 min-height: 320px;
+                box-shadow: none;
+            }
+            .brand-panel::after {
+                display: none;
             }
             .form-panel {
-                padding: 3rem 2rem;
+                padding: 2.5rem 1.5rem;
+            }
+            .login-card {
+                padding: 2rem 1.5rem;
+                box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.05);
             }
         }
     </style>

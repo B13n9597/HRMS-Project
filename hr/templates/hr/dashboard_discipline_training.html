@@ -1,0 +1,106 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}Discipline & Training Dashboard - ACT HRMS{% endblock %}
+
+{% block extra_styles %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.training-list { display: grid; gap: 14px; }
+.training-card { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 15px; background: #fff; transition: var(--transition); }
+.training-card:hover { border-color: rgba(2,93,162,0.24); box-shadow: var(--shadow-sm); }
+.progress-bar-bg { background: #e2e8f0; border-radius: 999px; height: 8px; width: 100%; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--primary); border-radius: inherit; transition: width 0.4s ease; }
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before { content: ''; position: absolute; left: 8px; top: 4px; bottom: 4px; width: 2px; background: var(--border-color); }
+.timeline-item { position: relative; margin-bottom: 20px; }
+.timeline-item:last-child { margin-bottom: 0; }
+.timeline-dot { position: absolute; left: -24px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--bg-surface); border: 3px solid var(--primary); }
+.drill-panel { background:#f8fafc; border:1px solid var(--border-color); border-radius:var(--radius-md); padding:20px; }
+.record-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.record-card { background:#fff; padding:14px; border-radius:var(--radius-sm); border:1px solid var(--border-color); }
+@media (max-width: 760px) { .record-grid { grid-template-columns: 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+    <div class="dashboard-hero">
+        <div>
+            <h1 class="dashboard-title"><span class="dashboard-title-icon"><i data-lucide="shield-alert" style="width:24px;height:24px;"></i></span>Discipline & Training Dashboard</h1>
+            <p class="dashboard-subtitle">Training compliance, professional development progress, discipline case tracking, employee drill-downs, and HR activity history.</p>
+        </div>
+        <div class="action-row">
+            <button class="btn btn-primary" onclick="alert('Training creation workflow placeholder')"><i data-lucide="plus-circle" style="width:16px;height:16px;"></i> Create Training</button>
+            <button class="btn btn-secondary" onclick="alert('Discipline case workflow placeholder')"><i data-lucide="file-plus" style="width:16px;height:16px;"></i> Log Case</button>
+        </div>
+    </div>
+
+    <div class="dashboard-kpi-grid">
+        <div class="metric-card"><div><div class="metric-label">Total Trainings</div><div class="metric-value">{{ total_trainings }}</div><div class="metric-caption">Active and scheduled</div></div><span class="metric-icon" style="background:var(--primary-light);color:var(--primary);"><i data-lucide="graduation-cap" style="width:24px;height:24px;"></i></span></div>
+        <div class="metric-card"><div><div class="metric-label">Completed</div><div class="metric-value">{{ completed_trainings }}</div><div class="metric-caption" style="color:var(--success-dark);"><i data-lucide="check-circle-2" style="width:14px;height:14px;"></i> Certified cohorts</div></div><span class="metric-icon" style="background:var(--success-light);color:var(--success);"><i data-lucide="badge-check" style="width:24px;height:24px;"></i></span></div>
+        <div class="metric-card"><div><div class="metric-label">Pending Trainings</div><div class="metric-value">{{ pending_trainings }}</div><div class="metric-caption" style="color:var(--warning);">{{ ongoing_trainings }} ongoing</div></div><span class="metric-icon" style="background:var(--warning-light);color:var(--warning);"><i data-lucide="clock" style="width:24px;height:24px;"></i></span></div>
+        <div class="metric-card"><div><div class="metric-label">Discipline Cases</div><div class="metric-value">{{ discipline_cases_count }}</div><div class="metric-caption" style="color:var(--danger);">{{ open_cases_count }} open or investigating</div></div><span class="metric-icon" style="background:var(--danger-light);color:var(--danger);"><i data-lucide="alert-octagon" style="width:24px;height:24px;"></i></span></div>
+    </div>
+
+    <div class="dashboard-grid-2">
+        <div class="card">
+            <div class="card-header"><i data-lucide="book-open" style="width:20px;height:20px;color:var(--primary);"></i><h3>Training Programs</h3><select class="form-input" style="max-width:150px;padding:8px 10px;font-size:12px;"><option>All Statuses</option><option>Completed</option><option>Ongoing</option><option>Pending</option></select></div>
+            <div class="card-body"><div class="training-list">
+                {% for t in trainings %}
+                <div class="training-card">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;"><div><strong style="font-size:15px;color:var(--text-main);">{{ t.title }}</strong><div style="font-size:12px;color:var(--text-light);margin-top:3px;">{{ t.instructor }} - {{ t.category }} - {{ t.enrolled }} enrolled</div></div>{% if t.status == 'Completed' %}<span class="badge badge-success">Completed</span>{% elif t.status == 'Ongoing' %}<span class="badge badge-primary">Ongoing</span>{% else %}<span class="badge badge-warning">Pending</span>{% endif %}</div>
+                    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:5px;"><span>Completion</span><span>{{ t.progress }}%</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ t.progress }}%; {% if t.status == 'Completed' %}background:var(--success);{% elif t.status == 'Pending' %}background:var(--warning);{% endif %}"></div></div>
+                </div>
+                {% endfor %}
+            </div></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><i data-lucide="bar-chart-3" style="width:20px;height:20px;color:var(--primary);"></i><h3>Training & Discipline Analytics</h3></div>
+            <div class="card-body"><div class="dashboard-grid-2" style="gap:16px;margin:0;"><div class="chart-panel" style="height:260px;"><canvas id="trainingStatusChart"></canvas></div><div class="chart-panel" style="height:260px;"><canvas id="disciplineSeverityChart"></canvas></div></div></div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid-2">
+        <div class="card">
+            <div class="card-header"><i data-lucide="scale" style="width:20px;height:20px;color:var(--primary);"></i><h3>Discipline Cases</h3></div>
+            <div class="table-wrap"><table><thead><tr><th>Case ID</th><th>Employee</th><th>Offense</th><th>Severity</th><th>Status</th></tr></thead><tbody>{% for c in cases %}<tr><td style="font-family:monospace;font-weight:700;color:var(--primary);">{{ c.id }}</td><td><strong>{{ c.employee_name }}</strong><div style="font-size:11px;color:var(--text-light);">{{ c.department }}</div></td><td style="font-size:13px;">{{ c.offense }}</td><td>{% if c.severity == 'High' %}<span class="badge badge-danger">High</span>{% elif c.severity == 'Medium' %}<span class="badge badge-warning">Medium</span>{% else %}<span class="badge badge-primary">Low</span>{% endif %}</td><td>{% if c.status == 'Closed' %}<span class="badge badge-success">Closed</span>{% elif c.status == 'Investigating' %}<span class="badge badge-warning">Investigating</span>{% else %}<span class="badge badge-danger">Open</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No disciplinary cases logged.</td></tr>{% endfor %}</tbody></table></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><i data-lucide="history" style="width:20px;height:20px;color:var(--primary);"></i><h3>Activity Log</h3></div>
+            <div class="card-body"><div class="timeline">{% for log in activity_log %}<div class="timeline-item"><div class="timeline-dot" style="border-color: {{ log.color }};"></div><strong style="font-size:14px;color:var(--text-main);">{{ log.title }}</strong><div style="font-size:13px;color:var(--text-muted);margin-top:2px;">{{ log.desc }}</div><div style="font-size:11px;color:var(--text-light);margin-top:4px;">{{ log.time }}</div></div>{% endfor %}</div></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><i data-lucide="user-search" style="width:20px;height:20px;color:var(--primary);"></i><h3>Employee Drill-Down</h3></div>
+        <div class="card-body">
+            <select id="empDrillSelect" class="form-input" style="max-width:420px;margin-bottom:18px;" onchange="updateEmpDrill(this.value)">
+                <option value="">Select employee profile...</option>{% for emp in employees %}<option value="{{ emp.get_full_name }}" data-dept="{{ emp.department.name|default:'General' }}">{{ emp.get_full_name }} ({{ emp.department.name|default:"General" }})</option>{% endfor %}
+            </select>
+            <div id="drillProfileBox" class="drill-panel" style="display:none;">
+                <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;"><div style="width:44px;height:44px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:var(--font-display);" id="drillAvatar">SB</div><div><h4 style="font-family:var(--font-display);font-size:17px;font-weight:700;" id="drillName">Samuel Berhanu</h4><span style="font-size:12px;color:var(--text-light);" id="drillDept">Department profile</span></div></div>
+                <div class="record-grid"><div class="record-card"><strong style="font-size:12px;color:var(--primary);display:block;margin-bottom:8px;">Training History</strong><ul style="font-size:13px;padding-left:18px;margin:0;color:var(--text-main);"><li>Academic Leadership (2026)</li><li>LMS Mastery (2025)</li><li>Workplace Safety (2025)</li></ul></div><div class="record-card"><strong style="font-size:12px;color:var(--danger);display:block;margin-bottom:8px;">Discipline Records</strong><div style="font-size:13px;color:var(--text-main);"><strong>DISC-2026-001:</strong> Unexcused Absence (Under Review)</div></div></div>
+            </div>
+            <div id="drillEmptyHint" style="padding:28px;text-align:center;color:var(--text-light);font-size:14px;border:1px dashed var(--border-color);border-radius:var(--radius-md);">Select an employee to inspect training history and discipline records.</div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    new Chart(document.getElementById('trainingStatusChart'), { type: 'doughnut', data: { labels: ['Completed','Ongoing','Pending'], datasets: [{ data: [{{ completed_trainings }}, {{ ongoing_trainings }}, {{ pending_trainings }}], backgroundColor: ['#10b981','#025da2','#f59e0b'], borderColor: '#fff', borderWidth: 3 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, color: '#475569' } }, title: { display: true, text: 'Training Status', color: '#0f172a', font: { weight: '700' } } } } });
+    new Chart(document.getElementById('disciplineSeverityChart'), { type: 'bar', data: { labels: ['Low','Medium','High'], datasets: [{ label: 'Cases', data: [1, 2, 1], backgroundColor: ['#025da2','#f59e0b','#ef4444'], borderRadius: 7 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, title: { display: true, text: 'Severity Mix', color: '#0f172a', font: { weight: '700' } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#e2e8f0' } } } } });
+});
+function updateEmpDrill(name) {
+    const box = document.getElementById('drillProfileBox');
+    const hint = document.getElementById('drillEmptyHint');
+    const select = document.getElementById('empDrillSelect');
+    if (!name) { box.style.display = 'none'; hint.style.display = 'block'; return; }
+    hint.style.display = 'none'; box.style.display = 'block';
+    document.getElementById('drillName').innerText = name;
+    document.getElementById('drillDept').innerText = select.options[select.selectedIndex].dataset.dept || 'Department profile';
+    const parts = name.trim().split(' ');
+    document.getElementById('drillAvatar').innerText = (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+}
+</script>
+{% endblock %}

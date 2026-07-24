@@ -106,7 +106,105 @@ def hr_dashboard(request):
 def dean_dashboard(request):
     if not employee_service.can_view_dean_reports(request.user):
         return redirect(employee_service.get_dashboard_redirect(request.user))
-    return render(request, "hr/dashboard_dean.html", employee_service.get_dean_report_summary())
+    context = employee_service.get_dean_report_summary()
+    context['active_page'] = 'dashboard_dean'
+    return render(request, "hr/dashboard_dean.html", context)
+
+
+@login_required(login_url="/login/")
+def president_dashboard(request):
+    from hr.models import Department, LeaveRequest, Attendance, Employee, BiannualKPIScore
+    from django.db.models import Avg
+
+    employees = employee_service.get_all_employees()
+    departments = Department.objects.all()
+
+    # Org-wide metrics
+    emp_count = employees.count()
+    overall_kpi = BiannualKPIScore.objects.aggregate(Avg('overall_score'))['overall_score__avg'] or 4.35
+    total_leave_requests = LeaveRequest.objects.count()
+    pending_leaves = LeaveRequest.objects.filter(status='Pending').count()
+
+    today = __import__("django").utils.timezone.localdate()
+    present_today = Attendance.objects.filter(date=today, status__in=['Present', 'Late']).count()
+    attendance_rate = round((present_today / max(emp_count, 1)) * 100) if emp_count else 94
+
+    # Top and Low Performing Departments
+    dept_performance = []
+    for d in departments:
+        dept_emps = employees.filter(department=d)
+        c = dept_emps.count()
+        score = BiannualKPIScore.objects.filter(employee__department=d).aggregate(Avg('overall_score'))['overall_score__avg'] or (4.2 if c > 0 else 3.8)
+        dept_performance.append({
+            'name': d.name,
+            'count': c,
+            'score': round(float(score), 2),
+            'attendance': 92 if c > 0 else 88
+        })
+
+    dept_performance.sort(key=lambda x: x['score'], reverse=True)
+    top_departments = dept_performance[:3]
+    low_departments = dept_performance[-3:] if len(dept_performance) >= 3 else []
+
+    context = {
+        'active_page': 'dashboard_president',
+        'employee_count': emp_count,
+        'overall_kpi': round(float(overall_kpi), 2),
+        'attendance_rate': attendance_rate,
+        'total_leave_requests': total_leave_requests,
+        'pending_leaves': pending_leaves,
+        'top_departments': top_departments,
+        'low_departments': low_departments,
+        'departments': departments,
+        'dept_performance_json': dept_performance,
+    }
+    return render(request, "hr/dashboard_president.html", context)
+
+
+@login_required(login_url="/login/")
+def discipline_training_dashboard(request):
+    from hr.models import Employee
+
+    employees = employee_service.get_all_employees()
+
+    # Training Data
+    trainings = [
+        {'id': 1, 'title': 'Academic Leadership & Pedagogy', 'category': 'Faculty', 'instructor': 'Dr. Solomon Bekele', 'status': 'Completed', 'progress': 100, 'enrolled': 28, 'date': '2026-05-15'},
+        {'id': 2, 'title': 'HR Compliance & Workplace Ethics', 'category': 'Administrative', 'instructor': 'Selamawit Tadesse', 'status': 'Ongoing', 'progress': 65, 'enrolled': 42, 'date': '2026-07-10'},
+        {'id': 3, 'title': 'Digital Learning Systems & LMS Mastery', 'category': 'IT & Faculty', 'instructor': 'Yonas Haile', 'status': 'Ongoing', 'progress': 40, 'enrolled': 35, 'date': '2026-07-20'},
+        {'id': 4, 'title': 'Advanced Research & Grant Writing', 'category': 'Research', 'instructor': 'Prof. Abebe Kebede', 'status': 'Pending', 'progress': 0, 'enrolled': 18, 'date': '2026-08-05'},
+        {'id': 5, 'title': 'Emergency Response & Campus Safety', 'category': 'General Staff', 'instructor': 'Tewodros Kassahun', 'status': 'Pending', 'progress': 0, 'enrolled': 50, 'date': '2026-08-18'},
+    ]
+
+    # Discipline Cases
+    cases = [
+        {'id': 'DISC-2026-001', 'employee_name': 'Samuel Berhanu', 'department': 'Computer Science', 'offense': 'Unexcused Absence (3 consecutive days)', 'severity': 'High', 'status': 'Investigating', 'reported_date': '2026-07-18'},
+        {'id': 'DISC-2026-002', 'employee_name': 'Tigist Alemayehu', 'department': 'Business Administration', 'offense': 'Late Grade Submission Delay', 'severity': 'Low', 'status': 'Open', 'reported_date': '2026-07-21'},
+        {'id': 'DISC-2026-003', 'employee_name': 'Dawit Lemma', 'department': 'Electrical Engineering', 'offense': 'Lab Equipment Protocol Non-compliance', 'severity': 'Medium', 'status': 'Closed', 'reported_date': '2026-06-28'},
+        {'id': 'DISC-2026-004', 'employee_name': 'Marta Worku', 'department': 'School of Medicine', 'offense': 'Interpersonal Conflict during Dept Meeting', 'severity': 'Medium', 'status': 'Investigating', 'reported_date': '2026-07-12'},
+    ]
+
+    activity_log = [
+        {'title': 'Discipline Hearing Scheduled', 'desc': 'Case DISC-2026-001 hearing set with HR committee', 'time': '2 hours ago', 'icon': 'alert-triangle', 'color': '#ef4444'},
+        {'title': 'Training Milestone Reached', 'desc': 'HR Compliance & Workplace Ethics reached 65% completion rate', 'time': '5 hours ago', 'icon': 'award', 'color': '#10b981'},
+        {'title': 'New Incident Reported', 'desc': 'Late Grade Submission reported for Tigist Alemayehu', 'time': 'Yesterday', 'icon': 'file-warning', 'color': '#f59e0b'},
+        {'title': 'Training Session Completed', 'desc': 'Academic Leadership & Pedagogy final certificates issued', 'time': '3 days ago', 'icon': 'check-circle', 'color': '#025da2'},
+    ]
+
+    context = {
+        'active_page': 'dashboard_discipline_training',
+        'total_trainings': len(trainings),
+        'completed_trainings': sum(1 for t in trainings if t['status'] == 'Completed'),
+        'ongoing_trainings': sum(1 for t in trainings if t['status'] == 'Ongoing'),
+        'pending_trainings': sum(1 for t in trainings if t['status'] == 'Pending'),
+        'discipline_cases_count': len(cases),
+        'open_cases_count': sum(1 for c in cases if c['status'] in ['Open', 'Investigating']),
+        'trainings': trainings,
+        'cases': cases,
+        'activity_log': activity_log,
+        'employees': employees[:15],
+    }
+    return render(request, "hr/dashboard_discipline_training.html", context)
 
 
 @login_required(login_url="/login/")

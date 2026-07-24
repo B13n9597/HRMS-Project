@@ -126,12 +126,14 @@ class Employee(BaseModel):
         null=True,
         blank=True,
         related_name='employees',
+        db_index=True,
     )
     first_name = models.CharField(max_length=50, blank=True, default='')
     last_name  = models.CharField(max_length=50, blank=True, default='')
     department = models.ForeignKey(
         Department, on_delete=models.SET_NULL,
-        null=True, blank=True, related_name='employees'
+        null=True, blank=True, related_name='employees',
+        db_index=True,
     )
     position   = models.ForeignKey(Position, on_delete=models.SET_NULL, null=True, blank=True)
     status     = models.ForeignKey(EmployeeStatus, on_delete=models.SET_NULL, null=True, blank=True)
@@ -454,12 +456,12 @@ class LeaveRequest(BaseModel):
         ('not_recommended', 'Not Recommended'),
     ]
 
-    employee       = models.ForeignKey(Employee, on_delete=models.CASCADE)
+    employee       = models.ForeignKey(Employee, on_delete=models.CASCADE, db_index=True)
     leave_type     = models.ForeignKey(LeaveType, on_delete=models.CASCADE)
     start_date     = models.DateField()
     end_date       = models.DateField()
     requested_days = models.IntegerField(null=True, blank=True)
-    status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    status         = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending', db_index=True)
     approved_by    = models.ForeignKey(
         Employee, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='approved_leaves'

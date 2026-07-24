@@ -247,10 +247,38 @@ def api_logout(request):
 def api_employees(request):
     if not is_hr(request.user):
         return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
-        
-    employees = Employee.objects.select_related('role', 'department', 'position', 'status').all()
+
+    from django.core.cache import cache
+    from django.core.paginator import Paginator
+
+    page = request.GET.get('page')
+    cache_key = f'api_employees_page_{page}' if page else 'api_employees_list_all'
+    cached_response = cache.get(cache_key)
+    if cached_response:
+        return JsonResponse(cached_response)
+
+    queryset = Employee.objects.select_related(
+        'user', 'role', 'department', 'position', 'status'
+    ).only(
+        'id', 'employee_id', 'first_name', 'last_name', 'hire_date', 'phone', 'address',
+        'user__email', 'user__username', 'role__name', 'department__name', 'position__title', 'status__name'
+    ).all()
+
+    if page:
+        paginator = Paginator(queryset, 20)
+        page_obj = paginator.get_page(page)
+        employees_list = page_obj.object_list
+        total_pages = paginator.num_pages
+        current_page = page_obj.number
+        total_count = paginator.count
+    else:
+        employees_list = queryset
+        total_pages = 1
+        current_page = 1
+        total_count = queryset.count()
+
     data = []
-    for emp in employees:
+    for emp in employees_list:
         data.append({
             'id': emp.id,
             'employee_id': emp.employee_id,
@@ -267,7 +295,16 @@ def api_employees(request):
             'phone': emp.phone,
             'address': emp.address,
         })
-    return JsonResponse({'success': True, 'employees': data})
+
+    response_data = {
+        'success': True,
+        'employees': data,
+        'page': current_page,
+        'total_pages': total_pages,
+        'total_count': total_count
+    }
+    cache.set(cache_key, response_data, 60)
+    return JsonResponse(response_data)
 
 
 @login_required
@@ -442,9 +479,38 @@ def api_admin_leaves(request):
         return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
         
     if request.method == 'GET':
-        requests = LeaveRequest.objects.filter(status='Pending').select_related('employee', 'leave_type').order_by('start_date')
+        from django.core.cache import cache
+        from django.core.paginator import Paginator
+
+        page = request.GET.get('page')
+        cache_key = f'api_admin_leaves_page_{page}' if page else 'api_admin_leaves_list_all'
+        cached_response = cache.get(cache_key)
+        if cached_response:
+            return JsonResponse(cached_response)
+
+        queryset = LeaveRequest.objects.select_related(
+            'employee', 'employee__department', 'leave_type'
+        ).only(
+            'id', 'employee__id', 'employee__first_name', 'employee__last_name',
+            'employee__department__name', 'leave_type__name', 'start_date', 'end_date',
+            'requested_days', 'comments', 'status'
+        ).filter(status='Pending').order_by('start_date')
+
+        if page:
+            paginator = Paginator(queryset, 20)
+            page_obj = paginator.get_page(page)
+            requests_list = page_obj.object_list
+            total_pages = paginator.num_pages
+            current_page = page_obj.number
+            total_count = paginator.count
+        else:
+            requests_list = queryset
+            total_pages = 1
+            current_page = 1
+            total_count = queryset.count()
+
         data = []
-        for r in requests:
+        for r in requests_list:
             data.append({
                 'id': r.id,
                 'employee_name': r.employee.get_full_name(),
@@ -455,7 +521,16 @@ def api_admin_leaves(request):
                 'requested_days': r.requested_days,
                 'comments': r.comments,
             })
-        return JsonResponse({'success': True, 'requests': data})
+
+        response_data = {
+            'success': True,
+            'requests': data,
+            'page': current_page,
+            'total_pages': total_pages,
+            'total_count': total_count
+        }
+        cache.set(cache_key, response_data, 60)
+        return JsonResponse(response_data)
         
     elif request.method == 'POST':
         try:

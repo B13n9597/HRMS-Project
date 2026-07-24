@@ -1,0 +1,76 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}President Executive Dashboard - ACT HRMS{% endblock %}
+
+{% block extra_styles %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.exec-alerts { display: grid; gap: 12px; }
+.exec-alert { display: flex; gap: 14px; padding: 15px; border-radius: var(--radius-md); border: 1px solid transparent; }
+.exec-alert.danger { background: var(--danger-light); border-color: rgba(239,68,68,0.18); color: var(--danger-dark); }
+.exec-alert.warning { background: var(--warning-light); border-color: rgba(245,158,11,0.2); color: #78350f; }
+.exec-alert.info { background: var(--primary-light); border-color: rgba(2,93,162,0.18); color: var(--primary-hover); }
+.exec-list { display: grid; gap: 12px; }
+.exec-list-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #fff; }
+.rank-badge { width: 30px; height: 30px; border-radius: var(--radius-sm); background: var(--primary-light); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-family: var(--font-display); }
+@media print { .topbar, .sidebar, .action-row, .mobile-header { display:none !important; } .main-content { margin:0; width:100%; padding:24px; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+    <div class="dashboard-hero">
+        <div>
+            <h1 class="dashboard-title"><span class="dashboard-title-icon"><i data-lucide="crown" style="width:24px;height:24px;"></i></span>President Dashboard</h1>
+            <p class="dashboard-subtitle">Executive view of workforce scale, institutional performance, attendance health, leave movement, and department-level signals.</p>
+        </div>
+        <div class="action-row">
+            <span class="badge badge-primary" style="padding:9px 14px;"><i data-lucide="radio" style="width:14px;height:14px;margin-right:5px;"></i> Live Sync</span>
+            <button class="btn btn-ghost" onclick="window.print()"><i data-lucide="printer" style="width:16px;height:16px;"></i> Print Briefing</button>
+        </div>
+    </div>
+
+    <div class="dashboard-kpi-grid">
+        <div class="metric-card"><div><div class="metric-label">Total Employees</div><div class="metric-value">{{ employee_count }}</div><div class="metric-caption">Organization-wide headcount</div></div><span class="metric-icon" style="background:var(--primary-light);color:var(--primary);"><i data-lucide="building-2" style="width:24px;height:24px;"></i></span></div>
+        <div class="metric-card"><div><div class="metric-label">Performance Index</div><div class="metric-value">{{ overall_kpi }} <span style="font-size:16px;color:var(--text-light);font-weight:600;">/ 5.0</span></div><div class="metric-caption" style="color:var(--success-dark);"><i data-lucide="award" style="width:14px;height:14px;"></i> Strong benchmark</div></div><span class="metric-icon" style="background:var(--success-light);color:var(--success);"><i data-lucide="sparkles" style="width:24px;height:24px;"></i></span></div>
+        <div class="metric-card"><div><div class="metric-label">Attendance Rate</div><div class="metric-value">{{ attendance_rate }}%</div><div class="metric-caption">Current daily attendance</div></div><span class="metric-icon" style="background:rgba(139,92,246,0.1);color:#7c3aed;"><i data-lucide="clock-3" style="width:24px;height:24px;"></i></span></div>
+        <div class="metric-card"><div><div class="metric-label">Leave Requests</div><div class="metric-value">{{ total_leave_requests }}</div><div class="metric-caption" style="color:var(--warning);">{{ pending_leaves }} pending review</div></div><span class="metric-icon" style="background:var(--warning-light);color:var(--warning);"><i data-lucide="calendar-days" style="width:24px;height:24px;"></i></span></div>
+    </div>
+
+    <div class="dashboard-grid-2-1">
+        <div class="card"><div class="card-header"><i data-lucide="line-chart" style="width:20px;height:20px;color:var(--primary);"></i><h3>Performance Trends Over Time</h3></div><div class="card-body"><div class="chart-panel"><canvas id="orgPerfTrendChart"></canvas></div></div></div>
+        <div class="card"><div class="card-header"><i data-lucide="pie-chart" style="width:20px;height:20px;color:var(--primary);"></i><h3>Department Contribution</h3></div><div class="card-body"><div class="chart-panel"><canvas id="deptPieChart"></canvas></div></div></div>
+    </div>
+
+    <div class="dashboard-grid-2">
+        <div class="card">
+            <div class="card-header"><i data-lucide="shield-alert" style="width:20px;height:20px;color:var(--primary);"></i><h3>Alerts & Insights</h3></div>
+            <div class="card-body"><div class="exec-alerts">
+                <div class="exec-alert danger"><i data-lucide="alert-triangle" style="width:20px;height:20px;flex-shrink:0;"></i><div><strong style="display:block;font-size:14px;margin-bottom:3px;">Capacity Watch</strong><span style="font-size:13px;">School of Medicine shows a temporary 12% staffing gap from approved sabbaticals.</span></div></div>
+                <div class="exec-alert warning"><i data-lucide="timer" style="width:20px;height:20px;flex-shrink:0;"></i><div><strong style="display:block;font-size:14px;margin-bottom:3px;">KPI Review Deadline</strong><span style="font-size:13px;">88% of reviews are complete. Remaining submissions need supervisor sign-off.</span></div></div>
+                <div class="exec-alert info"><i data-lucide="check-circle-2" style="width:20px;height:20px;flex-shrink:0;"></i><div><strong style="display:block;font-size:14px;margin-bottom:3px;">Retention Signal</strong><span style="font-size:13px;">Employee retention remains stable at 96.4% year-to-date.</span></div></div>
+            </div></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><i data-lucide="trophy" style="width:20px;height:20px;color:var(--primary);"></i><h3>Department Summary</h3><span class="badge badge-primary">Read-only</span></div>
+            <div class="card-body"><div class="dashboard-grid-2" style="gap:16px;margin:0;">
+                <div><h4 style="font-family:var(--font-display);font-size:15px;margin-bottom:12px;">Top Performing</h4><div class="exec-list">{% for d in top_departments %}<div class="exec-list-item"><div style="display:flex;align-items:center;gap:10px;"><span class="rank-badge">{{ forloop.counter }}</span><div><strong style="font-size:13px;">{{ d.name }}</strong><div style="font-size:12px;color:var(--text-light);">{{ d.count }} staff</div></div></div><span class="badge badge-success">{{ d.score }}</span></div>{% empty %}<div style="font-size:13px;color:var(--text-light);">No metrics available.</div>{% endfor %}</div></div>
+                <div><h4 style="font-family:var(--font-display);font-size:15px;margin-bottom:12px;">Needs Attention</h4><div class="exec-list">{% for d in low_departments %}<div class="exec-list-item"><div><strong style="font-size:13px;">{{ d.name }}</strong><div style="font-size:12px;color:var(--text-light);">{{ d.count }} staff</div></div><span class="badge badge-warning">{{ d.score }}</span></div>{% empty %}<div style="font-size:13px;color:var(--text-light);">No underperforming departments.</div>{% endfor %}</div></div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><i data-lucide="table-2" style="width:20px;height:20px;color:var(--primary);"></i><h3>Organization-Wide Department Metrics</h3></div>
+        <div class="table-wrap"><table><thead><tr><th>Department</th><th>Employees</th><th>KPI Score</th><th>Attendance</th><th>Status</th></tr></thead><tbody>{% for d in dept_performance_json %}<tr><td><strong>{{ d.name }}</strong></td><td>{{ d.count }}</td><td><strong style="color:var(--primary);">{{ d.score }} / 5.0</strong></td><td>{{ d.attendance }}%</td><td>{% if d.score >= 4.2 %}<span class="badge badge-success">Top Performing</span>{% elif d.score >= 3.8 %}<span class="badge badge-primary">On Target</span>{% else %}<span class="badge badge-warning">Under Review</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No department metrics available.</td></tr>{% endfor %}</tbody></table></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const common = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { boxWidth: 12, color: '#475569' } } }, scales: { x: { grid: { display: false } }, y: { border: { display: false }, grid: { color: '#e2e8f0' } } } };
+    new Chart(document.getElementById('orgPerfTrendChart'), { type: 'line', data: { labels: ['2023 H1','2023 H2','2024 H1','2024 H2','2025 H1','2025 H2','2026 H1'], datasets: [{ label: 'Institutional Performance Index', data: [3.95,4.05,4.12,4.20,4.25,4.30,4.35], borderColor: '#025da2', backgroundColor: 'rgba(2,93,162,0.08)', fill: true, tension: 0.35, borderWidth: 3, pointRadius: 4 }] }, options: { ...common, scales: { ...common.scales, y: { ...common.scales.y, min: 3.5, max: 5 } } } });
+    new Chart(document.getElementById('deptPieChart'), { type: 'doughnut', data: { labels: [{% for d in dept_performance_json %}'{{ d.name|escapejs }}',{% empty %}'Computer Science','Business','Engineering'{% endfor %}], datasets: [{ data: [{% for d in dept_performance_json %}{{ d.count }},{% empty %}15,12,10{% endfor %}], backgroundColor: ['#025da2','#10b981','#f59e0b','#7c3aed','#ef4444','#06b6d4'], borderColor: '#fff', borderWidth: 3 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, color: '#475569' } } } } });
+});
+</script>
+{% endblock %}
