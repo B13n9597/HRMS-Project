@@ -310,10 +310,12 @@
                     <td>${statusBadge(emp.status)}</td>
                     <td>${emp.hire_date || '—'}</td>
                     <td>
-                        <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px;" onclick="activateEmployee(${emp.id})">Activate</button>
-                        <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="terminateEmployee(${emp.id})">Terminate</button>
-                        <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px;" onclick="promoteEmployee(${emp.id})">Promote</button>
-                        <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px;" onclick="transferEmployee(${emp.id})">Transfer</button>
+                        <select class="form-input" aria-label="Actions for ${emp.full_name}" style="width:auto;min-width:125px;padding:6px 8px;font-size:12px;" onchange="handleEmployeeAction(this, ${emp.id})">
+                            <option value="">Actions…</option>
+                            <option value="promote">Promote</option>
+                            <option value="transfer">Transfer</option>
+                            <option value="terminate">Terminate</option>
+                        </select>
                     </td>
                 </tr>
             `).join('');
@@ -324,7 +326,8 @@
             const tbody = document.getElementById('employeeTableBody');
             tbody.innerHTML = `<tr class="empty-state"><td colspan="6"><i data-lucide="loader-2" style="width:18px;height:18px;animation:spin 1s linear infinite;vertical-align:middle;"></i> Loading employees…</td></tr>`;
             lucide.createIcons();
-            const data = await apiCall('/api/employees/');
+            const directoryQuery = new URLSearchParams(window.location.search).get('q');
+            const data = await apiCall(directoryQuery ? `/api/employees/?q=${encodeURIComponent(directoryQuery)}` : '/api/employees/');
             if (!data || !data.success) {
                 tbody.innerHTML = `<tr class="empty-state"><td colspan="6" style="color:var(--danger);">Failed to load employees. Please refresh.</td></tr>`;
                 return;
@@ -333,11 +336,12 @@
             renderEmployees(_allEmployees);
         }
 
-        window.activateEmployee = async function(employeeId) {
-            if (!confirm('Activate this employee?')) return;
-            const data = await apiCall(`/api/employees/status/${employeeId}/`, 'POST', { action: 'activate' });
-            if (data && data.success) { loadEmployees(); }
-            else { alert(data ? data.error : 'Action failed.'); }
+        window.handleEmployeeAction = function(select, employeeId) {
+            const action = select.value;
+            select.value = '';
+            if (action === 'promote') return window.promoteEmployee(employeeId);
+            if (action === 'transfer') return window.transferEmployee(employeeId);
+            if (action === 'terminate') return window.terminateEmployee(employeeId);
         };
        
         window.terminateEmployee = async function(employeeId) {

@@ -1,7 +1,8 @@
 from django.urls import path
-from hr.views import api_views, leave_views, page_views
+from hr.views import api_views, leave_views, page_views, dashboard_views
 from hr.views import attendance_views as attendanceviews
 from hr.views import employee_views, lifecycle_views, hr_modules_views, finance_views
+
 
 urlpatterns = [
     # ── Root ───────────────────────────────────────────────────────
@@ -17,6 +18,7 @@ urlpatterns = [
 
     # ── Attendance — misc ──────────────────────────────────────────
     path('my-qr/',                         attendanceviews.my_qr_code,                  name='attendance_my_qr'),
+    path('my-rotating-badge/',             page_views.rotating_qr_badge,                name='rotating_qr_badge'),
     path('scan/',                          attendanceviews.scan_qr_secure,              name='attendance_scan'),
     path('today/',                         attendanceviews.today_attendance,            name='attendance_today'),
     path('report/<int:employee_id>/',      attendanceviews.employee_attendance_report,  name='attendance_report'),

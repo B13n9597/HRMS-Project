@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
-from hr.views import api_views, page_views, supervisor_views
+from hr.views import api_views, page_views, supervisor_views, dashboard_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -18,12 +18,53 @@ urlpatterns = [
     path('kiosk/api/scan/',           api_views.api_kiosk_scan,      name='api_kiosk_scan'),
     path('tablet-kiosk/',             api_views.tablet_kiosk_view,   name='tablet_kiosk'),
 
-    # ── Role Dashboards ────────────────────────────────────────────
+    # ── Role Dashboards & Dedicated Routes ─────────────────────────
     path('dashboard/employee/',            page_views.employee_dashboard,            name='dashboard_employee'),
     path('dashboard/hr/',                  page_views.hr_dashboard,                  name='dashboard_hr'),
-    path('dashboard/dean/',                page_views.dean_dashboard,                name='dashboard_dean'),
-    path('dashboard/president/',           page_views.president_dashboard,           name='dashboard_president'),
+    
+    # Dean Routes
+    path('dean/dashboard/',                dashboard_views.dean_dashboard_view,      name='dean_dashboard'),
+    path('dashboard/dean/',                dashboard_views.dean_dashboard_view,      name='dashboard_dean'),
+    path('dean/export/attendance/',        dashboard_views.dean_export_attendance_csv, name='dean_export_attendance'),
+    path('dean/export/leave/',             dashboard_views.dean_export_leave_csv,      name='dean_export_leave'),
+    path('api/dean/leave/action/',         dashboard_views.dean_leave_action_api,      name='dean_leave_action_api'),
+
+    # CEO / President Routes
+    path('ceo/dashboard/',                dashboard_views.ceo_dashboard_view,                name='ceo_dashboard'),
+    path('dashboard/president/',           dashboard_views.ceo_dashboard_view,                name='dashboard_president'),
+    path('ceo/export/institution-report/', dashboard_views.ceo_export_institution_report_csv, name='ceo_export_institution_report'),
+    path('ceo/export/audit-logs/',         dashboard_views.ceo_export_audit_logs_csv,         name='ceo_export_audit_logs'),
+
+    # ── Dean JSON API Endpoints ────────────────────────────────────
+    path('api/dean/attendance-summary/',       dashboard_views.api_dean_attendance_summary,      name='api_dean_attendance_summary'),
+    path('api/dean/leave-requests/',           dashboard_views.api_dean_leave_requests,           name='api_dean_leave_requests'),
+
+    # ── Dean Chart API Endpoints ───────────────────────────────────
+    path('api/dean/charts/attendance-trend/',  dashboard_views.api_dean_chart_attendance_trend,   name='api_dean_chart_attendance_trend'),
+    path('api/dean/charts/status-pie/',        dashboard_views.api_dean_chart_status_pie,         name='api_dean_chart_status_pie'),
+    path('api/dean/charts/leave-overview/',    dashboard_views.api_dean_chart_leave_overview,     name='api_dean_chart_leave_overview'),
+    path('api/dean/charts/kpi-scores/',        dashboard_views.api_dean_chart_kpi_scores,         name='api_dean_chart_kpi_scores'),
+    path('api/dean/charts/late-trend/',        dashboard_views.api_dean_chart_late_trend,         name='api_dean_chart_late_trend'),
+
+    # ── Dean Export ────────────────────────────────────────────────
+    path('dean/export/report-pdf/',            dashboard_views.dean_export_pdf,                   name='dean_export_pdf'),
+
+    # ── CEO JSON API Endpoints ─────────────────────────────────────
+    path('api/ceo/analytics/attendance-trend/',       dashboard_views.api_ceo_attendance_trend,       name='api_ceo_attendance_trend'),
+    path('api/ceo/analytics/department-performance/', dashboard_views.api_ceo_dept_performance,       name='api_ceo_dept_performance'),
+
+    # ── CEO Chart API Endpoints ────────────────────────────────────
+    path('api/ceo/charts/attendance-trend/',   dashboard_views.api_ceo_chart_attendance_trend,    name='api_ceo_chart_attendance_trend'),
+    path('api/ceo/charts/dept-comparison/',    dashboard_views.api_ceo_chart_dept_comparison,     name='api_ceo_chart_dept_comparison'),
+    path('api/ceo/charts/leave-distribution/', dashboard_views.api_ceo_chart_leave_distribution,  name='api_ceo_chart_leave_distribution'),
+    path('api/ceo/charts/employee-performance/', dashboard_views.api_ceo_chart_emp_performance,   name='api_ceo_chart_emp_performance'),
+    path('api/ceo/charts/monthly-summary/',    dashboard_views.api_ceo_chart_monthly_summary,     name='api_ceo_chart_monthly_summary'),
+
+    # ── CEO Export ─────────────────────────────────────────────────
+    path('ceo/export/report-pdf/',             dashboard_views.ceo_export_pdf,                    name='ceo_export_pdf'),
+
     path('dashboard/discipline-training/', page_views.discipline_training_dashboard, name='dashboard_discipline_training'),
+
 
     # ── Supervisor Dashboard (defined here to avoid prefix collision) ─
     path('dashboard/supervisor/',

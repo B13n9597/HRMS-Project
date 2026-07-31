@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from hr.views.attendance_views import is_hr
 from hr.services import leave_service
+from hr.services import employee_service
 from hr.models import Employee, LeaveRequest, LeaveType, LeaveBalance
 
 
@@ -110,7 +111,7 @@ def employee_leave_manager(request):
         'error_msg':       error_msg,
         'active_page':     'employee_leave_manager',
         'today':           timezone.localdate().isoformat(),
-        'base_template':   'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
+        'base_template':   employee_service.get_base_template(request.user),
     }
     return render(request, 'hr/employee_leave_manager.html', context)
 

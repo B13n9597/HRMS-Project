@@ -34,8 +34,13 @@
             <input type="hidden" name="action" value="create_incident">
             <div class="form-grid-2">
                 <div class="form-field">
-                    <label for="{{ form.employee_id.id_for_label }}">Employee</label>
-                    {{ form.employee_id }}
+                    <label for="incident-employee">Employee</label>
+                    <select id="incident-employee" name="employee_id" class="form-input" required>
+                        <option value="">Select an employee</option>
+                        {% for employee in employees %}
+                        <option value="{{ employee.id }}">{{ employee.get_full_name }}{% if employee.department %} — {{ employee.department.name }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="form-field">
                     <label for="{{ form.incident_date.id_for_label }}">Incident Date</label>

@@ -15,8 +15,8 @@
 </style>
 <div class="page-header">
     <div class="page-header-left">
-        <h1>Training & CPD Management</h1>
-        <p>Review all employee training requests, completion evidence, CPD points, and certification status.</p>
+        <h1>Training Management</h1>
+        <p>Review employee training requests, training dates, providers, and completion evidence.</p>
     </div>
 </div>
 
@@ -28,11 +28,8 @@
 
 <div class="stats-grid">
     <div class="stat-tile"><div class="label">Pending Requests</div><div class="value">{{ requests|length }}</div></div>
-    <div class="stat-tile"><div class="label">Approved Training</div><div class="value">{{ approved_count }}</div></div>
-    <div class="stat-tile"><div class="label">Completed Training</div><div class="value">{{ completed_count }}</div></div>
     <div class="stat-tile"><div class="label">Total Training Cost</div><div class="value">{{ total_training_cost }}</div></div>
     <div class="stat-tile"><div class="label">Average Satisfaction</div><div class="value">{{ average_satisfaction_rating }}</div></div>
-    <div class="stat-tile"><div class="label">Below CPD Target</div><div class="value">{{ below_cpd_target_count }}</div></div>
 </div>
 
 <div class="card" style="margin-bottom: 22px;">
@@ -68,15 +65,6 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="form-field">
-                <label for="status-filter">Status</label>
-                <select id="status-filter" name="status" class="form-input">
-                    <option value="">All statuses</option>
-                    {% for status in statuses %}
-                        <option value="{{ status }}" {% if status_f == status %}selected{% endif %}>{{ status }}</option>
-                    {% endfor %}
-                </select>
-            </div>
             <div class="form-actions" style="grid-column: 1 / -1;">
                 <button class="btn btn-primary" type="submit">Apply Filters</button>
                 <a href="{% url 'training' %}" class="btn btn-ghost">Reset</a>
@@ -102,8 +90,6 @@
                         <th>Provider</th>
                         <th>Dates</th>
                         <th>Cost</th>
-                        <th>CPD</th>
-                        <th>Status</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -118,14 +104,6 @@
                         <td>{{ item.provider }}</td>
                         <td>{{ item.start_date|default:'-' }} → {{ item.end_date|default:'-' }}</td>
                         <td>{{ item.cost }}</td>
-                        <td>{{ item.cpd_points }}</td>
-                        <td>
-                            {% if item.status == 'Completed' %}<span class="badge badge-success">{{ item.status }}</span>
-                            {% elif item.status == 'Approved' %}<span class="badge badge-primary">{{ item.status }}</span>
-                            {% elif item.status == 'HR Rejected' or item.status == 'Supervisor Rejected' %}<span class="badge badge-danger">{{ item.status }}</span>
-                            {% else %}<span class="badge badge-warning">{{ item.status }}</span>
-                            {% endif %}
-                        </td>
                         <td>
                             <details>
                                 <summary class="btn btn-ghost">Review</summary>
@@ -141,12 +119,9 @@
                                         <div class="detail-card" style="grid-column: 1 / -1;"><strong>Business Justification</strong>{{ item.business_justification|default:'-' }}</div>
                                         <div class="detail-card"><strong>Supervisor Recommendation</strong>{{ item.supervisor_comment|default:'-' }}</div>
                                         <div class="detail-card"><strong>Supporting Document</strong>{% if item.supporting_document %}<a href="{{ item.supporting_document.url }}" target="_blank">View file</a>{% else %}-{% endif %}</div>
-                                        {% if item.status == 'Completed' %}
                                         <div class="detail-card"><strong>Certificate</strong>{% if item.certificate %}<a href="{{ item.certificate.url }}" target="_blank">Download</a>{% else %}-{% endif %}</div>
-                                        <div class="detail-card"><strong>CPD Points</strong>{{ item.cpd_points }}</div>
                                         <div class="detail-card" style="grid-column: 1 / -1;"><strong>Feedback</strong>{{ item.feedback|default:'-' }}</div>
                                         <div class="detail-card"><strong>Satisfaction Rating</strong>{{ item.satisfaction_rating|default:'-' }}</div>
-                                        {% endif %}
                                     </div>
                                     <form method="post" style="margin-top: 14px;">
                                         {% csrf_token %}
@@ -166,7 +141,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="11" style="text-align:center;">No training records found.</td></tr>
+                    <tr><td colspan="9" style="text-align:center;">No training records found.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

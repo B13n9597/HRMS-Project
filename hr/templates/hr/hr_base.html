@@ -1061,30 +1061,18 @@
                         {{ request.user.get_full_name|default:request.user.username }}
                     </span>
                     <span style="font-size: 11px; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px;">
-                        {% if request.user.is_superuser %}System Admin{% else %}HR Manager{% endif %}
+                        {% if request.user.is_superuser %}System Admin{% else %}{{ request.user.employee.role.name|default:"User" }}{% endif %}
                     </span>
                 </div>
             </div>
         </div>
 
 
-        <div class="nav-section-title">Dashboards</div>
-        <a href="{% url 'dashboard_hr' %}" class="nav-link {% if active_page == 'dashboard_hr' %}active{% endif %}">
-            <i data-lucide="layout-dashboard" style="width:18px;height:18px;"></i> HR Dashboard
-        </a>
-        <a href="{% url 'dashboard_dean' %}" class="nav-link {% if active_page == 'dashboard_dean' %}active{% endif %}">
-            <i data-lucide="graduation-cap" style="width:18px;height:18px;"></i> Dean Dashboard
-        </a>
-        <a href="{% url 'dashboard_president' %}" class="nav-link {% if active_page == 'dashboard_president' %}active{% endif %}">
-            <i data-lucide="crown" style="width:18px;height:18px;"></i> President Overview
-        </a>
-        <a href="{% url 'dashboard_discipline_training' %}" class="nav-link {% if active_page == 'dashboard_discipline_training' %}active{% endif %}">
-            <i data-lucide="shield-alert" style="width:18px;height:18px;"></i> Discipline & Training
-        </a>
+
 
         <!-- MY WORKSPACE -->
         <div class="nav-section">
-            <div class="nav-section-title {% if active_page in 'my_lifecycle,my_attendance,employee_leave_manager,my_salary_slips' %}open{% endif %}"
+            <div class="nav-section-title {% if active_page in 'my_lifecycle,my_attendance,attendance_my_qr,employee_leave_manager,my_salary_slips' %}open{% endif %}"
                  data-section="workspace">
                 <span class="section-label">My Workspace</span>
                 <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
@@ -1092,13 +1080,16 @@
                     <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
             </div>
-            <div class="nav-section-items {% if active_page in 'my_lifecycle,my_attendance,employee_leave_manager,my_salary_slips' %}open{% endif %}"
+            <div class="nav-section-items {% if active_page in 'my_lifecycle,my_attendance,attendance_my_qr,employee_leave_manager,my_salary_slips' %}open{% endif %}"
                  id="section-workspace">
                 <a href="{% url 'my_lifecycle' %}" class="nav-link {% if active_page == 'my_lifecycle' %}active{% endif %}">
                     <i data-lucide="user" style="width:18px;height:18px;"></i> My Profile
                 </a>
                 <a href="{% url 'my_attendance_record' %}" class="nav-link {% if active_page == 'my_attendance' %}active{% endif %}">
                     <i data-lucide="user-check" style="width:18px;height:18px;"></i> My Attendance
+                </a>
+                <a href="{% url 'rotating_qr_badge' %}" class="nav-link {% if active_page == 'attendance_my_qr' %}active{% endif %}">
+                    <i data-lucide="qr-code" style="width:18px;height:18px;color:var(--primary);"></i> My Rotating QR Badge
                 </a>
                 <a href="{% url 'employee_leave_manager' %}" class="nav-link {% if active_page == 'employee_leave_manager' %}active{% endif %}">
                     <i data-lucide="calendar" style="width:18px;height:18px;"></i> My Leave
@@ -1296,10 +1287,10 @@
         </a>
     </aside>
     <header class="topbar">
-        <div class="topbar-search">
+        <form class="topbar-search" method="get" action="{% url 'staff_directory' %}">
             <i data-lucide="search" style="width:18px;height:18px;"></i>
-            <input type="search" placeholder="Search employees, departments, reports..." aria-label="Search HRMS">
-        </div>
+            <input type="search" name="q" placeholder="Search employees, departments, positions..." aria-label="Search HRMS">
+        </form>
         <div class="topbar-actions">
             <button class="topbar-icon-btn" type="button" aria-label="View notifications">
                 <i data-lucide="bell" style="width:18px;height:18px;"></i>

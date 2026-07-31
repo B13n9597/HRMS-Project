@@ -18,6 +18,7 @@ from hr.services.attendance_service import (
     log_scan,
     get_employee_qr_token,
 )
+from hr.services import employee_service
 from hr.models import Employee, Attendance
 
 
@@ -324,7 +325,7 @@ def my_attendance(request):
         ],
         'years':           [2024, 2025, 2026],
         'active_page':     'my_attendance',
-        'base_template':   'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
+        'base_template':   employee_service.get_base_template(request.user),
     }
     return render(request, 'hr/my_attendance.html', context)
 

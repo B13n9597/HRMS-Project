@@ -4,11 +4,19 @@
 <div class="page-header">
     <div class="page-header-left">
         <h1>Career Development</h1>
-        <p>Track development plans and progress alongside training and CPD administration.</p>
+        <p>Career progression is shown from approved HR lifecycle records and completed training evidence.</p>
     </div>
 </div>
-<div class="card" style="text-align:center;padding:60px 20px;">
-    <h3 style="font-family:var(--font-display);font-size:20px;margin-bottom:8px;">Career Development</h3>
-    <p style="color:var(--text-muted);">This page is now integrated into the existing HR development navigation while retaining the current ACT HRMS styling.</p>
+<div class="dashboard-kpi-grid" style="margin-bottom:24px;">
+    <div class="metric-card"><div><div class="metric-label">Recorded Promotions</div><div class="metric-value">{{ promotion_count }}</div></div><span class="metric-icon"><i data-lucide="trending-up"></i></span></div>
+    <div class="metric-card"><div><div class="metric-label">Retirement Records</div><div class="metric-value">{{ retirement_count }}</div></div><span class="metric-icon"><i data-lucide="flag"></i></span></div>
+    <div class="metric-card"><div><div class="metric-label">Completed Training</div><div class="metric-value">{{ completed_training_count }}</div></div><span class="metric-icon"><i data-lucide="graduation-cap"></i></span></div>
+</div>
+<div class="card">
+    <div class="card-header"><i data-lucide="route" style="width:18px;height:18px;color:var(--primary);"></i><h3>Career Lifecycle</h3></div>
+    <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Stage</th><th>Department</th><th>Position</th><th>Effective Date</th></tr></thead><tbody>
+        {% for event in recent_events %}<tr><td><strong>{{ event.employee.get_full_name }}</strong></td><td><span class="badge badge-primary">{{ event.get_event_type_display }}</span></td><td>{{ event.department.name|default:"—" }}</td><td>{{ event.position.title|default:"—" }}</td><td>{{ event.start_date|date:"d M Y" }}</td></tr>
+        {% empty %}<tr><td colspan="5" style="text-align:center;padding:28px;color:var(--text-light);">No HR lifecycle records have been recorded yet.</td></tr>{% endfor %}
+    </tbody></table></div>
 </div>
 {% endblock %}

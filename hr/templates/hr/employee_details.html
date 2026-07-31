@@ -210,7 +210,8 @@
                 <h3>Leave Balance</h3>
             </div>
             {% if leave_balances %}
-            <div class="table-wrap">
+            <div class="card-body"><div class="chart-panel" style="height:300px;"><canvas id="leaveBalanceChart" aria-label="Leave balance chart"></canvas></div></div>
+            <div class="table-wrap" style="display:none;">
                 <table>
                     <thead><tr><th>Leave Type</th><th>Allocated</th><th>Used</th><th>Remaining</th><th>Updated</th></tr></thead>
                     <tbody>
@@ -263,4 +264,21 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const canvas = document.getElementById('leaveBalanceChart');
+  if (!canvas || !window.Chart) return;
+  new Chart(canvas, {
+    type: 'bar',
+    data: { labels: JSON.parse('{{ leave_balance_labels_json|escapejs }}'), datasets: [
+      {label: 'Used days', data: JSON.parse('{{ leave_balance_used_json|escapejs }}'), backgroundColor: '#f59e0b', borderRadius: 5},
+      {label: 'Remaining days', data: JSON.parse('{{ leave_balance_remaining_json|escapejs }}'), backgroundColor: '#10b981', borderRadius: 5}
+    ]},
+    options: {responsive: true, maintainAspectRatio: false, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}, plugins: {legend: {position: 'bottom'}}}
+  });
+});
+</script>
 {% endblock %}

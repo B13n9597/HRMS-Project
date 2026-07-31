@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.db.models import Q
 from hr.models import (
     Employee, Department, Position, LeaveRequest, LeaveBalance, LeaveType,
     Payroll, PerformanceEvaluation, KPICategory, KPIIndicator, EvaluationScore,
@@ -252,7 +253,8 @@ def api_employees(request):
     from django.core.paginator import Paginator
 
     page = request.GET.get('page')
-    cache_key = f'api_employees_page_{page}' if page else 'api_employees_list_all'
+    query = request.GET.get('q', '').strip()
+    cache_key = f'api_employees_alpha_{query.lower()}_page_{page}' if page else f'api_employees_alpha_{query.lower()}_list_all'
     cached_response = cache.get(cache_key)
     if cached_response:
         return JsonResponse(cached_response)
@@ -262,7 +264,13 @@ def api_employees(request):
     ).only(
         'id', 'employee_id', 'first_name', 'last_name', 'hire_date', 'phone', 'address',
         'user__email', 'user__username', 'role__name', 'department__name', 'position__title', 'status__name'
-    ).all()
+    ).order_by('last_name', 'first_name', 'employee_id')
+    if query:
+        queryset = queryset.filter(
+            Q(first_name__icontains=query) | Q(last_name__icontains=query) |
+            Q(employee_id__icontains=query) | Q(department__name__icontains=query) |
+            Q(position__title__icontains=query) | Q(user__email__icontains=query)
+        )
 
     if page:
         paginator = Paginator(queryset, 20)

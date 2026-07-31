@@ -1,13 +1,16 @@
 # hr/views/lifecycle_views.py
 
+import json
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
-from django.db.models import Q
+from django.db.models import Q, Exists, OuterRef
 
 from hr.views.attendance_views import is_hr
 from hr.models import Employee, EmployeeHistory, EmployeeCertificate
 from hr.forms import EmployeeCertificateForm
+from hr.services import employee_service
 
 
 @login_required(login_url='/login/')
@@ -41,7 +44,7 @@ def my_lifecycle(request):
         'form':          form,
         'cert_types':    EmployeeCertificate.CERT_TYPES,
         'active_page':   'my_lifecycle',
-        'base_template': 'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
+        'base_template': employee_service.get_base_template(request.user),
     }
     return render(request, 'hr/my_lifecycle.html', context)
 
@@ -55,8 +58,12 @@ def hr_lifecycle(request):
     query = request.GET.get('q', '').strip()
     dept_id = request.GET.get('department_id', '')
 
+    lifecycle_events = EmployeeHistory.objects.filter(employee_id=OuterRef('pk'), is_deleted=False)
     employees = Employee.objects.select_related(
         'department', 'position', 'status', 'role'
+    ).annotate(
+        has_promotion=Exists(lifecycle_events.filter(event_type='promoted')),
+        has_retirement=Exists(lifecycle_events.filter(event_type='retired')),
     ).order_by('first_name', 'last_name')
 
     if query:
@@ -140,6 +147,9 @@ def employee_details(request, id):
         'kpi_scores':   kpi_scores,
         'leave_requests': leave_requests,
         'leave_balances': leave_balances,
+        'leave_balance_labels_json': json.dumps([balance.leave_type.name for balance in leave_balances]),
+        'leave_balance_used_json': json.dumps([float(balance.used_days or 0) for balance in leave_balances]),
+        'leave_balance_remaining_json': json.dumps([float(balance.remaining_days or 0) for balance in leave_balances]),
         'payroll_records': payroll_records,
         'active_page':  'dashboard_hr',
     }
