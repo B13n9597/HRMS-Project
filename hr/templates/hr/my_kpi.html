@@ -14,8 +14,19 @@
     .kpi-hero h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; }
     .kpi-hero p  { opacity: 0.85; font-size: 14px; }
 
-    .two-col { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: start; }
-    @media(max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+    /* Full-width stacked layout: evaluate panel on top, results below */
+    .two-col { display: flex; flex-direction: column; gap: 28px; }
+    /* The evaluate card takes full width, split into side-by-side search + form */
+    .eval-inner { display: grid; grid-template-columns: 300px 1fr; gap: 0; }
+    .eval-inner-search {
+        border-right: 1px solid var(--border-color);
+        padding: 20px 20px 20px 24px;
+    }
+    .eval-inner-form  { padding: 20px 24px 24px; }
+    @media(max-width: 860px) {
+        .eval-inner { grid-template-columns: 1fr; }
+        .eval-inner-search { border-right: none; border-bottom: 1px solid var(--border-color); }
+    }
 
     /* Search box */
     .search-box {
@@ -204,367 +215,325 @@
 
 <div class="two-col">
 
-    <!-- ══════ LEFT: Search & Evaluate ══════ -->
+    <!-- ══════ FULL-WIDTH: Search + Evaluate side by side ══════ -->
     <div class="card">
         <div class="card-header">
-            <i data-lucide="search" style="width:18px;height:18px;color:var(--primary);"></i>
+            <i data-lucide="users-2" style="width:18px;height:18px;color:var(--primary);"></i>
             <h3>Evaluate a Peer</h3>
+            <span class="badge badge-primary" style="margin-left:auto;">{{ all_employees|length }} colleagues</span>
         </div>
-        <div class="card-body" style="padding:20px 24px;">
+        <div class="eval-inner">
 
-            <!-- Search input -->
-            <div class="search-box">
-                <i data-lucide="search" class="search-icon" style="width:16px;height:16px;"></i>
-                <input type="text" id="empSearch" placeholder="Search employees by name or department…"
-                       autocomplete="off">
+            <!-- LEFT: Employee Search List -->
+            <div class="eval-inner-search">
+                <div class="search-box">
+                    <i data-lucide="search" class="search-icon" style="width:16px;height:16px;"></i>
+                    <input type="text" id="empSearch" placeholder="Search by name or department…" autocomplete="off">
+                </div>
+                <div class="emp-count" id="empCount">{{ all_employees|length }} employees available</div>
+                <div class="employee-list" id="empList">
+                    {% for emp in all_employees %}
+                    <div class="employee-item"
+                         data-id="{{ emp.id }}"
+                         data-name="{{ emp.get_full_name }}"
+                         data-dept="{{ emp.department.name|default:'—' }}"
+                         data-initials="{{ emp.first_name|slice:':1'|upper }}">
+                        <div class="emp-avatar">{{ emp.first_name|slice:":1"|upper }}</div>
+                        <div class="emp-info">
+                            <div class="emp-name">{{ emp.get_full_name }}</div>
+                            <div class="emp-dept">{{ emp.department.name|default:"—" }} · {{ emp.position.title|default:"—" }}</div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">
+                        No other employees found.
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
 
-            <!-- Employee list -->
-            <div class="emp-count" id="empCount">{{ all_employees|length }} employees available</div>
-            <div class="employee-list" id="empList">
-                {% for emp in all_employees %}
-                <div class="employee-item"
-                     data-id="{{ emp.id }}"
-                     data-name="{{ emp.get_full_name }}"
-                     data-dept="{{ emp.department.name|default:'—' }}"
-                     data-initials="{{ emp.first_name|slice:':1'|upper }}">
-                    <div class="emp-avatar">{{ emp.first_name|slice:":1"|upper }}</div>
+            <!-- RIGHT: Evaluation Form -->
+            <div class="eval-inner-form">
+
+                <!-- Selected employee banner -->
+                <div class="selected-employee-banner" id="selectedBanner">
+                    <div class="emp-avatar" id="selectedAvatar"></div>
                     <div class="emp-info">
-                        <div class="emp-name">{{ emp.get_full_name }}</div>
-                        <div class="emp-dept">{{ emp.department.name|default:"—" }} · {{ emp.position.title|default:"—" }}</div>
+                        <div class="emp-name" id="selectedName"></div>
+                        <div class="emp-dept" id="selectedDept"></div>
                     </div>
+                    <button type="button" class="btn-clear" id="clearSelection" title="Clear">✕</button>
                 </div>
-                {% empty %}
-                <div style="padding:20px;text-align:center;color:var(--text-muted);font-size:13px;">
-                    No other employees found.
+
+                <!-- Prompt shown before selecting -->
+                <div class="select-prompt" id="selectPrompt">
+                    <i data-lucide="user-plus" style="width:44px;height:44px;"></i>
+                    <p style="font-weight:600;color:var(--text-main);margin-bottom:4px;">Select a colleague</p>
+                    <p style="font-size:13px;">Choose someone from the list to begin your evaluation.</p>
                 </div>
-                {% endfor %}
+
+                <!-- Evaluation form (hidden until employee selected) -->
+                <div class="eval-form" id="evalForm">
+                    <form method="POST" novalidate>
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="peer_evaluate">
+                        <input type="hidden" name="target_employee_id" id="targetEmployeeId" value="">
+
+                        <!-- Year + Period -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                            <div class="form-field" style="margin-bottom:0;">
+                                <label>Year</label>
+                                <select name="year" class="form-control">
+                                    {% for y in years %}<option value="{{ y }}">{{ y }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-field" style="margin-bottom:0;">
+                                <label>Period</label>
+                                <select name="period" class="form-control">
+                                    {% for val, label in periods %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Star ratings -->
+                        <div style="border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:16px;">
+                            {% for field_name, field_label in field_list %}
+                            <div class="rating-row" style="padding:14px 16px;">
+                                <span class="rating-label" style="font-size:14px;">{{ field_label }}</span>
+                                <div class="star-group">
+                                    {% for i in "54321" %}
+                                    <input type="radio" name="{{ field_name }}" id="{{ field_name }}{{ i }}" value="{{ i }}">
+                                    <label for="{{ field_name }}{{ i }}" title="{{ i }}/5">★</label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="rating-row" style="padding:14px 16px;">
+                                <span class="rating-label">Job Knowledge</span>
+                                <div class="star-group">{% for i in "54321" %}<input type="radio" name="job_knowledge" id="jk{{ i }}" value="{{ i }}"><label for="jk{{ i }}">★</label>{% endfor %}</div>
+                            </div>
+                            <div class="rating-row" style="padding:14px 16px;">
+                                <span class="rating-label">Work Quality</span>
+                                <div class="star-group">{% for i in "54321" %}<input type="radio" name="work_quality" id="wq{{ i }}" value="{{ i }}"><label for="wq{{ i }}">★</label>{% endfor %}</div>
+                            </div>
+                            <div class="rating-row" style="padding:14px 16px;">
+                                <span class="rating-label">Punctuality &amp; Attendance</span>
+                                <div class="star-group">{% for i in "54321" %}<input type="radio" name="attendance" id="at{{ i }}" value="{{ i }}"><label for="at{{ i }}">★</label>{% endfor %}</div>
+                            </div>
+                            <div class="rating-row" style="padding:14px 16px;">
+                                <span class="rating-label">Teamwork</span>
+                                <div class="star-group">{% for i in "54321" %}<input type="radio" name="teamwork" id="tw{{ i }}" value="{{ i }}"><label for="tw{{ i }}">★</label>{% endfor %}</div>
+                            </div>
+                            <div class="rating-row" style="padding:14px 16px;border-bottom:none;">
+                                <span class="rating-label">Ethics &amp; Conduct</span>
+                                <div class="star-group">{% for i in "54321" %}<input type="radio" name="ethics" id="et{{ i }}" value="{{ i }}"><label for="et{{ i }}">★</label>{% endfor %}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="form-field">
+                            <label>Comments <span style="font-size:11px;color:var(--text-light);">(optional)</span></label>
+                            <textarea name="comments" class="form-control" rows="3"
+                                      placeholder="Share specific feedback about this colleague…"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:4px;">
+                            <i data-lucide="send" style="width:15px;height:15px;"></i>
+                            Submit Peer Evaluation
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+        </div><!-- /.eval-inner -->
+    </div><!-- /.card -->
+
+    <!-- ══════ FULL-WIDTH: My Received & Given Evaluations ══════ -->
+    <div class="card">
+        <div class="card-header">
+            <i data-lucide="clipboard-list" style="width:18px;height:18px;color:var(--primary);"></i>
+            <h3>My Evaluations</h3>
+        </div>
+        <div style="padding:0;">
+
+            <!-- Tabs -->
+            <div class="eval-tabs" style="padding:0 24px;">
+                <button class="eval-tab active" data-tab="received">
+                    <i data-lucide="inbox" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                    Received ({{ received_evaluations|length }})
+                </button>
+                <button class="eval-tab" data-tab="given">
+                    <i data-lucide="send" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                    Given ({{ given_evaluations|length }})
+                </button>
             </div>
 
-            <!-- Selected employee banner -->
-            <div class="selected-employee-banner" id="selectedBanner">
-                <div class="emp-avatar" id="selectedAvatar"></div>
-                <div class="emp-info">
-                    <div class="emp-name" id="selectedName"></div>
-                    <div class="emp-dept" id="selectedDept"></div>
+            <!-- Received -->
+            <div class="eval-tab-panel active" id="tab-received">
+                {% if received_evaluations %}
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Evaluator</th><th>Type</th><th>Period</th>
+                                <th>Job Know.</th><th>Work Qual.</th><th>Attendance</th>
+                                <th>Teamwork</th><th>Ethics</th><th>Overall</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in received_evaluations %}
+                            <tr>
+                                <td style="font-weight:600;">{{ s.evaluator.get_full_name }}</td>
+                                <td><span class="badge badge-primary" style="font-size:11px;">{{ s.evaluation_type|title }}</span></td>
+                                <td style="white-space:nowrap;"><strong>{{ s.year }}</strong> <span class="badge badge-primary" style="font-size:11px;">{{ s.period }}</span></td>
+                                <td><span class="score-badge {% if s.job_knowledge >= 4 %}high{% elif s.job_knowledge <= 2 %}low{% endif %}">{{ s.job_knowledge }}</span></td>
+                                <td><span class="score-badge {% if s.work_quality >= 4 %}high{% elif s.work_quality <= 2 %}low{% endif %}">{{ s.work_quality }}</span></td>
+                                <td><span class="score-badge {% if s.attendance >= 4 %}high{% elif s.attendance <= 2 %}low{% endif %}">{{ s.attendance }}</span></td>
+                                <td><span class="score-badge {% if s.teamwork >= 4 %}high{% elif s.teamwork <= 2 %}low{% endif %}">{{ s.teamwork }}</span></td>
+                                <td><span class="score-badge {% if s.ethics >= 4 %}high{% elif s.ethics <= 2 %}low{% endif %}">{{ s.ethics }}</span></td>
+                                <td>{% if s.overall_score %}<strong style="color:var(--primary);font-size:15px;">{{ s.overall_score }}</strong><span style="font-size:11px;color:var(--text-light);">/5</span>{% else %}—{% endif %}</td>
+                            </tr>
+                            {% if s.comments %}
+                            <tr>
+                                <td colspan="9" style="font-size:13px;color:var(--text-muted);padding-top:4px;padding-bottom:12px;background:#fafafa;">
+                                    <i data-lucide="message-circle" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>{{ s.comments }}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                <button type="button" class="btn-clear" id="clearSelection" title="Clear selection">✕</button>
+                {% else %}
+                <div class="empty-kpi">
+                    <i data-lucide="inbox" style="width:40px;height:40px;"></i>
+                    <p style="font-weight:600;color:var(--text-main);margin-bottom:4px;">No evaluations received yet</p>
+                    <p style="font-size:13px;">When colleagues evaluate you, their feedback will appear here.</p>
+                </div>
+                {% endif %}
             </div>
 
-            <!-- Prompt to select -->
-            <div class="select-prompt" id="selectPrompt">
-                <i data-lucide="user-plus" style="width:40px;height:40px;"></i>
-                <p style="font-weight:600;color:var(--text-main);margin-bottom:4px;">Select an employee above</p>
-                <p style="font-size:13px;">Choose a colleague to start your peer evaluation.</p>
-            </div>
-
-            <!-- Evaluation form (hidden until employee selected) -->
-            <div class="eval-form" id="evalForm">
-                <form method="POST" novalidate>
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="peer_evaluate">
-                    <input type="hidden" name="target_employee_id" id="targetEmployeeId" value="">
-
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-                        <div class="form-field" style="margin-bottom:0;">
-                            <label>Year</label>
-                            <select name="year" class="form-control">
-                                {% for y in years %}
-                                <option value="{{ y }}">{{ y }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-field" style="margin-bottom:0;">
-                            <label>Period</label>
-                            <select name="period" class="form-control">
-                                {% for val, label in periods %}
-                                <option value="{{ val }}">{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom:16px;">
-                        <div class="rating-row">
-                            <span class="rating-label">Job Knowledge</span>
-                            <div class="star-group">
-                                {% for i in "54321" %}
-                                <input type="radio" name="job_knowledge" id="jk{{ i }}" value="{{ i }}">
-                                <label for="jk{{ i }}" title="{{ i }}/5">★</label>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="rating-row">
-                            <span class="rating-label">Work Quality</span>
-                            <div class="star-group">
-                                {% for i in "54321" %}
-                                <input type="radio" name="work_quality" id="wq{{ i }}" value="{{ i }}">
-                                <label for="wq{{ i }}" title="{{ i }}/5">★</label>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="rating-row">
-                            <span class="rating-label">Punctuality &amp; Attendance</span>
-                            <div class="star-group">
-                                {% for i in "54321" %}
-                                <input type="radio" name="attendance" id="at{{ i }}" value="{{ i }}">
-                                <label for="at{{ i }}" title="{{ i }}/5">★</label>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="rating-row">
-                            <span class="rating-label">Teamwork</span>
-                            <div class="star-group">
-                                {% for i in "54321" %}
-                                <input type="radio" name="teamwork" id="tw{{ i }}" value="{{ i }}">
-                                <label for="tw{{ i }}" title="{{ i }}/5">★</label>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="rating-row" style="margin-bottom:16px;">
-                            <span class="rating-label">Ethics &amp; Conduct</span>
-                            <div class="star-group">
-                                {% for i in "54321" %}
-                                <input type="radio" name="ethics" id="et{{ i }}" value="{{ i }}">
-                                <label for="et{{ i }}" title="{{ i }}/5">★</label>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-field">
-                        <label>Comments <span style="font-size:11px;color:var(--text-light);">(optional)</span></label>
-                        <textarea name="comments" class="form-control" rows="3"
-                                  placeholder="Share specific feedback about this colleague…"></textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary" style="width:100%;">
-                        <i data-lucide="send" style="width:15px;height:15px;"></i>
-                        Submit Peer Evaluation
-                    </button>
-                </form>
+            <!-- Given -->
+            <div class="eval-tab-panel" id="tab-given">
+                {% if given_evaluations %}
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Employee</th><th>Period</th>
+                                <th>Job Know.</th><th>Work Qual.</th><th>Attendance</th>
+                                <th>Teamwork</th><th>Ethics</th><th>Overall</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in given_evaluations %}
+                            <tr>
+                                <td style="font-weight:600;">{{ s.employee.get_full_name }}</td>
+                                <td style="white-space:nowrap;"><strong>{{ s.year }}</strong> <span class="badge badge-primary" style="font-size:11px;">{{ s.period }}</span></td>
+                                <td><span class="score-badge {% if s.job_knowledge >= 4 %}high{% elif s.job_knowledge <= 2 %}low{% endif %}">{{ s.job_knowledge }}</span></td>
+                                <td><span class="score-badge {% if s.work_quality >= 4 %}high{% elif s.work_quality <= 2 %}low{% endif %}">{{ s.work_quality }}</span></td>
+                                <td><span class="score-badge {% if s.attendance >= 4 %}high{% elif s.attendance <= 2 %}low{% endif %}">{{ s.attendance }}</span></td>
+                                <td><span class="score-badge {% if s.teamwork >= 4 %}high{% elif s.teamwork <= 2 %}low{% endif %}">{{ s.teamwork }}</span></td>
+                                <td><span class="score-badge {% if s.ethics >= 4 %}high{% elif s.ethics <= 2 %}low{% endif %}">{{ s.ethics }}</span></td>
+                                <td>{% if s.overall_score %}<strong style="color:var(--primary);font-size:15px;">{{ s.overall_score }}</strong><span style="font-size:11px;color:var(--text-light);">/5</span>{% else %}—{% endif %}</td>
+                            </tr>
+                            {% if s.comments %}
+                            <tr>
+                                <td colspan="8" style="font-size:13px;color:var(--text-muted);padding-top:4px;padding-bottom:12px;background:#fafafa;">
+                                    <i data-lucide="message-circle" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>{{ s.comments }}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-kpi">
+                    <i data-lucide="send" style="width:40px;height:40px;"></i>
+                    <p style="font-weight:600;color:var(--text-main);margin-bottom:4px;">No peer evaluations given yet</p>
+                    <p style="font-size:13px;">Select a colleague on the left to submit your first peer evaluation.</p>
+                </div>
+                {% endif %}
             </div>
 
         </div>
-    </div>
+    </div><!-- /.card -->
 
-    <!-- ══════ RIGHT: My Received Evaluations ══════ -->
-    <div>
-        <div class="card">
-            <div class="card-header">
-                <i data-lucide="clipboard-list" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>My Evaluations</h3>
-            </div>
-            <div class="card-body" style="padding:0;">
-
-                <!-- Tabs: Received / Given -->
-                <div class="eval-tabs" style="padding:0 24px;">
-                    <button class="eval-tab active" data-tab="received">
-                        <i data-lucide="inbox" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
-                        Received
-                    </button>
-                    <button class="eval-tab" data-tab="given">
-                        <i data-lucide="send" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
-                        Given
-                    </button>
-                </div>
-
-                <!-- Received tab -->
-                <div class="eval-tab-panel active" id="tab-received">
-                    {% if received_evaluations %}
-                    <div style="overflow-x:auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Evaluator</th>
-                                    <th>Type</th>
-                                    <th>Period</th>
-                                    <th>JK</th>
-                                    <th>WQ</th>
-                                    <th>Att</th>
-                                    <th>TW</th>
-                                    <th>Eth</th>
-                                    <th>Overall</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for s in received_evaluations %}
-                                <tr>
-                                    <td style="font-weight:600;">{{ s.evaluator.get_full_name }}</td>
-                                    <td>
-                                        <span class="badge badge-primary" style="font-size:11px;">{{ s.evaluation_type|title }}</span>
-                                    </td>
-                                    <td style="white-space:nowrap;">
-                                        <strong>{{ s.year }}</strong>
-                                        <span class="badge badge-primary" style="font-size:11px;margin-left:4px;">{{ s.period }}</span>
-                                    </td>
-                                    <td><span class="score-badge {% if s.job_knowledge >= 4 %}high{% elif s.job_knowledge <= 2 %}low{% endif %}">{{ s.job_knowledge }}</span></td>
-                                    <td><span class="score-badge {% if s.work_quality >= 4 %}high{% elif s.work_quality <= 2 %}low{% endif %}">{{ s.work_quality }}</span></td>
-                                    <td><span class="score-badge {% if s.attendance >= 4 %}high{% elif s.attendance <= 2 %}low{% endif %}">{{ s.attendance }}</span></td>
-                                    <td><span class="score-badge {% if s.teamwork >= 4 %}high{% elif s.teamwork <= 2 %}low{% endif %}">{{ s.teamwork }}</span></td>
-                                    <td><span class="score-badge {% if s.ethics >= 4 %}high{% elif s.ethics <= 2 %}low{% endif %}">{{ s.ethics }}</span></td>
-                                    <td>
-                                        {% if s.overall_score %}
-                                        <strong style="color:var(--primary);font-size:15px;">{{ s.overall_score }}</strong>
-                                        <span style="font-size:11px;color:var(--text-light);">/5</span>
-                                        {% else %}—{% endif %}
-                                    </td>
-                                </tr>
-                                {% if s.comments %}
-                                <tr>
-                                    <td colspan="9" style="font-size:13px;color:var(--text-muted);padding-top:4px;padding-bottom:12px;background:#fafafa;">
-                                        <i data-lucide="message-circle" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>
-                                        {{ s.comments }}
-                                    </td>
-                                </tr>
-                                {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="empty-kpi">
-                        <i data-lucide="inbox" style="width:40px;height:40px;"></i>
-                        <p style="font-weight:600;color:var(--text-main);margin-bottom:4px;">No evaluations received yet</p>
-                        <p style="font-size:13px;">When colleagues evaluate you, their feedback will appear here.</p>
-                    </div>
-                    {% endif %}
-                </div>
-
-                <!-- Given tab -->
-                <div class="eval-tab-panel" id="tab-given">
-                    {% if given_evaluations %}
-                    <div style="overflow-x:auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Employee</th>
-                                    <th>Period</th>
-                                    <th>JK</th>
-                                    <th>WQ</th>
-                                    <th>Att</th>
-                                    <th>TW</th>
-                                    <th>Eth</th>
-                                    <th>Overall</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for s in given_evaluations %}
-                                <tr>
-                                    <td style="font-weight:600;">{{ s.employee.get_full_name }}</td>
-                                    <td style="white-space:nowrap;">
-                                        <strong>{{ s.year }}</strong>
-                                        <span class="badge badge-primary" style="font-size:11px;margin-left:4px;">{{ s.period }}</span>
-                                    </td>
-                                    <td><span class="score-badge {% if s.job_knowledge >= 4 %}high{% elif s.job_knowledge <= 2 %}low{% endif %}">{{ s.job_knowledge }}</span></td>
-                                    <td><span class="score-badge {% if s.work_quality >= 4 %}high{% elif s.work_quality <= 2 %}low{% endif %}">{{ s.work_quality }}</span></td>
-                                    <td><span class="score-badge {% if s.attendance >= 4 %}high{% elif s.attendance <= 2 %}low{% endif %}">{{ s.attendance }}</span></td>
-                                    <td><span class="score-badge {% if s.teamwork >= 4 %}high{% elif s.teamwork <= 2 %}low{% endif %}">{{ s.teamwork }}</span></td>
-                                    <td><span class="score-badge {% if s.ethics >= 4 %}high{% elif s.ethics <= 2 %}low{% endif %}">{{ s.ethics }}</span></td>
-                                    <td>
-                                        {% if s.overall_score %}
-                                        <strong style="color:var(--primary);font-size:15px;">{{ s.overall_score }}</strong>
-                                        <span style="font-size:11px;color:var(--text-light);">/5</span>
-                                        {% else %}—{% endif %}
-                                    </td>
-                                </tr>
-                                {% if s.comments %}
-                                <tr>
-                                    <td colspan="8" style="font-size:13px;color:var(--text-muted);padding-top:4px;padding-bottom:12px;background:#fafafa;">
-                                        <i data-lucide="message-circle" style="width:13px;height:13px;vertical-align:middle;margin-right:4px;"></i>
-                                        {{ s.comments }}
-                                    </td>
-                                </tr>
-                                {% endif %}
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="empty-kpi">
-                        <i data-lucide="send" style="width:40px;height:40px;"></i>
-                        <p style="font-weight:600;color:var(--text-main);margin-bottom:4px;">No peer evaluations submitted yet</p>
-                        <p style="font-size:13px;">Select a colleague on the left to submit your first peer evaluation.</p>
-                    </div>
-                    {% endif %}
-                </div>
-
-            </div>
-        </div>
-    </div>
-
-</div>
+</div><!-- /.two-col -->
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const searchInput   = document.getElementById('empSearch');
-    const empList       = document.getElementById('empList');
-    const empItems      = empList.querySelectorAll('.employee-item');
-    const empCount      = document.getElementById('empCount');
-    const selectPrompt  = document.getElementById('selectPrompt');
-    const evalForm      = document.getElementById('evalForm');
-    const selectedBanner = document.getElementById('selectedBanner');
-    const targetInput   = document.getElementById('targetEmployeeId');
+document.addEventListener('DOMContentLoaded', function() {
+    var searchInput    = document.getElementById('empSearch');
+    var empList        = document.getElementById('empList');
+    var empItems       = empList ? empList.querySelectorAll('.employee-item') : [];
+    var empCount       = document.getElementById('empCount');
+    var selectPrompt   = document.getElementById('selectPrompt');
+    var evalForm       = document.getElementById('evalForm');
+    var selectedBanner = document.getElementById('selectedBanner');
+    var targetInput    = document.getElementById('targetEmployeeId');
+    var clearBtn       = document.getElementById('clearSelection');
 
-    // ── Search filter ──
-    searchInput.addEventListener('input', () => {
-        const q = searchInput.value.toLowerCase().trim();
-        let visible = 0;
-        empItems.forEach(item => {
-            const name = item.dataset.name.toLowerCase();
-            const dept = item.dataset.dept.toLowerCase();
-            const show = name.includes(q) || dept.includes(q);
+    if (!searchInput || !empList) return;
+
+    /* Search filter */
+    searchInput.addEventListener('input', function() {
+        var q = searchInput.value.toLowerCase().trim();
+        var visible = 0;
+        empItems.forEach(function(item) {
+            var show = item.dataset.name.toLowerCase().includes(q) ||
+                       item.dataset.dept.toLowerCase().includes(q);
             item.style.display = show ? '' : 'none';
             if (show) visible++;
         });
-        empCount.textContent = visible + ' employee' + (visible !== 1 ? 's' : '') + ' found';
+        if (empCount) empCount.textContent = visible + ' employee' + (visible !== 1 ? 's' : '') + ' found';
     });
 
-    // ── Select employee ──
-    empItems.forEach(item => {
-        item.addEventListener('click', () => {
-            // Deselect others
-            empItems.forEach(el => el.classList.remove('selected'));
+    /* Select employee */
+    empItems.forEach(function(item) {
+        item.addEventListener('click', function() {
+            empItems.forEach(function(el) { el.classList.remove('selected'); });
             item.classList.add('selected');
 
-            // Set form values
-            targetInput.value = item.dataset.id;
-            document.getElementById('selectedAvatar').textContent = item.dataset.initials;
-            document.getElementById('selectedName').textContent = item.dataset.name;
-            document.getElementById('selectedDept').textContent = item.dataset.dept;
+            if (targetInput) targetInput.value = item.dataset.id;
+            var av = document.getElementById('selectedAvatar');
+            var nm = document.getElementById('selectedName');
+            var dp = document.getElementById('selectedDept');
+            if (av) av.textContent = item.dataset.initials;
+            if (nm) nm.textContent = item.dataset.name;
+            if (dp) dp.textContent = item.dataset.dept;
 
-            // Show form, hide prompt
-            selectedBanner.classList.add('active');
-            evalForm.classList.add('active');
-            selectPrompt.style.display = 'none';
-
-            // Re-create icons in the form
+            if (selectedBanner) selectedBanner.classList.add('active');
+            if (evalForm)       evalForm.classList.add('active');
+            if (selectPrompt)   selectPrompt.style.display = 'none';
             if (typeof lucide !== 'undefined') lucide.createIcons();
         });
     });
 
-    // ── Clear selection ──
-    document.getElementById('clearSelection').addEventListener('click', () => {
-        empItems.forEach(el => el.classList.remove('selected'));
-        targetInput.value = '';
-        selectedBanner.classList.remove('active');
-        evalForm.classList.remove('active');
-        selectPrompt.style.display = '';
-    });
+    /* Clear selection */
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function() {
+            empItems.forEach(function(el) { el.classList.remove('selected'); });
+            if (targetInput)    targetInput.value = '';
+            if (selectedBanner) selectedBanner.classList.remove('active');
+            if (evalForm)       evalForm.classList.remove('active');
+            if (selectPrompt)   selectPrompt.style.display = '';
+        });
+    }
 
-    // ── Tabs ──
-    document.querySelectorAll('.eval-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.eval-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.eval-tab-panel').forEach(p => p.classList.remove('active'));
+    /* Tabs */
+    document.querySelectorAll('.eval-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.eval-tab').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelectorAll('.eval-tab-panel').forEach(function(p) { p.classList.remove('active'); });
             tab.classList.add('active');
-            document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+            var panel = document.getElementById('tab-' + tab.dataset.tab);
+            if (panel) panel.classList.add('active');
         });
     });
 
-    // Re-init lucide icons
     if (typeof lucide !== 'undefined') lucide.createIcons();
 });
 </script>

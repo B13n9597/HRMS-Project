@@ -115,7 +115,7 @@
 <!-- Summary row -->
 <div class="summary-row">
     <div class="stat-mini">
-        <div class="num">{{ records|length }}</div>
+        <div class="num">{{ total_records }}</div>
         <div class="lbl">Total Records</div>
     </div>
     <div class="stat-mini">
@@ -131,6 +131,13 @@
         <div class="lbl">Departments</div>
     </div>
 </div>
+{% if page_obj.paginator.num_pages > 1 %}
+<div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:16px;">
+    {% if page_obj.has_previous %}<a class="btn btn-ghost" href="?page={{ page_obj.previous_page_number }}&q={{ search_query|urlencode }}&month={{ month }}&year={{ year }}&department_id={{ dept_id }}&status={{ status_f }}">Previous</a>{% endif %}
+    <span style="font-size:13px;color:var(--text-muted);">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="btn btn-ghost" href="?page={{ page_obj.next_page_number }}&q={{ search_query|urlencode }}&month={{ month }}&year={{ year }}&department_id={{ dept_id }}&status={{ status_f }}">Next</a>{% endif %}
+</div>
+{% endif %}
 
 <!-- Records Table -->
 <div class="card">

@@ -7,14 +7,16 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
+from django.utils import timezone
 
 from hr.forms import BulkEmployeeUploadForm, EmployeeCreateForm
-from hr.models import Attendance, LeaveRequest, TrainingRequest, DisciplinaryIncident, Grievance
+from hr.models import Attendance, LeaveRequest, TrainingRequest, DisciplinaryIncident, Grievance, Notification
 from django.db.models import Count
 from hr.services import attendance_service, employee_service
 from hr.services.kpi_service import current_biannual_period, get_employee_kpi_summary
 
 
+@ensure_csrf_cookie
 def login_view(request):
     if request.user.is_authenticated:
         return redirect(employee_service.get_dashboard_redirect(request.user))
@@ -104,6 +106,13 @@ def hr_dashboard(request):
     if not employee_service.can_manage_employees(request.user):
         return redirect(employee_service.get_dashboard_redirect(request.user))
 
+    # Also runs on normal HR use; the management command covers days with no login.
+    from hr.services.probation_service import run_probation_checks
+    run_probation_checks()
+
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:8]
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+
     return render(
         request,
         "hr/dashboard_hr.html",
@@ -113,8 +122,10 @@ def hr_dashboard(request):
             "attendance_logs": employee_service.get_all_attendance_logs()[:8],
             "employee_count": employee_service.get_all_employees().count(),
             "active_count": employee_service.get_all_employees().filter(status__name__iexact="Active").count(),
-            "present_today": Attendance.objects.filter(date__exact=__import__("django").utils.timezone.localdate()).count(),
+            "present_today": Attendance.objects.filter(date__exact=timezone.localdate()).count(),
             "pending_leaves": LeaveRequest.objects.filter(status="Pending").count(),
+            "notifications": notifications,
+            "notifications_count": unread_count,
         },
     )
 

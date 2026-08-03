@@ -61,21 +61,13 @@
         <h1>My Attendance</h1>
         <p>Review your personal attendance history.</p>
     </div>
-    <a href="{% url 'tablet_kiosk_attendance' %}" class="btn btn-primary">
-        <i data-lucide="tablet" style="width:15px;height:15px;"></i>
-        Office Kiosk
-    </a>
 </div>
 
-<!-- Summary stats -->
-{% with present_count=records|length %}
+<!-- Summary stats — counts computed by JS after table renders -->
 <div class="stat-row">
     <div class="stat-card">
-        <div class="num" style="color:var(--success);">
-            {% for r in records %}{% if r.status == 'Present' or r.status == 'Late' %}{{ forloop.counter }}{% endif %}{% endfor %}
-            {# Django templates can't count inside loops directly; compute in card #}
-        </div>
-        <div class="lbl">Records This Period</div>
+        <div class="num" style="color:var(--success);" id="presentCount">—</div>
+        <div class="lbl">Present / On Time</div>
     </div>
     <div class="stat-card">
         <div class="num" style="color:var(--primary);">{{ records|length }}</div>
@@ -86,7 +78,6 @@
         <div class="lbl">Late Arrivals</div>
     </div>
 </div>
-{% endwith %}
 
 <!-- Filters -->
 <form method="GET" class="filter-bar">
@@ -172,4 +163,35 @@
         </table>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    /* Count Present and Late directly from the rendered table badges */
+    var rows    = document.querySelectorAll('tbody tr');
+    var present = 0;
+    var late    = 0;
+
+    rows.forEach(function (row) {
+        /* Look for badge text inside the Status column (last td with a badge) */
+        var badge = row.querySelector('.badge');
+        if (!badge) return;
+        var text = badge.textContent.trim();
+        if (text === 'Present') present++;
+        if (text === 'Late')    { late++; present++; } /* Late counts toward present too */
+    });
+
+    var lateEl    = document.getElementById('lateCount');
+    var presentEl = document.getElementById('presentCount');
+    if (lateEl)    lateEl.textContent    = late;
+    if (presentEl) presentEl.textContent = present;
+
+    /* Highlight late count card if any late arrivals */
+    if (late > 0 && lateEl) {
+        lateEl.closest('.stat-card').style.borderColor = 'var(--warning)';
+        lateEl.closest('.stat-card').style.borderWidth = '2px';
+    }
+});
+</script>
 {% endblock %}

@@ -46,7 +46,8 @@ class InsecureTLSSMTPEmailBackend(EmailBackend):
 # Read SECRET_KEY from .env — never hardcode it
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
 
-DEBUG = config('DEBUG', default=True, cast=bool)
+# Production-safe by default; set DEBUG=True explicitly in a local .env only.
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
@@ -75,6 +76,7 @@ INSTALLED_APPS = [
 # ==============================================================================
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -82,6 +84,16 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Local in-memory cache for development. Production can switch to Redis by
+# setting CACHE_BACKEND and CACHE_LOCATION in the environment.
+CACHES = {
+    'default': {
+        'BACKEND': config('CACHE_BACKEND', default='django.core.cache.backends.locmem.LocMemCache'),
+        'LOCATION': config('CACHE_LOCATION', default='hrms-dashboard-cache'),
+        'TIMEOUT': config('CACHE_TIMEOUT', default=60, cast=int),
+    }
+}
 
 
 # ==============================================================================

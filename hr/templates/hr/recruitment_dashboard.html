@@ -1,0 +1,45 @@
+{% extends 'hr/hr_base.html' %}
+{% block title %}Recruitment{% endblock %}
+{% block content %}
+<h1>Recruitment</h1><p>Review applications and move candidates through the hiring pipeline.</p>
+<form method="get" style="margin:18px 0;display:flex;gap:8px;flex-wrap:wrap"><select name="job"><option value="">All jobs</option>{% for job in jobs %}<option value="{{ job.id }}" {% if job_id == job.id|stringformat:'s' %}selected{% endif %}>{{ job.title }}</option>{% endfor %}</select><input name="qualification" value="{{ qualification }}" placeholder="Qualification"><select name="status"><option value="">All statuses</option>{% for value,label in statuses %}<option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select><button class="btn btn-primary">Filter</button></form>
+<div class="card"><table class="table"><thead><tr><th>Applicant</th><th>Job</th><th>Qualification</th><th>Documents</th><th>Status</th><th>Action</th></tr></thead><tbody>{% for application in applications %}<tr><td>{{ application.applicant.full_name }}<br><small>{{ application.applicant.email }} · {{ application.applicant.phone }}</small></td><td>{{ application.job }}</td><td>{{ application.applicant.qualification }}<br><small>{{ application.applicant.field_of_study }}</small></td><td>{% if application.applicant.cv %}<a href="{{ application.applicant.cv.url }}">CV</a>{% else %}<span class="text-muted">No CV</span>{% endif %} · {% if application.applicant.fayda_id %}<a href="{{ application.applicant.fayda_id.url }}">ID</a>{% else %}<span class="text-muted">No ID</span>{% endif %}</td><td>
+    {% if application.converted_employee %}
+        <span class="badge badge-success">{{ application.status }}</span>
+        <div style="font-size:12px;color:#475569;margin-top:4px;">Employee created: {{ application.converted_employee.employee_id }}</div>
+    {% else %}
+        {% if application.status == 'Selected' %}
+            <span class="badge badge-warning">{{ application.status }}</span>
+            <div style="font-size:12px;color:#475569;margin-top:4px;">Ready for onboarding</div>
+        {% elif application.status == 'Hired' %}
+            <span class="badge badge-primary">{{ application.status }}</span>
+            <div style="font-size:12px;color:#475569;margin-top:4px;">Employee account pending</div>
+        {% else %}
+            <span class="badge badge-secondary">{{ application.status }}</span>
+        {% endif %}
+    {% endif %}
+</td>
+<td>
+    {% if application.converted_employee %}
+        <div style="font-weight:600;color:#0f172a;">Employee created</div>
+        <div style="font-size:12px;color:#475569;">ID: {{ application.converted_employee.employee_id }}</div>
+    {% else %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="application_id" value="{{ application.id }}">
+            <select name="status">
+                {% for value,label in statuses %}
+                    <option value="{{ value }}" {% if application.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <input name="hr_notes" value="{{ application.hr_notes }}" placeholder="HR notes">
+            <button class="btn btn-primary">Save</button>
+        </form>
+    {% endif %}
+</td>
+</tr>
+{% empty %}
+<tr><td colspan="6">No applications match these filters.</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% endblock %}

@@ -3,7 +3,6 @@
 {% block topbar_title %}Department Management &amp; Oversight{% endblock %}
 
 {% block extra_styles %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 .dept-selector-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
   background:linear-gradient(135deg,#f0f7ff,#e8f4fd);
@@ -28,52 +27,178 @@
 </style>
 {% endblock %}
 {% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-const deanChartData = {
-  attendanceLabels: JSON.parse('{{ chart_att_labels_json|escapejs }}'),
-  present: JSON.parse('{{ chart_att_present_json|escapejs }}'),
-  late: JSON.parse('{{ chart_att_late_json|escapejs }}'),
-  absent: JSON.parse('{{ chart_att_absent_json|escapejs }}'),
-  status: JSON.parse('{{ chart_status_dist_json|escapejs }}'),
-  leave: JSON.parse('{{ chart_leave_bar_json|escapejs }}'),
-  lateTrend: JSON.parse('{{ chart_late_trend_json|escapejs }}'),
-  kpiNames: JSON.parse('{{ chart_kpi_names_json|escapejs }}'),
-  kpiScores: JSON.parse('{{ chart_kpi_scores_json|escapejs }}')
-};
+(function () {
+  /* ── Safe JSON helper — returns fallback if template var is empty/null ── */
+  function safeJSON(raw, fallback) {
+    try { var v = JSON.parse(raw); return (v !== null && v !== undefined) ? v : fallback; }
+    catch (e) { return fallback; }
+  }
 
-function applyFilters() {
-  const params = new URLSearchParams(window.location.search);
-  params.set('dept_id', document.getElementById('deptSelect').value);
-  params.set('days', document.getElementById('daysSelect').value);
-  document.getElementById('chartSpinner').style.display = 'block';
-  window.location.search = params.toString();
-}
+  var DATA = {
+    labels:   safeJSON('{{ chart_att_labels_json|escapejs }}',  []),
+    present:  safeJSON('{{ chart_att_present_json|escapejs }}', []),
+    late:     safeJSON('{{ chart_att_late_json|escapejs }}',    []),
+    absent:   safeJSON('{{ chart_att_absent_json|escapejs }}',  []),
+    status:   safeJSON('{{ chart_status_dist_json|escapejs }}', {present:0,absent:0,on_leave:0}),
+    leave:    safeJSON('{{ chart_leave_bar_json|escapejs }}',   {approved:0,pending:0,rejected:0}),
+    lateTrend:safeJSON('{{ chart_late_trend_json|escapejs }}',  []),
+    kpiNames: safeJSON('{{ chart_kpi_names_json|escapejs }}',   []),
+    kpiScores:safeJSON('{{ chart_kpi_scores_json|escapejs }}',  [])
+  };
 
-function processDeanLeave(reqId, action) {
-  const comments = window.prompt(`Optional note for ${action}ing this leave request:`);
-  if (comments === null) return;
-  fetch('{% url "dean_leave_action_api" %}', {
-    method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-    body: JSON.stringify({request_id: reqId, action, comments})
-  }).then(response => response.json()).then(data => {
-    if (!data.success) throw new Error(data.error || 'Unable to update the leave request.');
-    document.getElementById(`req-card-${reqId}`)?.remove();
-  }).catch(error => alert(error.message));
-}
+  function processDeanLeave(reqId, action) {
+    var comments = window.prompt('Optional note for ' + action + 'ing this leave request:');
+    if (comments === null) return;
+    fetch('{% url "dean_leave_action_api" %}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+      body: JSON.stringify({request_id: reqId, action: action, comments: comments})
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (!data.success) throw new Error(data.error || 'Unable to update the leave request.');
+      var card = document.getElementById('req-card-' + reqId);
+      if (card) {
+        card.style.opacity = '0.4';
+        setTimeout(function(){ card.remove(); }, 400);
+      }
+    })
+    .catch(function(err){ alert(err.message); });
+  }
+  window.processDeanLeave = processDeanLeave;
 
-document.addEventListener('DOMContentLoaded', () => {
-  if (!window.Chart) { console.error('Chart.js failed to load.'); return; }
-  const common = {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}};
-  new Chart(document.getElementById('deanAttTrendChart'), {type: 'line', data: {labels: deanChartData.attendanceLabels, datasets: [
-    {label: 'Present', data: deanChartData.present, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.12)', fill: true, tension: .35},
-    {label: 'Late', data: deanChartData.late, borderColor: '#f59e0b', tension: .35},
-    {label: 'Absent', data: deanChartData.absent, borderColor: '#ef4444', tension: .35}
-  ]}, options: {...common, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}});
-  new Chart(document.getElementById('deanStatusPieChart'), {type: 'doughnut', data: {labels: ['Present', 'Absent', 'On Leave'], datasets: [{data: [deanChartData.status.present, deanChartData.status.absent, deanChartData.status.on_leave], backgroundColor: ['#10b981', '#ef4444', '#0369a1'], borderWidth: 2}]}, options: common});
-  new Chart(document.getElementById('deanLeaveOverviewChart'), {type: 'bar', data: {labels: ['Approved', 'Pending', 'Rejected'], datasets: [{label: 'Requests', data: [deanChartData.leave.approved, deanChartData.leave.pending, deanChartData.leave.rejected], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderRadius: 6}]}, options: {...common, plugins: {...common.plugins, legend: {display: false}}, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}});
-  new Chart(document.getElementById('deanLateTrendChart'), {type: 'line', data: {labels: deanChartData.lateTrend.map(item => item.date), datasets: [{label: 'Late arrivals', data: deanChartData.lateTrend.map(item => item.late), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.12)', fill: true, tension: .35}]}, options: {...common, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}});
-  new Chart(document.getElementById('deanKpiChart'), {type: 'bar', data: {labels: deanChartData.kpiNames, datasets: [{label: 'KPI score', data: deanChartData.kpiScores, backgroundColor: '#0369a1', borderRadius: 6}]}, options: {...common, indexAxis: 'y', plugins: {...common.plugins, legend: {display: false}}, scales: {x: {beginAtZero: true, max: 5}}}});
-});
+  function buildCharts() {
+    if (!window.Chart) {
+      console.error('Chart.js did not load — charts unavailable.');
+      return;
+    }
+
+    var base = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 12 }, padding: 14 } } }
+    };
+
+    /* ── Chart 1: Daily Attendance Trend (multi-line) ── */
+    var c1 = document.getElementById('deanAttTrendChart');
+    if (c1) {
+      new Chart(c1, {
+        type: 'line',
+        data: {
+          labels: DATA.labels,
+          datasets: [
+            { label: 'Present', data: DATA.present, borderColor: '#10b981',
+              backgroundColor: 'rgba(16,185,129,.10)', fill: true, tension: .35,
+              pointRadius: 3, borderWidth: 2 },
+            { label: 'Late',    data: DATA.late,    borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245,158,11,.08)', fill: false, tension: .35,
+              pointRadius: 3, borderWidth: 2 },
+            { label: 'Absent',  data: DATA.absent,  borderColor: '#ef4444',
+              backgroundColor: 'rgba(239,68,68,.08)', fill: false, tension: .35,
+              pointRadius: 3, borderWidth: 2 }
+          ]
+        },
+        options: Object.assign({}, base, {
+          scales: { y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } }
+        })
+      });
+    }
+
+    /* ── Chart 2: Today's Status Doughnut ── */
+    var c2 = document.getElementById('deanStatusPieChart');
+    if (c2) {
+      var s = DATA.status;
+      new Chart(c2, {
+        type: 'doughnut',
+        data: {
+          labels: ['Present', 'Absent', 'On Leave'],
+          datasets: [{ data: [s.present || 0, s.absent || 0, s.on_leave || 0],
+            backgroundColor: ['#10b981', '#ef4444', '#0369a1'],
+            borderWidth: 2, borderColor: '#fff', hoverOffset: 5 }]
+        },
+        options: Object.assign({}, base, { cutout: '60%' })
+      });
+    }
+
+    /* ── Chart 3: Leave Requests Overview (grouped bar) ── */
+    var c3 = document.getElementById('deanLeaveOverviewChart');
+    if (c3) {
+      var l = DATA.leave;
+      new Chart(c3, {
+        type: 'bar',
+        data: {
+          labels: ['Approved', 'Pending', 'Rejected'],
+          datasets: [{ label: 'Requests',
+            data: [l.approved || 0, l.pending || 0, l.rejected || 0],
+            backgroundColor: ['rgba(16,185,129,.8)', 'rgba(245,158,11,.8)', 'rgba(239,68,68,.8)'],
+            borderRadius: 6, borderSkipped: false }]
+        },
+        options: Object.assign({}, base, {
+          plugins: Object.assign({}, base.plugins, { legend: { display: false } }),
+          scales: { y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } }
+        })
+      });
+    }
+
+    /* ── Chart 4: Late Arrivals Trend (line) ── */
+    var c4 = document.getElementById('deanLateTrendChart');
+    if (c4) {
+      new Chart(c4, {
+        type: 'line',
+        data: {
+          labels: DATA.lateTrend.map(function(d){ return d.date; }),
+          datasets: [{ label: 'Late arrivals',
+            data: DATA.lateTrend.map(function(d){ return d.late; }),
+            borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.12)',
+            fill: true, tension: .35, pointRadius: 3, borderWidth: 2 }]
+        },
+        options: Object.assign({}, base, {
+          plugins: Object.assign({}, base.plugins, { legend: { display: false } }),
+          scales: { y: { beginAtZero: true, ticks: { precision: 0, stepSize: 1 } } }
+        })
+      });
+    }
+
+    /* ── Chart 5: Per-employee KPI horizontal bar ── */
+    var c5 = document.getElementById('deanKpiChart');
+    if (c5) {
+      var colors = DATA.kpiScores.map(function(s){
+        return s >= 4.5 ? '#10b981' : s >= 3.5 ? '#0369a1' : s >= 2.5 ? '#f59e0b' : '#ef4444';
+      });
+      new Chart(c5, {
+        type: 'bar',
+        data: {
+          labels: DATA.kpiNames,
+          datasets: [{ label: 'KPI score',
+            data: DATA.kpiScores,
+            backgroundColor: colors,
+            borderRadius: 5, borderSkipped: false }]
+        },
+        options: Object.assign({}, base, {
+          indexAxis: 'y',
+          plugins: Object.assign({}, base.plugins, { legend: { display: false } }),
+          scales: {
+            x: { beginAtZero: true, max: 5, ticks: { callback: function(v){ return v.toFixed(1); } } },
+            y: { ticks: { font: { size: 12 } } }
+          }
+        })
+      });
+    }
+  }
+
+  /* Wait for DOM + Chart.js to both be ready */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      buildCharts();
+      if (window.lucide) lucide.createIcons();
+    });
+  } else {
+    buildCharts();
+    if (window.lucide) lucide.createIcons();
+  }
+})();
 </script>
 {% endblock %}
 

@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from hr.views.attendance_views import is_hr
 from hr.services import leave_service
+from hr.services.leave_service import sabbatical_eligibility
 from hr.services import employee_service
 from hr.models import Employee, LeaveRequest, LeaveType, LeaveBalance
 
@@ -88,12 +89,40 @@ def employee_leave_manager(request):
             except Exception as exc:
                 error_msg = str(exc)
 
-    leave_types  = leave_service.get_all_leave_types()
-    my_requests  = []
+    leave_types  = leave_service.get_leave_types_for_employee(employee) if employee else []
+    my_requests = []
     my_balances  = []
     if employee:
         my_requests = leave_service.get_employee_requests(employee.pk)
-        my_balances = leave_service.get_leave_balance(employee.pk)
+        # Enrich balances with sabbatical eligibility info for UI
+        balances_qs = leave_service.get_leave_balance(employee.pk)
+        enriched = []
+        seen_sabbatical = False  # track whether we have already added a sabbatical card
+        for b in balances_qs:
+            type_key = b.leave_type.name.lower().strip()
+            is_sabbatical = 'sabbatical' in type_key
+
+            # Deduplicate: if this is any sabbatical-type entry and we already
+            # have one enriched with eligibility info, skip this one.
+            if is_sabbatical and seen_sabbatical:
+                continue
+
+            info = {
+                'leave_type_name': b.leave_type.name,
+                'remaining_days': b.remaining_days,
+                'allocated_days': getattr(b, 'allocated_days', None),
+            }
+            if is_sabbatical:
+                elig = sabbatical_eligibility(employee)
+                info['sabbatical_info'] = {
+                    'eligible': elig['eligible'],
+                    'years_completed': elig['years_completed'],
+                    'years_until': elig['years_until'],
+                    'eligible_date': elig['eligible_date'].isoformat() if elig['eligible_date'] else None,
+                }
+                seen_sabbatical = True
+            enriched.append(info)
+        my_balances = enriched
 
     # Build status-coloured badge map
     status_badge = {

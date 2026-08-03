@@ -1277,148 +1277,163 @@
                     <i data-lucide="sliders" style="width:18px;height:18px;"></i> Global Settings
                 </a>
                 <a href="{% url 'roles_permissions' %}" class="nav-link {% if active_page == 'roles_permissions' %}active{% endif %}">
+                <a href="{% url 'global_settings' %}" class="nav-link {% if active_page == 'global_settings' %}active{% endif %}">
+                    <i data-lucide="sliders" style="width:18px;height:18px;"></i> Global Settings
+                </a>
+                <a href="{% url 'roles_permissions' %}" class="nav-link {% if active_page == 'roles_permissions' %}active{% endif %}">
                     <i data-lucide="shield" style="width:18px;height:18px;"></i> Roles &amp; Permissions
                 </a>
             </div>
         </div>
 
         <a href="{% url 'logout' %}" class="nav-link nav-link-logout">
-            <i data-lucide="log-out" style="width:18px;height:18px;"></i> Log Out
+            <i data-lucide="log-out" style="width:18px;height:18px;"></i> Logout
         </a>
-    </aside>
-    <header class="topbar">
-        <form class="topbar-search" method="get" action="{% url 'staff_directory' %}">
-            <i data-lucide="search" style="width:18px;height:18px;"></i>
-            <input type="search" name="q" placeholder="Search employees, departments, positions..." aria-label="Search HRMS">
-        </form>
-        <div class="topbar-actions">
-            <button class="topbar-icon-btn" type="button" aria-label="View notifications">
-                <i data-lucide="bell" style="width:18px;height:18px;"></i>
-                <span class="notification-dot" aria-hidden="true"></span>
-            </button>
-            <button class="topbar-icon-btn" type="button" aria-label="Open help">
-                <i data-lucide="circle-help" style="width:18px;height:18px;"></i>
-            </button>
-            <div class="topbar-profile" aria-label="Signed in user">
-                <div class="topbar-avatar">{{ request.user.username|slice:":1"|upper }}</div>
-                <div class="topbar-profile-meta">
-                    <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
-                    <span>{% if request.user.is_superuser %}System Admin{% else %}HR Manager{% endif %}</span>
+    </div>
+</aside>
+<!-- Sidebar navigation items end -->
+</aside>
+<header class="topbar">
+    <form class="topbar-search" method="get" action="{% url 'staff_directory' %}">
+        <i data-lucide="search" style="width:18px;height:18px;"></i>
+        <input type="search" name="q" placeholder="Search employees, departments, positions..." aria-label="Search HRMS">
+    </form>
+    <div class="topbar-actions">
+        <button class="topbar-icon-btn" type="button" aria-label="View notifications">
+            <i data-lucide="bell" style="width:18px;height:18px;"></i>
+            <span class="notification-dot" aria-hidden="true"></span>
+            {% if notifications_count and notifications_count > 0 %}
+                <span class="notification-badge">{{ notifications_count }}</span>
+            {% endif %}
+        </button>
+        <div id="notificationsDropdown" class="notifications-dropdown" style="display:none;position:absolute;right:1rem;top:4.5rem;width:320px;z-index:1000;background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:14px;box-shadow:0 20px 40px rgba(15,23,42,.12);overflow:hidden;">
+            <div style="padding:16px;border-bottom:1px solid rgba(15,23,42,.08);font-weight:700;">Notifications</div>
+            {% if notifications %}
+                <div style="max-height:320px;overflow:auto;">
+                    {% for note in notifications %}
+                        <div style="padding:12px 16px;border-bottom:1px solid rgba(15,23,42,.06);">
+                            <div style="font-size:13px;color:#0f172a;">{{ note.message }}</div>
+                            <div style="font-size:12px;color:#64748b;margin-top:6px;">{{ note.created_at|date:"M d, Y H:i" }}</div>
+                        </div>
+                    {% endfor %}
                 </div>
-            </div>
+            {% else %}
+                <div style="padding:16px;color:#475569;">No notifications found.</div>
+            {% endif %}
         </div>
-    </header>
-    <main class="main-content">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-        {% block content %}{% endblock %}
-    </main>
-
-    {% block extra_modals %}{% endblock %}
-
-    <!-- Signature Viewer Modal -->
-    <div id="signatureModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
-        <div class="modal-content" style="background:#fff;border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow:auto;box-shadow:0 20px 25px rgba(0,0,0,0.15);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <h2 id="signatureModalTitle" style="margin:0;font-size:18px;font-weight:600;color:#0f172a;">Attendance Signature</h2>
-                <button onclick="closeSignatureModal()" style="width:32px;height:32px;border:none;background:none;cursor:pointer;font-size:20px;color:#475569;display:flex;align-items:center;justify-content:center;">✕</button>
-            </div>
-            <div id="signatureModalBody" style="text-align:center;color:#475569;font-size:14px;padding:20px 0;">
-                <img id="signatureImage" alt="Signature" style="display:none;max-width:100%;max-height:400px;border:1px solid #e2e8f0;border-radius:8px;padding:12px;background:#f8fafc;">
-            </div>
-            <div style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end;">
-                <button onclick="closeSignatureModal()" class="btn btn-primary" style="padding:8px 16px;border:none;background:#025da2;color:#fff;border-radius:8px;cursor:pointer;">Close</button>
+        <div class="topbar-profile" aria-label="Signed in user">
+            <div class="topbar-avatar">{{ request.user.username|slice:":1"|upper }}</div>
+            <div class="topbar-profile-meta">
+                <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                <span>{% if request.user.is_superuser %}System Admin{% else %}HR Manager{% endif %}</span>
             </div>
         </div>
     </div>
-
-    <script>
-        if (window.lucide) {
-            lucide.createIcons();
+</header>
+<main class="main-content">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+<script>
+    document.addEventListener('click', function(event) {
+        const dropdown = document.getElementById('notificationsDropdown');
+        const button = event.target.closest('[aria-label="View notifications"]');
+        if (!button && dropdown && !dropdown.contains(event.target)) {
+            dropdown.style.display = 'none';
         }
-        
-        // Mobile Menu Drawer Toggle & Collapsible Sidebar Logic
-        document.addEventListener('DOMContentLoaded', () => {
-            // Collapsible Sidebar Nav Sections (Accordion style)
-            const navSectionTitles = document.querySelectorAll('.sidebar .nav-section-title');
-            navSectionTitles.forEach(title => {
-                title.addEventListener('click', () => {
-                    const navSection = title.closest('.nav-section');
-                    const items = navSection ? navSection.querySelector('.nav-section-items') : null;
-                    if (!items) return;
+    });
+    const noteButton = document.querySelector('[aria-label="View notifications"]');
+    if (noteButton) {
+        noteButton.addEventListener('click', function() {
+            const dropdown = document.getElementById('notificationsDropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        });
+    }
+</script>
 
-                    const isOpen = title.classList.contains('open');
+{% block extra_modals %}{% endblock %}
 
-                    // Close all section dropdowns
-                    navSectionTitles.forEach(t => {
-                        t.classList.remove('open');
-                        const otherItems = t.closest('.nav-section')?.querySelector('.nav-section-items');
-                        if (otherItems) {
-                            otherItems.classList.remove('open');
-                        }
-                    });
+<!-- Signature Viewer Modal -->
+<div id="signatureModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
+    <div class="modal-content" style="background:#fff;border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow:auto;box-shadow:0 20px 25px rgba(0,0,0,0.15);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h2 id="signatureModalTitle" style="margin:0;font-size:18px;font-weight:600;color:#0f172a;">Attendance Signature</h2>
+            <button onclick="closeSignatureModal()" style="width:32px;height:32px;border:none;background:none;cursor:pointer;font-size:20px;color:#475569;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+        <div id="signatureModalBody" style="text-align:center;color:#475569;font-size:14px;padding:20px 0;">
+            <img id="signatureImage" alt="Signature" style="display:none;max-width:100%;max-height:400px;border:1px solid #e2e8f0;border-radius:8px;padding:12px;background:#f8fafc;">
+        </div>
+        <div style="display:flex;gap:12px;margin-top:20px;justify-content:flex-end;">
+            <button onclick="closeSignatureModal()" class="btn btn-primary" style="padding:8px 16px;border:none;background:#025da2;color:#fff;border-radius:8px;cursor:pointer;">Close</button>
+        </div>
+    </div>
+</div>
 
-                    // If the clicked section was not already open, open it
-                    if (!isOpen) {
-                        title.classList.add('open');
-                        items.classList.add('open');
-                    }
+<script>
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+    // Mobile Menu Drawer Toggle & Collapsible Sidebar Logic
+    document.addEventListener('DOMContentLoaded', () => {
+        const navSectionTitles = document.querySelectorAll('.sidebar .nav-section-title');
+        navSectionTitles.forEach(title => {
+            title.addEventListener('click', () => {
+                const navSection = title.closest('.nav-section');
+                const items = navSection ? navSection.querySelector('.nav-section-items') : null;
+                if (!items) return;
+                const isOpen = title.classList.contains('open');
+                navSectionTitles.forEach(t => {
+                    t.classList.remove('open');
+                    const otherItems = t.closest('.nav-section')?.querySelector('.nav-section-items');
+                    if (otherItems) otherItems.classList.remove('open');
                 });
+                if (!isOpen) {
+                    title.classList.add('open');
+                    items.classList.add('open');
+                }
             });
-
-            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-            const sidebar = document.querySelector('.sidebar');
-            const sidebarOverlay = document.getElementById('sidebarOverlay');
-
-            if (mobileMenuBtn && sidebar && sidebarOverlay) {
-                function toggleMenu() {
-                    sidebar.classList.toggle('open');
-                    sidebarOverlay.classList.toggle('active');
-                    document.body.classList.toggle('no-scroll');
-                }
-                
-                function closeMenu() {
-                    sidebar.classList.remove('open');
-                    sidebarOverlay.classList.remove('active');
-                    document.body.classList.remove('no-scroll');
-                }
-
-                mobileMenuBtn.addEventListener('click', toggleMenu);
-                sidebarOverlay.addEventListener('click', closeMenu);
-
-                // Close menu if window is resized above mobile breakpoint
-                window.addEventListener('resize', () => {
-                    if (window.innerWidth > 900) {
-                        closeMenu();
-                    }
-                });
-            }
         });
-        
-        // Signature viewer modal functions
-        function viewSignature(imageUrl, employeeName, attendanceDate) {
-            document.getElementById('signatureImage').src = imageUrl;
-            document.getElementById('signatureImage').style.display = 'block';
-            document.getElementById('signatureModalTitle').textContent = employeeName + ' - ' + attendanceDate;
-            document.getElementById('signatureModal').style.display = 'flex';
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        if (mobileMenuBtn && sidebar && sidebarOverlay) {
+            const toggleMenu = () => {
+                sidebar.classList.toggle('open');
+                sidebarOverlay.classList.toggle('active');
+                document.body.classList.toggle('no-scroll');
+            };
+            const closeMenu = () => {
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('active');
+                document.body.classList.remove('no-scroll');
+            };
+            mobileMenuBtn.addEventListener('click', toggleMenu);
+            sidebarOverlay.addEventListener('click', closeMenu);
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 900) closeMenu();
+            });
         }
-        
-        function closeSignatureModal() {
-            document.getElementById('signatureModal').style.display = 'none';
-            document.getElementById('signatureImage').src = '';
-        }
-        
-        // Close modal when clicking outside
-        document.getElementById('signatureModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeSignatureModal();
-            }
-        });
-    </script>
-    {% block extra_scripts %}{% endblock %}
+    });
+    // Signature viewer modal functions
+    function viewSignature(imageUrl, employeeName, attendanceDate) {
+        document.getElementById('signatureImage').src = imageUrl;
+        document.getElementById('signatureImage').style.display = 'block';
+        document.getElementById('signatureModalTitle').textContent = employeeName + ' - ' + attendanceDate;
+        document.getElementById('signatureModal').style.display = 'flex';
+    }
+    function closeSignatureModal() {
+        document.getElementById('signatureModal').style.display = 'none';
+        document.getElementById('signatureImage').src = '';
+    }
+    document.getElementById('signatureModal').addEventListener('click', function(e) {
+        if (e.target === this) closeSignatureModal();
+    });
+</script>
+{% block extra_scripts %}{% endblock %}
+{% include 'hr/chatbot_widget.html' %}
 </body>
 </html>
-

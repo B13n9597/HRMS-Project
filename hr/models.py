@@ -119,6 +119,9 @@ class EmployeeStatus(BaseModel):
 # ============================================================
 
 class Employee(BaseModel):
+    GENDER_CHOICES = [('Male', 'Male'), ('Female', 'Female')]
+    MARITAL_STATUS_CHOICES = [('Single', 'Single'), ('Married', 'Married')]
+    EMPLOYMENT_PHASE_CHOICES = [('Probation', 'Probation'), ('Permanent', 'Permanent')]
     user       = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     role       = models.ForeignKey(
         'Role',
@@ -129,7 +132,10 @@ class Employee(BaseModel):
         db_index=True,
     )
     first_name = models.CharField(max_length=50, blank=True, default='')
+    middle_name = models.CharField(max_length=50, blank=True, default='')
     last_name  = models.CharField(max_length=50, blank=True, default='')
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, default='')
+    marital_status = models.CharField(max_length=10, choices=MARITAL_STATUS_CHOICES, blank=True, default='')
     department = models.ForeignKey(
         Department, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='employees',
@@ -138,7 +144,15 @@ class Employee(BaseModel):
     position   = models.ForeignKey(Position, on_delete=models.SET_NULL, null=True, blank=True)
     status     = models.ForeignKey(EmployeeStatus, on_delete=models.SET_NULL, null=True, blank=True)
     hire_date  = models.DateField(default=timezone.localdate)
+    employment_phase = models.CharField(
+        max_length=12, choices=EMPLOYMENT_PHASE_CHOICES, default='Probation'
+    )
     phone      = models.CharField(max_length=20, blank=True, default='')
+    emergency_contact = models.CharField(max_length=20, blank=True, default='')
+    fayda_id = models.FileField(upload_to='ids/', null=True, blank=True)
+    qualification = models.CharField(max_length=100, blank=True, default='')
+    field_of_study = models.CharField(max_length=100, blank=True, default='')
+    institution = models.CharField(max_length=150, blank=True, default='')
     address    = models.TextField(blank=True, default='')
 
     #  — QR attendance token 
@@ -238,13 +252,29 @@ class JobVacancy(BaseModel):
 # ============================================================
 
 class Applicant(BaseModel):
+    GENDER_CHOICES = [('Male', 'Male'), ('Female', 'Female')]
+    MARITAL_STATUS_CHOICES = [('Single', 'Single'), ('Married', 'Married')]
     first_name = models.CharField(max_length=50)
+    middle_name = models.CharField(max_length=50, blank=True, default='')
     last_name  = models.CharField(max_length=50)
-    email      = models.EmailField()
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
+    marital_status = models.CharField(max_length=10, choices=MARITAL_STATUS_CHOICES)
+    email      = models.EmailField(unique=True)
     phone      = models.CharField(max_length=20)
+    emergency_contact = models.CharField(max_length=20)
+    fayda_id = models.FileField(upload_to='ids/')
+    cv = models.FileField(upload_to='cvs/')
+    qualification = models.CharField(max_length=100)
+    field_of_study = models.CharField(max_length=100)
+    institution = models.CharField(max_length=150)
+    work_experience = models.TextField(blank=True, default='')
+
+    @property
+    def full_name(self):
+        return ' '.join(part for part in (self.first_name, self.middle_name, self.last_name) if part)
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}"
+        return self.full_name
 
 
 # ============================================================
@@ -257,11 +287,14 @@ class Applicant(BaseModel):
 class Application(BaseModel): 
     STATUS_CHOICES = [
         ('Applied',              'Applied'),
+        ('Shortlisted',          'Shortlisted'),
+        ('Interview',            'Interview'),
         ('Screening',            'Screening'),
         ('Qualified',            'Qualified — passed auto screen'),
         ('Rejected_Auto',        'Rejected — auto screening'),   # ← NEW
         ('Interviewed',          'Interviewed'),
         ('Selected',             'Selected'),
+        ('Hired',                'Hired'),
         ('Rejected',             'Rejected — manual'),
     ]
 
@@ -284,6 +317,11 @@ class Application(BaseModel):
     skills           = models.TextField(blank=True)                   # comma-separated
     screening_score  = models.IntegerField(null=True, blank=True)     # 0–100
     screening_notes  = models.TextField(blank=True)
+    hr_notes = models.TextField(blank=True, default='')
+    converted_employee = models.OneToOneField(
+        Employee, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='source_application',
+    )
 
     def run_auto_screening(self):
         """
@@ -400,6 +438,9 @@ class Attendance(BaseModel):
 
     class Meta:
         unique_together = ('employee', 'date')
+        indexes = [
+            models.Index(fields=['date', 'status'], name='attendance_date_status_idx'),
+        ]
 
 
 
@@ -438,6 +479,16 @@ class LeaveType(BaseModel):
     description = models.TextField(blank=True)
     def __str__(self):
         return self.name
+
+
+class LeavePolicy(BaseModel):
+    """Optional gender rule for a leave type; blank means available to everyone."""
+    GENDER_CHOICES = [('', 'All employees'), ('Male', 'Male'), ('Female', 'Female')]
+    leave_type = models.OneToOneField(LeaveType, on_delete=models.CASCADE, related_name='policy')
+    allowed_gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, default='')
+
+    def __str__(self):
+        return f"{self.leave_type.name}: {self.allowed_gender or 'All'}"
 
 
 class LeaveRequest(BaseModel):
@@ -493,6 +544,17 @@ class LeaveRequest(BaseModel):
     document       = models.FileField(
         upload_to='leave_documents/', null=True, blank=True
     )
+
+    def clean(self):
+        super().clean()
+        if not self.employee_id or not self.leave_type_id:
+            return
+        # Import locally to avoid a models/services import cycle during startup.
+        from hr.services.leave_service import is_leave_type_available
+        if not is_leave_type_available(self.employee, self.leave_type):
+            raise ValidationError({
+                'leave_type': f'{self.leave_type.name} leave is not available for this employee.'
+            })
 
 
 class LeaveBalance(BaseModel):
