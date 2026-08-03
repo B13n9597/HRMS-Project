@@ -11,11 +11,15 @@
                 <p>Manage employee profiles, onboard individuals, or bulk-import a full roster.</p>
             </div>
             <div class="action-row" style="display: flex; gap: 12px; align-items: center;">
-                <input type="text" id="directorySearchInput" class="form-input" placeholder="Search employee..." value="{{ search_query|default:'' }}" style="padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 14px; width: 250px;">
-                <button class="btn btn-primary" id="openCreateModalBtn">
-                    <i data-lucide="user-plus" style="width:16px;height:16px;"></i>
-                    Create Employee
-                </button>
+                <input type="text" id="directorySearchInput" class="form-input" placeholder="Search employee..." style="padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 14px; width: 250px;">
+                <div class="alert alert-info">
+                    <h5>Employee Creation</h5>
+                    <p>
+                        Employee records are created automatically after the recruitment
+                        and onboarding process. Existing ACT employees can be added using
+                        Bulk Import (CSV/Excel).
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -91,7 +95,7 @@
                         <tr class="empty-state">
                             <td colspan="5">
                                 <i data-lucide="loader-2" style="width:20px;height:20px;animation:spin 1s linear infinite;vertical-align:middle;"></i>
-                                Loading employee directory...
+                                Loading employee directory¦
                             </td>
                         </tr>
                     </tbody>
@@ -310,12 +314,10 @@
                     <td>${statusBadge(emp.status)}</td>
                     <td>${emp.hire_date || '—'}</td>
                     <td>
-                        <select class="form-input" aria-label="Actions for ${emp.full_name}" style="width:auto;min-width:125px;padding:6px 8px;font-size:12px;" onchange="handleEmployeeAction(this, ${emp.id})">
-                            <option value="">Actions…</option>
-                            <option value="promote">Promote</option>
-                            <option value="transfer">Transfer</option>
-                            <option value="terminate">Terminate</option>
-                        </select>
+                        <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px;" onclick="activateEmployee(${emp.id})">Activate</button>
+                        <button class="btn btn-danger" style="font-size:12px;padding:6px 10px;" onclick="terminateEmployee(${emp.id})">Terminate</button>
+                        <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px;" onclick="promoteEmployee(${emp.id})">Promote</button>
+                        <button class="btn btn-ghost" style="font-size:12px;padding:6px 10px;" onclick="transferEmployee(${emp.id})">Transfer</button>
                     </td>
                 </tr>
             `).join('');
@@ -326,8 +328,7 @@
             const tbody = document.getElementById('employeeTableBody');
             tbody.innerHTML = `<tr class="empty-state"><td colspan="6"><i data-lucide="loader-2" style="width:18px;height:18px;animation:spin 1s linear infinite;vertical-align:middle;"></i> Loading employees…</td></tr>`;
             lucide.createIcons();
-            const directoryQuery = new URLSearchParams(window.location.search).get('q');
-            const data = await apiCall(directoryQuery ? `/api/employees/?q=${encodeURIComponent(directoryQuery)}` : '/api/employees/');
+            const data = await apiCall('/api/employees/');
             if (!data || !data.success) {
                 tbody.innerHTML = `<tr class="empty-state"><td colspan="6" style="color:var(--danger);">Failed to load employees. Please refresh.</td></tr>`;
                 return;
@@ -336,12 +337,11 @@
             renderEmployees(_allEmployees);
         }
 
-        window.handleEmployeeAction = function(select, employeeId) {
-            const action = select.value;
-            select.value = '';
-            if (action === 'promote') return window.promoteEmployee(employeeId);
-            if (action === 'transfer') return window.transferEmployee(employeeId);
-            if (action === 'terminate') return window.terminateEmployee(employeeId);
+        window.activateEmployee = async function(employeeId) {
+            if (!confirm('Activate this employee?')) return;
+            const data = await apiCall(`/api/employees/status/${employeeId}/`, 'POST', { action: 'activate' });
+            if (data && data.success) { loadEmployees(); }
+            else { alert(data ? data.error : 'Action failed.'); }
         };
        
         window.terminateEmployee = async function(employeeId) {
