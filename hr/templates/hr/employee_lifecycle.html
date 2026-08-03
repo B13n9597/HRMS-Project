@@ -104,15 +104,19 @@
         <div class="timeline-steps">
             <div class="t-step past">
                 <div class="t-dot"></div><div class="t-line"></div>
-                <div class="t-lbl">Recruited</div>
+                <div class="t-lbl">Recruitment</div>
             </div>
             <div class="t-step {% if emp.status.name == 'Active' %}active{% elif emp.status.name != 'Active' %}past{% endif %}">
                 <div class="t-dot"></div><div class="t-line"></div>
-                <div class="t-lbl">Active</div>
+                <div class="t-lbl">Employment</div>
             </div>
-            <div class="t-step {% if emp.status.name == 'Terminated' or emp.status.name == 'Resigned' %}active{% endif %}">
+            <div class="t-step {% if emp.has_promotion %}active{% endif %}">
+                <div class="t-dot"></div><div class="t-line"></div>
+                <div class="t-lbl">Promotion</div>
+            </div>
+            <div class="t-step {% if emp.has_retirement or emp.status.name == 'Retired' %}active{% endif %}">
                 <div class="t-dot"></div>
-                <div class="t-lbl">Exit</div>
+                <div class="t-lbl">Retirement</div>
             </div>
         </div>
     </div>

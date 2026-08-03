@@ -30,8 +30,8 @@
             <p class="dashboard-subtitle">Training compliance, professional development progress, discipline case tracking, employee drill-downs, and HR activity history.</p>
         </div>
         <div class="action-row">
-            <button class="btn btn-primary" onclick="alert('Training creation workflow placeholder')"><i data-lucide="plus-circle" style="width:16px;height:16px;"></i> Create Training</button>
-            <button class="btn btn-secondary" onclick="alert('Discipline case workflow placeholder')"><i data-lucide="file-plus" style="width:16px;height:16px;"></i> Log Case</button>
+            <a class="btn btn-primary" href="{% url 'training' %}"><i data-lucide="graduation-cap" style="width:16px;height:16px;"></i> Training Records</a>
+            <a class="btn btn-secondary" href="{% url 'hr_discipline_cases' %}"><i data-lucide="file-plus" style="width:16px;height:16px;"></i> Discipline Cases</a>
         </div>
     </div>
 
@@ -44,12 +44,12 @@
 
     <div class="dashboard-grid-2">
         <div class="card">
-            <div class="card-header"><i data-lucide="book-open" style="width:20px;height:20px;color:var(--primary);"></i><h3>Training Programs</h3><select class="form-input" style="max-width:150px;padding:8px 10px;font-size:12px;"><option>All Statuses</option><option>Completed</option><option>Ongoing</option><option>Pending</option></select></div>
+            <div class="card-header"><i data-lucide="book-open" style="width:20px;height:20px;color:var(--primary);"></i><h3>Training Records</h3><a href="{% url 'training' %}" class="btn btn-ghost" style="margin-left:auto;padding:6px 10px;font-size:12px;">View all</a></div>
             <div class="card-body"><div class="training-list">
                 {% for t in trainings %}
                 <div class="training-card">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;"><div><strong style="font-size:15px;color:var(--text-main);">{{ t.title }}</strong><div style="font-size:12px;color:var(--text-light);margin-top:3px;">{{ t.instructor }} - {{ t.category }} - {{ t.enrolled }} enrolled</div></div>{% if t.status == 'Completed' %}<span class="badge badge-success">Completed</span>{% elif t.status == 'Ongoing' %}<span class="badge badge-primary">Ongoing</span>{% else %}<span class="badge badge-warning">Pending</span>{% endif %}</div>
-                    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:5px;"><span>Completion</span><span>{{ t.progress }}%</span></div><div class="progress-bar-bg"><div class="progress-bar-fill" style="width: {{ t.progress }}%; {% if t.status == 'Completed' %}background:var(--success);{% elif t.status == 'Pending' %}background:var(--warning);{% endif %}"></div></div>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px;"><div><strong style="font-size:15px;color:var(--text-main);">{{ t.title }}</strong><div style="font-size:12px;color:var(--text-light);margin-top:3px;">{{ t.employee.get_full_name }} · {{ t.department.name|default:"Unassigned department" }}</div></div><span class="badge {% if t.status == 'Completed' %}badge-success{% elif t.status == 'Approved' %}badge-primary{% else %}badge-warning{% endif %}">{{ t.status }}</span></div>
+                    <div style="font-size:12px;color:var(--text-muted);">Requested {{ t.request_date|date:"d M Y" }}{% if t.start_date %} · Starts {{ t.start_date|date:"d M Y" }}{% endif %}</div>
                 </div>
                 {% endfor %}
             </div></div>
@@ -63,7 +63,7 @@
     <div class="dashboard-grid-2">
         <div class="card">
             <div class="card-header"><i data-lucide="scale" style="width:20px;height:20px;color:var(--primary);"></i><h3>Discipline Cases</h3></div>
-            <div class="table-wrap"><table><thead><tr><th>Case ID</th><th>Employee</th><th>Offense</th><th>Severity</th><th>Status</th></tr></thead><tbody>{% for c in cases %}<tr><td style="font-family:monospace;font-weight:700;color:var(--primary);">{{ c.id }}</td><td><strong>{{ c.employee_name }}</strong><div style="font-size:11px;color:var(--text-light);">{{ c.department }}</div></td><td style="font-size:13px;">{{ c.offense }}</td><td>{% if c.severity == 'High' %}<span class="badge badge-danger">High</span>{% elif c.severity == 'Medium' %}<span class="badge badge-warning">Medium</span>{% else %}<span class="badge badge-primary">Low</span>{% endif %}</td><td>{% if c.status == 'Closed' %}<span class="badge badge-success">Closed</span>{% elif c.status == 'Investigating' %}<span class="badge badge-warning">Investigating</span>{% else %}<span class="badge badge-danger">Open</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No disciplinary cases logged.</td></tr>{% endfor %}</tbody></table></div>
+            <div class="table-wrap"><table><thead><tr><th>Case ID</th><th>Employee</th><th>Category</th><th>Incident Date</th><th>Status</th></tr></thead><tbody>{% for c in cases %}<tr><td style="font-family:monospace;font-weight:700;color:var(--primary);">DISC-{{ c.id }}</td><td><strong>{{ c.employee.get_full_name }}</strong><div style="font-size:11px;color:var(--text-light);">{{ c.department.name|default:"Unassigned department" }}</div></td><td style="font-size:13px;">{{ c.category }}</td><td>{{ c.incident_date|date:"d M Y" }}</td><td><span class="badge {% if c.status == 'Closed' %}badge-success{% elif c.status == 'Under Investigation' %}badge-warning{% else %}badge-primary{% endif %}">{{ c.status }}</span></td></tr>{% empty %}<tr><td colspan="5">No disciplinary cases logged.</td></tr>{% endfor %}</tbody></table></div>
         </div>
         <div class="card">
             <div class="card-header"><i data-lucide="history" style="width:20px;height:20px;color:var(--primary);"></i><h3>Activity Log</h3></div>
@@ -88,8 +88,12 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    new Chart(document.getElementById('trainingStatusChart'), { type: 'doughnut', data: { labels: ['Completed','Ongoing','Pending'], datasets: [{ data: [{{ completed_trainings }}, {{ ongoing_trainings }}, {{ pending_trainings }}], backgroundColor: ['#10b981','#025da2','#f59e0b'], borderColor: '#fff', borderWidth: 3 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, color: '#475569' } }, title: { display: true, text: 'Training Status', color: '#0f172a', font: { weight: '700' } } } } });
-    new Chart(document.getElementById('disciplineSeverityChart'), { type: 'bar', data: { labels: ['Low','Medium','High'], datasets: [{ label: 'Cases', data: [1, 2, 1], backgroundColor: ['#025da2','#f59e0b','#ef4444'], borderRadius: 7 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, title: { display: true, text: 'Severity Mix', color: '#0f172a', font: { weight: '700' } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#e2e8f0' } } } } });
+    const trainingLabels = JSON.parse('{{ training_status_labels_json|escapejs }}');
+    const trainingCounts = JSON.parse('{{ training_status_counts_json|escapejs }}');
+    const disciplineLabels = JSON.parse('{{ discipline_status_labels_json|escapejs }}');
+    const disciplineCounts = JSON.parse('{{ discipline_status_counts_json|escapejs }}');
+    new Chart(document.getElementById('trainingStatusChart'), { type: 'doughnut', data: { labels: trainingLabels, datasets: [{ data: trainingCounts, backgroundColor: ['#10b981','#025da2','#f59e0b','#7c3aed','#ef4444'], borderColor: '#fff', borderWidth: 3 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, color: '#475569' } } } } });
+    new Chart(document.getElementById('disciplineSeverityChart'), { type: 'bar', data: { labels: disciplineLabels, datasets: [{ label: 'Cases', data: disciplineCounts, backgroundColor: '#025da2', borderRadius: 7 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, title: { display: true, text: 'Case Status', color: '#0f172a', font: { weight: '700' } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#e2e8f0' } } } } });
 });
 function updateEmpDrill(name) {
     const box = document.getElementById('drillProfileBox');

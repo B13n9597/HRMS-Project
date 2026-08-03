@@ -52,13 +52,16 @@ ROLE_EMPLOYEE   = "employee"
 ROLE_HR         = "hr"
 ROLE_DEAN       = "dean"
 ROLE_SUPERVISOR = "supervisor"
+ROLE_CEO        = "ceo"
 
 ROLE_REDIRECTS = {
     ROLE_EMPLOYEE:   "/dashboard/employee/",
     ROLE_HR:         "/dashboard/hr/",
-    ROLE_DEAN:       "/dashboard/dean/",
+    ROLE_DEAN:       "/dean/dashboard/",
     ROLE_SUPERVISOR: "/dashboard/supervisor/",
+    ROLE_CEO:        "/ceo/dashboard/",
 }
+
  
 
 @transaction.atomic
@@ -401,23 +404,45 @@ def get_dean_report_summary():
  
  
 def get_role_key(user) -> str:
+    if not user or not user.is_authenticated:
+        return ROLE_EMPLOYEE
     if user.is_superuser:
         return ROLE_HR
 
     employee  = get_employee_for_user(user)
     role_name = employee.role.name.strip().lower() if employee and employee.role else ""
 
+    if role_name in {"president", "ceo", "chief executive officer"}:
+        return ROLE_CEO
     if role_name in {"dean", "academic dean"}:
         return ROLE_DEAN
-    if role_name in {"hr", "admin", "hr manager", "human resources"}:
+    if role_name in {"hr", "admin", "hr manager", "hr director", "human resources", "system administrator"}:
         return ROLE_HR
     if role_name in {"supervisor", "department head", "dept head", "team lead"}:
         return ROLE_SUPERVISOR
     return ROLE_EMPLOYEE
 
 
+
 def get_dashboard_redirect(user) -> str:
     return ROLE_REDIRECTS.get(get_role_key(user), "/dashboard/employee/")
+
+
+def get_base_template(user) -> str:
+    """
+    Returns the correct base template for the current user's role.
+    Used so My Profile / My Attendance / My Leave stay inside the
+    user's own portal (Dean → base_dean, CEO → base_ceo, etc.)
+    rather than redirecting into the HR shell.
+    """
+    role = get_role_key(user)
+    if role == ROLE_DEAN:
+        return "dean/base_dean.html"
+    if role == ROLE_CEO:
+        return "ceo/base_ceo.html"
+    if role == ROLE_HR or (user.is_superuser or user.is_staff):
+        return "hr/hr_base.html"
+    return "hr/employee_base.html"
 
 
 def can_manage_employees(user) -> bool:
@@ -473,38 +498,47 @@ def send_employee_credentials(
       - Their username  (so they can log in after setting a password)
       - Their Employee ID and attendance PIN
       - A password-SETUP link they click to choose their own password
- 
+
     No password is generated, stored, or sent.
+
+    This is intentionally resilient: if SMTP delivery fails (for example due to
+    an SSL certificate issue), the employee record is still created and the
+    failure is logged rather than crashing the onboarding flow.
     """
     user = employee.user
     if not user:
         return
- 
+
     # Build the one-time setup link using Django's built-in token generator
     uid   = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
- 
+
     base_url = getattr(settings, "SITE_BASE_URL", "http://localhost:8000")
     setup_link = f"{base_url}/set-password/{uid}/{token}/"
- 
-    send_mail(
-        subject = "Welcome to ACT HRMS — Set up your password",
-        message = (
-            f"Hello {employee.get_full_name()},\n\n"
-            "Your ACT HRMS account has been created.\n\n"
-            f"  Username      : {user.username}\n"
-            f"  Employee ID   : {employee.employee_id}\n"
-            f"  Attendance PIN: {attendance_pin}\n\n"
-            "To set your password and activate your account, click the link below.\n"
-            "This link expires in 24 hours and can only be used once:\n\n"
-            f"  {setup_link}\n\n"
-            "If you did not expect this email, please contact HR immediately.\n\n"
-            "— ACT HRMS Team"
-        ),
-        from_email    = getattr(settings, "DEFAULT_FROM_EMAIL", None),
-        recipient_list = [recipient_email],
-        fail_silently  = getattr(settings, "EMAIL_FAIL_SILENTLY", False),
-    )
+
+    try:
+        send_mail(
+            subject = "Welcome to ACT HRMS — Set up your password",
+            message = (
+                f"Hello {employee.get_full_name()},\n\n"
+                "Your ACT HRMS account has been created.\n\n"
+                f"  Username      : {user.username}\n"
+                f"  Employee ID   : {employee.employee_id}\n"
+                f"  Attendance PIN: {attendance_pin}\n\n"
+                "To set your password and activate your account, click the link below.\n"
+                "This link expires in 24 hours and can only be used once:\n\n"
+                f"  {setup_link}\n\n"
+                "If you did not expect this email, please contact HR immediately.\n\n"
+                "— ACT HRMS Team"
+            ),
+            from_email    = getattr(settings, "DEFAULT_FROM_EMAIL", None),
+            recipient_list = [recipient_email],
+            fail_silently  = getattr(settings, "EMAIL_FAIL_SILENTLY", False),
+        )
+    except Exception as exc:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning("Welcome email failed for employee %s (%s): %s", employee.id, recipient_email, exc)
 
 
 def _truthy(value) -> bool:

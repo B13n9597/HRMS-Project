@@ -432,7 +432,7 @@ def supervisor_hiring_request(request):
         number_needed        = request.POST.get('number_needed', 1)
         employment_type      = request.POST.get('employment_type', 'Full-Time')
         reason               = request.POST.get('reason', '').strip()
-        required_skills      = request.POST.get('required_skills', '').strip()
+        qualification        = request.POST.get('qualification', '').strip()
         preferred_start_date = request.POST.get('preferred_start_date', '')
         selected_dept_id     = request.POST.get('department_id', '')
 
@@ -455,7 +455,8 @@ def supervisor_hiring_request(request):
                     number_needed=int(number_needed),
                     employment_type=employment_type,
                     reason=reason,
-                    required_skills=required_skills,
+                    # Retain the existing database field while treating it as a qualification requirement.
+                    required_skills=qualification,
                     preferred_start_date=preferred_start_date,
                     status='Pending',
                 )

@@ -9,10 +9,35 @@ SETUP STEPS BEFORE RUNNING:
 4. Add .env to your .gitignore — never commit it
 """
 
+import smtplib
+import ssl
 from pathlib import Path
+
 from decouple import config   # pip install python-decouple
+from django.core.mail.backends.smtp import EmailBackend
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+class InsecureTLSSMTPEmailBackend(EmailBackend):
+    """SMTP backend that disables certificate verification for local/dev SMTP issues."""
+
+    def open(self):
+        if self.connection:
+            return False
+
+        self.connection = smtplib.SMTP(self.host, self.port, timeout=self.timeout)
+
+        if self.use_tls:
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+            self.connection.starttls(context=context)
+
+        if self.username and self.password:
+            self.connection.login(self.username, self.password)
+
+        return True
 
 
 # ==============================================================================
@@ -157,7 +182,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #  5. Copy the 16-character code Google gives you
 #  6. Paste it into EMAIL_HOST_PASSWORD in your .env file
 # ==============================================================================
-EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND       = 'humanresource.settings.InsecureTLSSMTPEmailBackend'
 EMAIL_HOST          = 'smtp.gmail.com'
 EMAIL_PORT          = 587
 EMAIL_USE_TLS       = True                # TLS on port 587 — required by Gmail

@@ -1,0 +1,24 @@
+{% extends base_template %}
+{% block title %}My Rotating QR Badge — ACT HRMS{% endblock %}
+{% block extra_styles %}
+<style>
+.qr-badge-card{max-width:520px;margin:0 auto;text-align:center;padding:36px;background:#fff;border:1px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)}
+.qr-frame{display:inline-flex;padding:22px;background:#fff;border:1px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:var(--shadow-md);margin:22px 0}.qr-frame img{width:200px;height:200px}.qr-timer{font-family:monospace;font-size:18px;font-weight:700;color:var(--primary);background:var(--primary-light);padding:8px 16px;border-radius:999px}.qr-progress{height:5px;background:var(--border-color);border-radius:99px;overflow:hidden;margin:18px auto 0;max-width:240px}.qr-progress span{display:block;height:100%;width:100%;background:var(--primary);transition:width 1s linear}
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header"><div class="page-header-left"><h1>My Rotating QR Badge</h1><p>Present this badge at the attendance kiosk to clock in or out.</p></div></div>
+<div class="qr-badge-card"><h2 style="font-family:var(--font-display);font-size:22px;">{{ employee.get_full_name }}</h2><p style="color:var(--text-light);margin-top:4px;">{{ employee.department.name|default:"Department not assigned" }}</p><div class="qr-frame" id="qrcode"></div><div class="qr-timer">Refreshes in: <span id="countdown">30</span>s</div><div class="qr-progress"><span id="progress"></span></div><button class="btn btn-ghost" type="button" id="refreshBadge" style="margin-top:18px;">Refresh badge</button></div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const root = document.getElementById('qrcode'); const countdown = document.getElementById('countdown'); const progress = document.getElementById('progress'); let seconds = 30;
+  const qr = new QRCode(root, {width: 200, height: 200, colorDark: '#0f172a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H});
+  function renderTimer(){countdown.textContent=seconds;progress.style.width=`${(seconds / 30) * 100}%`;}
+  async function refresh(){try {const response=await fetch('{% url "attendance_my_qr" %}'); const data=await response.json(); const token=data?.data?.token || data?.data?.qr_token; if(!data.success || !token) throw new Error(data.error || 'Unable to load badge.'); qr.clear(); qr.makeCode(token); seconds=30; renderTimer();} catch(error) {root.textContent=error.message;}}
+  document.getElementById('refreshBadge').addEventListener('click', refresh); setInterval(() => {seconds -= 1; if(seconds <= 0) refresh(); else renderTimer();}, 1000); refresh();
+});
+</script>
+{% endblock %}

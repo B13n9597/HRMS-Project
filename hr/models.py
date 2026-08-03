@@ -145,7 +145,7 @@ class Employee(BaseModel):
     qr_token   = models.UUIDField(
         default=uuid.uuid4,
         unique=True,
-        editable=False,     # generated once, never changed through forms
+        editable=False,    
     )
 
     # — Tablet login/signature fields

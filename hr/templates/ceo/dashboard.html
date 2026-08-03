@@ -1,0 +1,592 @@
+{% extends 'ceo/base_ceo.html' %}
+
+{% block title %}CEO Executive Dashboard — ACT HRMS{% endblock %}
+{% block topbar_title %}Organization-Wide Strategic Overview{% endblock %}
+
+{% block extra_styles %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+.exec-stat-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 22px; border-bottom: 1px solid var(--border-color);
+}
+.exec-stat-row:last-child { border-bottom: none; }
+.dept-perf-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 13px 22px; border-bottom: 1px solid var(--border-color);
+}
+.dept-perf-row:last-child { border-bottom: none; }
+.audit-action-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 9px; border-radius: 999px; font-size: 11px;
+    font-weight: 600; font-family: monospace;
+    background: var(--ceo-light); color: var(--ceo-accent);
+    max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kpi-ring {
+    display: flex; align-items: center; justify-content: center;
+    width: 52px; height: 52px; border-radius: 50%;
+    border: 3px solid var(--ceo-accent); font-family: var(--font-display);
+    font-weight: 800; font-size: 15px; color: var(--ceo-accent);
+    flex-shrink: 0;
+}
+.section-anchor { scroll-margin-top: 90px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+
+    <!-- ── Header Hero ──────────────────────────────────────────── -->
+    <div class="dashboard-hero">
+        <div>
+            <h1 class="dashboard-title">
+                <span class="dashboard-title-icon">
+                    <i data-lucide="crown" style="width:22px;height:22px;"></i>
+                </span>
+                President &amp; CEO Executive Dashboard
+            </h1>
+            <p class="dashboard-subtitle">
+                Institution-wide strategic oversight: organization scale, advanced attendance analytics,
+                leave distribution, department performance comparison, and full audit trail.
+            </p>
+        </div>
+        <div class="action-row">
+            <a href="{% url 'ceo_export_institution_report' %}" class="btn btn-ghost" title="Export institution workforce report CSV">
+                <i data-lucide="building-2" style="width:15px;height:15px;color:var(--ceo-accent);"></i> Dept Metrics CSV
+            </a>
+            <a href="{% url 'ceo_export_audit_logs' %}" class="btn btn-ghost" title="Export system audit logs CSV">
+                <i data-lucide="shield-check" style="width:15px;height:15px;color:#10b981;"></i> Audit Logs CSV
+            </a>
+            <button class="btn btn-primary" onclick="window.print()">
+                <i data-lucide="printer" style="width:15px;height:15px;"></i> Print Briefing
+            </button>
+        </div>
+    </div>
+
+    <!-- ── 1. Organisation Overview Cards ──────────────────────── -->
+    <div class="dashboard-kpi-grid">
+        <div class="metric-card">
+            <div>
+                <div class="metric-label">Total Employees</div>
+                <div class="metric-value">{{ employee_count }}</div>
+                <div class="metric-caption">
+                    <i data-lucide="building" style="width:13px;height:13px;color:var(--ceo-accent);"></i>
+                    Across {{ department_count }} departments
+                </div>
+            </div>
+            <span class="metric-icon" style="background:var(--ceo-light);color:var(--ceo-accent);">
+                <i data-lucide="users" style="width:22px;height:22px;"></i>
+            </span>
+        </div>
+
+        <div class="metric-card">
+            <div>
+                <div class="metric-label">Performance Index</div>
+                <div class="metric-value" style="color:var(--ceo-accent);">
+                    {{ overall_kpi }}<span style="font-size:16px;color:var(--text-light);font-weight:600;"> / 5.0</span>
+                </div>
+                <div class="metric-caption" style="color:#047857;">
+                    <i data-lucide="award" style="width:13px;height:13px;"></i> Institution KPI benchmark
+                </div>
+            </div>
+            <span class="metric-icon" style="background:var(--success-light);color:var(--success);">
+                <i data-lucide="sparkles" style="width:22px;height:22px;"></i>
+            </span>
+        </div>
+
+        <div class="metric-card">
+            <div>
+                <div class="metric-label">Attendance Rate</div>
+                <div class="metric-value" style="color:#7c3aed;">{{ attendance_rate }}%</div>
+                <div class="metric-caption">
+                    <i data-lucide="clock" style="width:13px;height:13px;"></i> Today's institutional rate
+                </div>
+            </div>
+            <span class="metric-icon" style="background:rgba(124,58,237,0.10);color:#7c3aed;">
+                <i data-lucide="activity" style="width:22px;height:22px;"></i>
+            </span>
+        </div>
+
+        <div class="metric-card">
+            <div>
+                <div class="metric-label">Leave Movement</div>
+                <div class="metric-value">{{ total_leave_requests }}</div>
+                <div class="metric-caption" style="color:#b45309;">
+                    <i data-lucide="alert-circle" style="width:13px;height:13px;"></i>
+                    {{ pending_leaves }} pending review
+                </div>
+            </div>
+            <span class="metric-icon" style="background:var(--warning-light);color:var(--warning);">
+                <i data-lucide="calendar-days" style="width:22px;height:22px;"></i>
+            </span>
+        </div>
+    </div>
+
+    <!-- ── 2. Advanced Analytics — 3-Chart Grid ─────────────────── -->
+    <div id="analytics" class="section-anchor charts-grid-3">
+
+        <!-- 2.1 Attendance Trend Line Chart -->
+        <div class="card">
+            <div class="card-header">
+                <i data-lucide="trending-up" style="width:19px;height:19px;color:var(--ceo-accent);"></i>
+                <h3>Attendance Trend (7 Days)</h3>
+                <span class="badge badge-ceo">Line</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-panel-lg">
+                    <canvas id="attTrendLineChart" aria-label="7-day attendance trend"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2.2 Leave Distribution Pie/Doughnut -->
+        <div id="leave" class="section-anchor card">
+            <div class="card-header">
+                <i data-lucide="pie-chart" style="width:19px;height:19px;color:var(--ceo-accent);"></i>
+                <h3>Leave Distribution</h3>
+                <span class="badge badge-ceo">Doughnut</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-panel-lg">
+                    <canvas id="leaveDistDoughnutChart" aria-label="Leave type distribution"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2.3 Department KPI Bar Chart -->
+        <div id="departments" class="section-anchor card">
+            <div class="card-header">
+                <i data-lucide="bar-chart-2" style="width:19px;height:19px;color:var(--ceo-accent);"></i>
+                <h3>Dept KPI Comparison</h3>
+                <span class="badge badge-ceo">Bar</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-panel-lg">
+                    <canvas id="deptKpiBarChart" aria-label="Department KPI comparison"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 3. Top vs Low Performing Departments ─────────────────── -->
+    <div class="dashboard-grid-2">
+
+        <!-- Top Departments -->
+        <div class="card">
+            <div class="card-header">
+                <i data-lucide="trophy" style="width:19px;height:19px;color:#f59e0b;"></i>
+                <h3>Top Performing Departments</h3>
+                <span class="badge badge-success">Leading</span>
+            </div>
+            {% for d in top_departments %}
+            <div class="dept-perf-row">
+                <div class="rank-badge">{{ forloop.counter }}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ d.name }}</div>
+                    <div style="font-size:12px;color:var(--text-light);margin-top:2px;">{{ d.count }} staff &bull; {{ d.attendance }}% attendance today</div>
+                </div>
+                <div class="kpi-ring">{{ d.score }}</div>
+            </div>
+            {% empty %}
+            <div style="padding:28px;text-align:center;color:var(--text-light);">No department data available.</div>
+            {% endfor %}
+        </div>
+
+        <!-- Needs Attention Departments -->
+        <div class="card">
+            <div class="card-header">
+                <i data-lucide="alert-triangle" style="width:19px;height:19px;color:#f59e0b;"></i>
+                <h3>Departments Needing Attention</h3>
+                <span class="badge badge-warning">Review</span>
+            </div>
+            {% for d in low_departments %}
+            <div class="dept-perf-row">
+                <div class="rank-badge" style="background:var(--warning-light);color:#b45309;">
+                    <i data-lucide="alert-circle" style="width:13px;height:13px;"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ d.name }}</div>
+                    <div style="font-size:12px;color:var(--text-light);margin-top:2px;">{{ d.count }} staff &bull; {{ d.attendance }}% attendance today</div>
+                </div>
+                <div class="kpi-ring" style="border-color:#f59e0b;color:#b45309;">{{ d.score }}</div>
+            </div>
+            {% empty %}
+            <div style="padding:28px;text-align:center;color:var(--text-light);">All departments performing well.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ── 4. Approval Oversight + Audit Logs ──────────────────── -->
+    <div class="dashboard-grid-2">
+
+        <!-- Approval Oversight -->
+        <div class="card">
+            <div class="card-header">
+                <i data-lucide="check-square" style="width:19px;height:19px;color:var(--ceo-accent);"></i>
+                <h3>Approval Oversight &amp; Leave Audit</h3>
+                <span class="badge badge-ceo">Institutional Visibility</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Leave Type</th>
+                            <th>Status</th>
+                            <th>Approved By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in escalated_leaves %}
+                        <tr>
+                            <td>
+                                <div class="emp-name-cell">
+                                    <div class="emp-avatar">
+                                        {{ req.employee.first_name|slice:":1" }}{{ req.employee.last_name|slice:":1" }}
+                                    </div>
+                                    <div>
+                                        <strong>{{ req.employee.get_full_name }}</strong>
+                                        <div style="font-size:11px;color:var(--text-light);">
+                                            {{ req.start_date|date:"M d" }} &rarr; {{ req.end_date|date:"M d, Y" }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge badge-ceo" style="font-size:11px;">
+                                    {{ req.employee.department.name|default:"General" }}
+                                </span>
+                            </td>
+                            <td style="font-size:13px;">{{ req.leave_type.name }}</td>
+                            <td>
+                                {% if req.status == 'Approved' %}
+                                    <span class="badge badge-success">Approved</span>
+                                {% elif req.status == 'Rejected' %}
+                                    <span class="badge badge-danger">Rejected</span>
+                                {% else %}
+                                    <span class="badge badge-warning">{{ req.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size:12px;color:var(--text-muted);">
+                                {% if req.approved_by %}
+                                    <i data-lucide="user-check" style="width:12px;height:12px;color:var(--success);margin-right:3px;"></i>
+                                    {{ req.approved_by.get_full_name }}
+                                {% else %}
+                                    <span style="color:var(--text-light);">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align:center;padding:28px;color:var(--text-light);">
+                                No leave oversight records found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- System Audit Logs -->
+        <div id="audit" class="section-anchor card">
+            <div class="card-header">
+                <i data-lucide="shield" style="width:19px;height:19px;color:var(--ceo-accent);"></i>
+                <h3>System Activity Audit Logs</h3>
+                <a href="{% url 'ceo_export_audit_logs' %}" class="badge badge-ceo" style="text-decoration:none;cursor:pointer;">
+                    Export All
+                </a>
+            </div>
+            <div class="table-wrap" style="max-height:360px;overflow-y:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Record</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in audit_logs %}
+                        <tr>
+                            <td style="font-size:12px;color:var(--text-light);white-space:nowrap;">
+                                {{ log.timestamp|date:"M d, H:i" }}
+                            </td>
+                            <td>
+                                <strong style="font-size:13px;">{{ log.user.get_full_name|default:log.user.username }}</strong>
+                            </td>
+                            <td>
+                                <span class="audit-action-pill">{{ log.action_type }}</span>
+                            </td>
+                            <td style="font-size:12px;font-family:monospace;color:var(--text-muted);">
+                                #{{ log.record_id }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" style="text-align:center;padding:28px;color:var(--text-light);">
+                                No audit logs recorded yet.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 5. Full Department Performance Table ─────────────────── -->
+    <div class="card" style="margin-top:4px;">
+        <div class="card-header">
+            <i data-lucide="grid-3x3" style="width:19px;height:19px;color:var(--ceo-accent);"></i>
+            <h3>Organization-Wide Department Performance &amp; Attendance Metrics</h3>
+            <a href="{% url 'ceo_export_institution_report' %}" class="badge badge-ceo" style="text-decoration:none;">
+                Export CSV
+            </a>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Headcount</th>
+                        <th>KPI Index</th>
+                        <th>Attendance Rate</th>
+                        <th>Pending Leaves</th>
+                        <th>Benchmark</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in dept_performance_json %}
+                    <tr>
+                        <td><strong>{{ d.name }}</strong></td>
+                        <td>
+                            <span class="badge badge-ceo">{{ d.count }}</span>
+                        </td>
+                        <td>
+                            <strong style="color:var(--ceo-accent);">{{ d.score }} / 5.0</strong>
+                        </td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div class="progress-track">
+                                    <div class="progress-fill" style="width:{{ d.attendance }}%;"></div>
+                                </div>
+                                <span style="font-size:13px;font-weight:600;">{{ d.attendance }}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if d.pending_leaves > 0 %}
+                                <span class="badge badge-warning">{{ d.pending_leaves }} Pending</span>
+                            {% else %}
+                                <span class="badge badge-success">Clear</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if d.score >= 4.5 %}
+                                <span class="badge badge-success">Excellent</span>
+                            {% elif d.score >= 3.5 %}
+                                <span class="badge badge-ceo">Good</span>
+                            {% elif d.score >= 2.5 %}
+                                <span class="badge badge-warning">Average</span>
+                            {% else %}
+                                <span class="badge badge-danger">Needs Improvement</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align:center;padding:32px;color:var(--text-light);">
+                            No department data available.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ── 6. Employee Lifecycle History ────────────────────────── -->
+    <div class="card" style="margin-top:24px;">
+        <div class="card-header">
+            <i data-lucide="git-branch" style="width:19px;height:19px;color:var(--ceo-accent);"></i>
+            <h3>Recent Employee Lifecycle Events</h3>
+            <span class="badge badge-primary">Org Intelligence</span>
+        </div>
+        <div class="table-wrap" style="max-height:320px;overflow-y:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Event</th>
+                        <th>Department</th>
+                        <th>Position</th>
+                        <th>Date</th>
+                        <th>Recorded By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ev in lifecycle_history %}
+                    <tr>
+                        <td>
+                            <div class="emp-name-cell">
+                                <div class="emp-avatar">
+                                    {{ ev.employee.first_name|slice:":1" }}{{ ev.employee.last_name|slice:":1" }}
+                                </div>
+                                <strong style="font-size:13px;">{{ ev.employee.get_full_name }}</strong>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge badge-ceo" style="font-size:11px;text-transform:capitalize;">
+                                {{ ev.event_type|capfirst }}
+                            </span>
+                        </td>
+                        <td style="font-size:13px;">{{ ev.department.name|default:"—" }}</td>
+                        <td style="font-size:13px;color:var(--text-muted);">{{ ev.position.title|default:"—" }}</td>
+                        <td style="font-size:12px;color:var(--text-light);white-space:nowrap;">
+                            {{ ev.start_date|date:"M d, Y" }}
+                        </td>
+                        <td style="font-size:12px;color:var(--text-muted);">
+                            {{ ev.recorded_by.get_full_name|default:"System" }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" style="text-align:center;padding:28px;color:var(--text-light);">
+                            No lifecycle events recorded.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div><!-- /.dashboard-page -->
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const PALETTE = [
+        '#4f46e5','#7c3aed','#0369a1','#10b981',
+        '#f59e0b','#ef4444','#06b6d4','#84cc16',
+        '#f97316','#ec4899','#14b8a6','#6366f1'
+    ];
+
+    // ── 2.1  Attendance Trend — Line Chart ────────────────────────
+    const trendLabels = JSON.parse('{{ att_trend_labels_json|escapejs }}');
+    const trendValues = JSON.parse('{{ att_trend_values_json|escapejs }}');
+    const trendCtx = document.getElementById('attTrendLineChart');
+    if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [{
+                    label: 'Attendance Rate (%)',
+                    data: trendValues,
+                    borderColor: '#4f46e5',
+                    backgroundColor: 'rgba(79,70,229,0.10)',
+                    fill: true,
+                    tension: 0.38,
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#4f46e5',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { family: 'Inter', size: 12 } } },
+                    tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y}% present` } }
+                },
+                scales: {
+                    y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }
+                }
+            }
+        });
+    }
+
+    // ── 2.2  Leave Distribution — Doughnut Chart ──────────────────
+    const leaveLabels = JSON.parse('{{ leave_dist_labels_json|escapejs }}');
+    const leaveCounts = JSON.parse('{{ leave_dist_counts_json|escapejs }}');
+    const leaveCtx = document.getElementById('leaveDistDoughnutChart');
+    if (leaveCtx) {
+        new Chart(leaveCtx, {
+            type: 'doughnut',
+            data: {
+                labels: leaveLabels,
+                datasets: [{
+                    data: leaveCounts,
+                    backgroundColor: PALETTE.slice(0, leaveLabels.length),
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                    hoverOffset: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { family: 'Inter', size: 11 }, padding: 10 }
+                    },
+                    tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} requests` } }
+                }
+            }
+        });
+    }
+
+    // ── 2.3  Department KPI — Horizontal Bar Chart ────────────────
+    const deptPerf = JSON.parse('{{ dept_perf_json|escapejs }}');
+    const deptCtx  = document.getElementById('deptKpiBarChart');
+    if (deptCtx && deptPerf.length) {
+        const deptNames  = deptPerf.map(d => d.name.length > 18 ? d.name.slice(0, 16) + '…' : d.name);
+        const deptScores = deptPerf.map(d => d.score);
+        const barColors  = deptScores.map(s =>
+            s >= 4.5 ? '#10b981' :
+            s >= 3.5 ? '#4f46e5' :
+            s >= 2.5 ? '#f59e0b' : '#ef4444'
+        );
+        new Chart(deptCtx, {
+            type: 'bar',
+            data: {
+                labels: deptNames,
+                datasets: [{
+                    label: 'KPI Score (/5.0)',
+                    data: deptScores,
+                    backgroundColor: barColors,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: ctx => ` KPI: ${ctx.parsed.x} / 5.0` } }
+                },
+                scales: {
+                    x: { min: 0, max: 5, ticks: { callback: v => v.toFixed(1) } },
+                    y: { ticks: { font: { family: 'Inter', size: 11 } } }
+                }
+            }
+        });
+    }
+
+    // ── Auto-refresh: reload charts every 5 minutes ───────────────
+    setTimeout(() => window.location.reload(), 5 * 60 * 1000);
+});
+</script>
+{% endblock %}

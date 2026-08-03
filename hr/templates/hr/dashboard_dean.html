@@ -5,130 +5,352 @@
 {% block extra_styles %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-.approval-stack { display: grid; gap: 12px; padding: 18px; max-height: 380px; overflow-y: auto; }
-.approval-card { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; background: #fff; transition: var(--transition); }
+.dashboard-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; margin-bottom: 28px; }
+.metric-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 22px; box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; transition: var(--transition); }
+.metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: rgba(2, 93, 162, 0.24); }
+.metric-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); margin-bottom: 8px; }
+.metric-value { font-family: var(--font-display); font-size: 30px; line-height: 1; font-weight: 800; color: var(--text-main); }
+.metric-caption { display: inline-flex; align-items: center; gap: 5px; color: var(--text-light); font-size: 12px; font-weight: 600; margin-top: 10px; }
+.metric-icon { width: 48px; height: 48px; border-radius: var(--radius-md); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+.filter-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #fff; padding: 16px 20px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); margin-bottom: 24px; }
+.form-select, .form-input { padding: 9px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 14px; background: #f8fafc; color: var(--text-main); outline: none; }
+.form-select:focus, .form-input:focus { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(2,93,162,0.1); }
+
+.status-badge-late { background: rgba(239, 68, 68, 0.12); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.2); font-weight: 700; }
+.status-badge-present { background: rgba(16, 185, 129, 0.12); color: #047857; border: 1px solid rgba(16, 185, 129, 0.2); font-weight: 700; }
+.status-badge-absent { background: rgba(245, 158, 11, 0.12); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.2); font-weight: 700; }
+
+.tech-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; font-family: monospace; }
+.tech-tag.qr-active { background: rgba(2, 93, 162, 0.1); color: var(--primary); }
+.tech-tag.sig-active { background: rgba(16, 185, 129, 0.1); color: #047857; }
+
+.approval-stack { display: grid; gap: 12px; padding: 18px; max-height: 420px; overflow-y: auto; }
+.approval-card { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; background: #fff; transition: var(--transition); }
 .approval-card:hover { border-color: rgba(2, 93, 162, 0.24); box-shadow: var(--shadow-sm); }
-.approval-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
-.approval-actions { display: flex; gap: 8px; margin-top: 12px; }
-.progress-track { width: 96px; height: 7px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: inherit; background: var(--success); }
-.report-list { display: grid; gap: 12px; }
-.report-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #fff; }
-.staff-cell { min-width: 210px; }
-@media print { .topbar, .sidebar, .action-row, .mobile-header { display: none !important; } .main-content { margin: 0; width: 100%; padding: 24px; } }
+.approval-actions { display: flex; gap: 8px; margin-top: 14px; }
+
+@media print { .topbar, .sidebar, .action-row, .filter-bar { display: none !important; } .main-content { margin: 0; width: 100%; padding: 24px; } }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="dashboard-page">
+    <!-- Header Hero -->
     <div class="dashboard-hero">
         <div>
             <h1 class="dashboard-title">
                 <span class="dashboard-title-icon"><i data-lucide="graduation-cap" style="width:24px;height:24px;"></i></span>
                 Dean Dashboard
             </h1>
-            <p class="dashboard-subtitle">Department-level workforce health, academic performance, leave decisions, training approvals, and staff trends.</p>
+            <p class="dashboard-subtitle">Department-level management: staff headcount, daily attendance monitoring, leave approvals, and KPI performance tracking.</p>
         </div>
         <div class="action-row">
-            <select id="deptFilterSelect" class="form-input" style="min-width:210px;" onchange="filterStaffTable(this.value)">
-                <option value="ALL">All Departments</option>
-                {% for dept in departments %}<option value="{{ dept.name }}">{{ dept.name }}</option>{% endfor %}
-            </select>
-            <button class="btn btn-ghost" onclick="window.print()"><i data-lucide="download" style="width:16px;height:16px;"></i> Export</button>
+            <a href="{% url 'dean_export_attendance' %}" class="btn btn-ghost" title="Export Department Attendance CSV">
+                <i data-lucide="file-spreadsheet" style="width:16px;height:16px;color:#10b981;"></i> Export Attendance
+            </a>
+            <a href="{% url 'dean_export_leave' %}" class="btn btn-ghost" title="Export Department Leave Summary CSV">
+                <i data-lucide="file-text" style="width:16px;height:16px;color:#025da2;"></i> Export Leave Summary
+            </a>
+            <button class="btn btn-primary" onclick="window.print()">
+                <i data-lucide="printer" style="width:16px;height:16px;"></i> Print Briefing
+            </button>
         </div>
     </div>
 
+    <!-- Department Selector Filter Bar -->
+    <form method="GET" class="filter-bar">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <i data-lucide="building" style="width:18px;height:18px;color:var(--primary);"></i>
+            <strong style="font-size:14px;color:var(--text-main);">Active Department:</strong>
+        </div>
+        <select name="dept_id" class="form-select" style="min-width:240px;" onchange="this.form.submit()">
+            {% for d in departments %}
+            <option value="{{ d.id }}" {% if active_dept and active_dept.id == d.id %}selected{% endif %}>
+                {{ d.name }}
+            </option>
+            {% endfor %}
+        </select>
+        {% if active_dept %}
+        <span class="badge badge-primary" style="padding:6px 12px;">Managed by Dean</span>
+        {% endif %}
+    </form>
+
+    <!-- 1. Department Overview Cards -->
     <div class="dashboard-kpi-grid">
         <div class="metric-card">
-            <div><div class="metric-label">Total Staff</div><div class="metric-value">{{ employee_count }}</div><div class="metric-caption" style="color:var(--success-dark);"><i data-lucide="trending-up" style="width:14px;height:14px;"></i> +4% from last term</div></div>
+            <div>
+                <div class="metric-label">Total Staff</div>
+                <div class="metric-value">{{ employee_count }}</div>
+                <div class="metric-caption"><i data-lucide="users" style="width:14px;height:14px;color:var(--primary);"></i> Department headcount</div>
+            </div>
             <span class="metric-icon" style="background:var(--primary-light);color:var(--primary);"><i data-lucide="users" style="width:24px;height:24px;"></i></span>
         </div>
         <div class="metric-card">
-            <div><div class="metric-label">Active vs On Leave</div><div class="metric-value">{{ active_count }} <span style="font-size:16px;color:var(--text-light);font-weight:600;">/ {{ on_leave_count }}</span></div><div class="metric-caption">{{ active_count }} active on campus</div></div>
+            <div>
+                <div class="metric-label">Active Employees</div>
+                <div class="metric-value" style="color:#047857;">{{ active_count }}</div>
+                <div class="metric-caption"><i data-lucide="user-check" style="width:14px;height:14px;color:#10b981;"></i> {{ on_leave_count }} currently on leave</div>
+            </div>
             <span class="metric-icon" style="background:var(--success-light);color:var(--success);"><i data-lucide="user-check" style="width:24px;height:24px;"></i></span>
         </div>
         <div class="metric-card">
-            <div><div class="metric-label">Performance Score</div><div class="metric-value">{{ dept_perf_score }} <span style="font-size:16px;color:var(--text-light);font-weight:600;">/ 5.0</span></div><div class="metric-caption" style="color:var(--success-dark);"><i data-lucide="award" style="width:14px;height:14px;"></i> Department average</div></div>
-            <span class="metric-icon" style="background:var(--warning-light);color:var(--warning);"><i data-lucide="star" style="width:24px;height:24px;"></i></span>
+            <div>
+                <div class="metric-label">Present Today</div>
+                <div class="metric-value" style="color:var(--primary);">{{ present_today }}</div>
+                <div class="metric-caption" style="color:var(--primary);"><i data-lucide="clock" style="width:14px;height:14px;"></i> Daily clock-ins</div>
+            </div>
+            <span class="metric-icon" style="background:rgba(2,93,162,0.12);color:var(--primary);"><i data-lucide="calendar-check" style="width:24px;height:24px;"></i></span>
         </div>
         <div class="metric-card">
-            <div><div class="metric-label">Pending Approvals</div><div class="metric-value">{{ pending_approvals_count }}</div><div class="metric-caption" style="color:var(--warning);"><i data-lucide="clock" style="width:14px;height:14px;"></i> Action queue</div></div>
-            <span class="metric-icon" style="background:var(--danger-light);color:var(--danger);"><i data-lucide="file-check-2" style="width:24px;height:24px;"></i></span>
+            <div>
+                <div class="metric-label">Absent Today</div>
+                <div class="metric-value" style="color:{% if absent_today > 0 %}#dc2626{% else %}var(--text-main){% endif %};">{{ absent_today }}</div>
+                <div class="metric-caption" style="color:#f59e0b;"><i data-lucide="alert-circle" style="width:14px;height:14px;"></i> Missing / Unclocked</div>
+            </div>
+            <span class="metric-icon" style="background:var(--danger-light);color:var(--danger);"><i data-lucide="user-x" style="width:24px;height:24px;"></i></span>
         </div>
     </div>
 
+    <!-- Main Grid: Attendance Logs & Leave Approvals -->
     <div class="dashboard-grid-2-1">
+        <!-- 2. Attendance Monitoring (With Late/Missing Clock-ins & QR/Signature Visibility) -->
         <div class="card">
-            <div class="card-header"><i data-lucide="bar-chart-2" style="width:20px;height:20px;color:var(--primary);"></i><h3>Department Comparison</h3></div>
-            <div class="card-body"><div class="chart-panel"><canvas id="deptComparisonChart"></canvas></div></div>
+            <div class="card-header">
+                <i data-lucide="clock-3" style="width:20px;height:20px;color:var(--primary);"></i>
+                <h3>Daily Attendance Monitoring ({{ active_dept.name|default:"Department" }})</h3>
+                <span class="badge badge-primary">Today</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Staff Member</th>
+                            <th>Time In</th>
+                            <th>Time Out</th>
+                            <th>Status</th>
+                            <th>Tracking Security</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in attendance_logs %}
+                        <tr>
+                            <td>
+                                <div class="emp-name-cell">
+                                    <div class="emp-avatar">{{ log.employee.first_name|slice:":1" }}{{ log.employee.last_name|slice:":1" }}</div>
+                                    <div>
+                                        <strong>{{ log.employee.get_full_name }}</strong>
+                                        <div style="font-size:11px;color:var(--text-light);">{{ log.employee.position.title|default:"Staff Member" }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if log.time_in %}
+                                    <strong style="font-size:13px;{% if log.is_late %}color:#dc2626;{% endif %}">
+                                        {{ log.time_in|date:"H:i A" }}
+                                    </strong>
+                                {% else %}
+                                    <span style="color:var(--text-light);font-size:12px;">--:--</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log.time_out %}
+                                    <span style="font-size:13px;">{{ log.time_out|date:"H:i A" }}</span>
+                                {% else %}
+                                    <span style="color:var(--text-light);font-size:12px;">Active Shift</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if log.status == 'Late' or log.is_late %}
+                                    <span class="badge status-badge-late"><i data-lucide="alert-triangle" style="width:12px;height:12px;margin-right:4px;"></i> Late Clock-in</span>
+                                {% elif log.status == 'Present' %}
+                                    <span class="badge status-badge-present"><i data-lucide="check" style="width:12px;height:12px;margin-right:4px;"></i> Present</span>
+                                {% else %}
+                                    <span class="badge status-badge-absent"><i data-lucide="x" style="width:12px;height:12px;margin-right:4px;"></i> Absent</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:6px;">
+                                    {% if log.has_qr %}
+                                        <span class="tech-tag qr-active"><i data-lucide="qr-code" style="width:12px;height:12px;"></i> QR Active</span>
+                                    {% endif %}
+                                    {% if log.has_sig %}
+                                        <span class="tech-tag sig-active"><i data-lucide="pen-tool" style="width:12px;height:12px;"></i> Signed</span>
+                                    {% endif %}
+                                    {% if not log.has_qr and not log.has_sig %}
+                                        <span style="font-size:11px;color:var(--text-light);">PIN Fallback</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-light);">No attendance records found for today.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+        <!-- 3. Leave Management (Approve / Reject & Pending Queue) -->
         <div class="card">
-            <div class="card-header"><i data-lucide="inbox" style="width:20px;height:20px;color:var(--primary);"></i><h3>Approvals Queue</h3><span class="badge badge-warning">{{ pending_leaves|length }} Leave</span></div>
+            <div class="card-header">
+                <i data-lucide="file-check" style="width:20px;height:20px;color:var(--primary);"></i>
+                <h3>Department Leave Approvals</h3>
+                <span class="badge badge-warning">{{ pending_leaves|length }} Pending</span>
+            </div>
             <div class="approval-stack">
                 {% for req in pending_leaves %}
-                <div class="approval-card" id="req-row-{{ req.id }}">
-                    <div class="approval-top">
+                <div class="approval-card" id="req-card-{{ req.id }}">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                         <div>
-                            <strong style="font-size:14px;">{{ req.employee.get_full_name }}</strong>
-                            <div style="font-size:12px;color:var(--text-light);margin-top:3px;">{{ req.leave_type.name }} - {{ req.requested_days }} day(s)</div>
-                            <div style="font-size:12px;color:var(--primary);font-weight:600;margin-top:3px;">{{ req.employee.department.name|default:"General Academic" }}</div>
+                            <strong style="font-size:14px;color:var(--text-main);">{{ req.employee.get_full_name }}</strong>
+                            <div style="font-size:12px;color:var(--text-light);margin-top:3px;">
+                                <strong>{{ req.leave_type.name }}</strong> &bull; {{ req.requested_days|default:"1" }} Day(s)
+                            </div>
+                            <div style="font-size:11px;color:var(--primary);margin-top:3px;">
+                                {{ req.start_date|date:"M d, Y" }} &rarr; {{ req.end_date|date:"M d, Y" }}
+                            </div>
                         </div>
-                        <span class="badge badge-warning">Leave</span>
+                        <span class="badge badge-warning">Pending</span>
                     </div>
+                    {% if req.comments %}
+                    <p style="font-size:12px;color:var(--text-muted);background:#f8fafc;padding:8px;border-radius:4px;margin-top:8px;">
+                        "{{ req.comments }}"
+                    </p>
+                    {% endif %}
                     <div class="approval-actions">
-                        <button class="btn btn-primary" style="padding:7px 12px;font-size:12px;" onclick="handleLeaveAction('{{ req.id }}', 'approve')">Approve</button>
-                        <button class="btn btn-ghost" style="padding:7px 12px;font-size:12px;color:var(--danger);" onclick="handleLeaveAction('{{ req.id }}', 'reject')">Reject</button>
+                        <button class="btn btn-primary" style="padding:6px 14px;font-size:12px;" onclick="processDeanLeave('{{ req.id }}', 'approve')">
+                            <i data-lucide="check" style="width:14px;height:14px;"></i> Approve
+                        </button>
+                        <button class="btn btn-ghost" style="padding:6px 14px;font-size:12px;color:var(--danger);" onclick="processDeanLeave('{{ req.id }}', 'reject')">
+                            <i data-lucide="x" style="width:14px;height:14px;"></i> Reject
+                        </button>
                     </div>
                 </div>
                 {% empty %}
-                <div style="padding:28px 10px;text-align:center;color:var(--text-light);font-size:14px;"><i data-lucide="check-circle-2" style="width:32px;height:32px;color:var(--success);margin-bottom:8px;"></i><p>No pending leave approvals.</p></div>
-                {% endfor %}
-                <div class="approval-card">
-                    <div class="approval-top"><div><strong style="font-size:14px;">Faculty LMS Certification</strong><div style="font-size:12px;color:var(--text-light);margin-top:3px;">36 participants - dean endorsement needed</div></div><span class="badge badge-primary">Training</span></div>
-                    <div class="approval-actions"><button class="btn btn-primary" style="padding:7px 12px;font-size:12px;">Approve</button><button class="btn btn-ghost" style="padding:7px 12px;font-size:12px;">Review</button></div>
+                <div style="padding:36px 16px;text-align:center;color:var(--text-light);">
+                    <i data-lucide="check-circle-2" style="width:36px;height:36px;color:var(--success);margin-bottom:8px;"></i>
+                    <p>All department leave requests reviewed!</p>
                 </div>
+                {% endfor %}
             </div>
         </div>
     </div>
 
-    <div class="card" style="margin-bottom:28px;">
-        <div class="section-toolbar">
-            <div style="display:flex;align-items:center;gap:10px;"><i data-lucide="users-2" style="width:20px;height:20px;color:var(--primary);"></i><h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;">Staff Overview</h3></div>
-            <input type="text" id="tableSearch" class="form-input" placeholder="Search staff..." style="max-width:260px;" onkeyup="searchStaffTable()">
+    <!-- Performance (KPI Tracking) & Charts -->
+    <div class="dashboard-grid-2" style="margin-top:24px;">
+        <!-- 4. Performance KPI Index Card -->
+        <div class="card">
+            <div class="card-header">
+                <i data-lucide="award" style="width:20px;height:20px;color:var(--primary);"></i>
+                <h3>Staff KPI Performance ({{ active_dept.name|default:"Department" }})</h3>
+                <span class="badge badge-success">Avg {{ dept_perf_score }} / 5.0</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-panel">
+                    <canvas id="deptPunctualityChart"></canvas>
+                </div>
+            </div>
         </div>
-        <div class="table-wrap">
-            <table id="staffTable">
-                <thead><tr><th>Name</th><th>Department</th><th>KPI Score</th><th>Attendance</th><th>Leave</th></tr></thead>
-                <tbody>
-                    {% for emp in employees %}
-                    <tr data-dept="{{ emp.department.name|default:'General' }}">
-                        <td class="staff-cell"><div class="emp-name-cell"><div class="emp-avatar">{{ emp.first_name|slice:":1" }}{{ emp.last_name|slice:":1" }}</div><div><strong>{{ emp.get_full_name }}</strong><div style="font-size:11px;color:var(--text-light);">{{ emp.position.title|default:"Faculty Staff" }}</div></div></div></td>
-                        <td><span class="badge badge-primary">{{ emp.department.name|default:"General" }}</span></td>
-                        <td><strong style="color:var(--primary);">{% cycle '4.6' '4.4' '4.8' '4.2' '4.5' '4.3' %} / 5.0</strong></td>
-                        <td><div style="display:flex;align-items:center;gap:8px;"><div class="progress-track"><div class="progress-fill" style="width:94%;"></div></div><strong style="font-size:12px;">94%</strong></div></td>
-                        <td>{% if emp.status.name == 'On Leave' %}<span class="badge badge-warning">On Leave</span>{% else %}<span class="badge badge-success">Available</span>{% endif %}</td>
-                    </tr>
-                    {% empty %}<tr class="empty-state"><td colspan="5">No staff members found.</td></tr>{% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
 
-    <div class="dashboard-grid-2">
-        <div class="card"><div class="card-header"><i data-lucide="trending-up" style="width:20px;height:20px;color:var(--primary);"></i><h3>KPI Trend</h3></div><div class="card-body"><div class="chart-panel"><canvas id="kpiTrendChart"></canvas></div></div></div>
-        <div class="card"><div class="card-header"><i data-lucide="file-down" style="width:20px;height:20px;color:var(--primary);"></i><h3>Reports</h3><button class="btn btn-ghost" onclick="window.print()" style="padding:8px 12px;font-size:12px;"><i data-lucide="download" style="width:14px;height:14px;"></i> Export</button></div><div class="card-body"><div class="report-list"><div class="report-item"><div><strong>Attendance and Leave Trend</strong><div style="font-size:12px;color:var(--text-light);margin-top:3px;">Monthly movement across academic departments</div></div><span class="badge badge-success">Ready</span></div><div class="chart-panel" style="height:210px;"><canvas id="attendanceTrendChart"></canvas></div></div></div></div>
+        <!-- 5. Leave Summary & Filtered History -->
+        <div class="card">
+            <div class="card-header">
+                <i data-lucide="filter" style="width:20px;height:20px;color:var(--primary);"></i>
+                <h3>Department Leave Records History</h3>
+            </div>
+            <div class="table-wrap" style="max-height:300px;overflow-y:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Type</th>
+                            <th>Dates</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in all_leave_requests %}
+                        <tr>
+                            <td><strong>{{ l.employee.get_full_name }}</strong></td>
+                            <td>{{ l.leave_type.name }}</td>
+                            <td style="font-size:12px;">{{ l.start_date|date:"M d" }} - {{ l.end_date|date:"M d" }}</td>
+                            <td>
+                                {% if l.status == 'Approved' %}
+                                    <span class="badge badge-success">Approved</span>
+                                {% elif l.status == 'Rejected' %}
+                                    <span class="badge badge-danger">Rejected</span>
+                                {% else %}
+                                    <span class="badge badge-warning">{{ l.status }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" style="text-align:center;padding:16px;color:var(--text-light);">No previous leave history.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const chartDefaults = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { boxWidth: 12, color: '#475569' } } }, scales: { x: { grid: { display: false } }, y: { border: { display: false }, grid: { color: '#e2e8f0' } } } };
-    new Chart(document.getElementById('deptComparisonChart'), { type: 'bar', data: { labels: [{% for d in dept_stats %}'{{ d.name|escapejs }}',{% empty %}'Computer Science','Business Admin','Engineering','Medicine'{% endfor %}], datasets: [{ label: 'Performance', data: [{% for d in dept_stats %}{{ d.kpi_score }} * 20,{% empty %}86,90,84,92{% endfor %}], backgroundColor: '#025da2', borderRadius: 7 }, { label: 'Attendance', data: [{% for d in dept_stats %}{{ d.attendance_rate }},{% empty %}94,92,95,91{% endfor %}], backgroundColor: '#10b981', borderRadius: 7 }, { label: 'Leave Rate', data: [{% for d in dept_stats %}{{ d.pending_leaves|default:0 }} * 4,{% empty %}8,12,6,10{% endfor %}], backgroundColor: '#f59e0b', borderRadius: 7 }] }, options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, min: 0, max: 100 } } } });
-    new Chart(document.getElementById('kpiTrendChart'), { type: 'line', data: { labels: ['Q1 2025','Q2 2025','Q3 2025','Q4 2025','Q1 2026','Q2 2026'], datasets: [{ label: 'Average KPI Score', data: [4.1,4.15,4.22,4.28,4.31,4.35], borderColor: '#025da2', backgroundColor: 'rgba(2,93,162,0.08)', fill: true, tension: 0.35, pointRadius: 4 }] }, options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, min: 3.5, max: 5 } } } });
-    new Chart(document.getElementById('attendanceTrendChart'), { type: 'line', data: { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul'], datasets: [{ label: 'Attendance', data: [94,93,95,96,92,94,95], borderColor: '#10b981', tension: 0.35 }, { label: 'Leave Rate', data: [6,7,5,4,8,6,5], borderColor: '#f59e0b', tension: 0.35 }] }, options: { ...chartDefaults, scales: { ...chartDefaults.scales, y: { ...chartDefaults.scales.y, min: 0, max: 100 } } } });
+    const trendData = JSON.parse('{{ att_trend_json|escapejs }}');
+    const labels = trendData.map(item => item.date);
+    const rates = trendData.map(item => item.rate);
+
+    new Chart(document.getElementById('deptPunctualityChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Department Attendance Punctuality (%)',
+                data: rates,
+                borderColor: '#025da2',
+                backgroundColor: 'rgba(2, 93, 162, 0.08)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 3,
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { min: 0, max: 100 } }
+        }
+    });
 });
-function filterStaffTable(deptName) { document.querySelectorAll('#staffTable tbody tr').forEach(row => { row.style.display = (deptName === 'ALL' || row.getAttribute('data-dept') === deptName) ? '' : 'none'; }); }
-function searchStaffTable() { const input = document.getElementById('tableSearch').value.toLowerCase(); document.querySelectorAll('#staffTable tbody tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(input) ? '' : 'none'; }); }
-function handleLeaveAction(requestId, action) { fetch('/api/admin/leaves/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' }, body: JSON.stringify({ request_id: requestId, action: action }) }).then(res => res.json()).then(data => { if (data.success) { const row = document.getElementById(`req-row-${requestId}`); if (row) row.remove(); } else { alert(data.error || 'Action failed'); } }).catch(() => alert('Error processing request')); }
+
+function processDeanLeave(reqId, action) {
+    const comments = prompt(`Enter optional comment for ${action}ing this leave request:`);
+    if (comments === null) return; // User cancelled
+
+    fetch('/api/dean/leave/action/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ request_id: reqId, action: action, comments: comments })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const card = document.getElementById(`req-card-${reqId}`);
+            if (card) {
+                card.style.opacity = '0.4';
+                card.innerHTML = `<div style="color:var(--success);font-weight:700;padding:12px;"><i data-lucide="check-circle"></i> Leave ${data.status}!</div>`;
+                setTimeout(() => card.remove(), 1200);
+            }
+        } else {
+            alert(data.error || 'Failed to update leave status');
+        }
+    })
+    .catch(err => alert('Network error processing leave action: ' + err));
+}
 </script>
 {% endblock %}

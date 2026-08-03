@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Dean Briefing Report — {{ dept.name|default:"Department" }} — {{ today }}</title>
+<style>
+  @page { margin: 20mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #0f172a; background: #fff; }
+  .report-header { display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 3px solid #0369a1; padding-bottom: 14px; margin-bottom: 22px; }
+  .logo-box { background: #0369a1; color: #fff; padding: 4px 10px; border-radius: 6px;
+    font-weight: 800; font-size: 14px; display: inline-block; margin-right: 8px; }
+  .report-title { font-size: 22px; font-weight: 800; color: #0369a1; }
+  .report-meta { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .report-stamp { text-align: right; font-size: 12px; color: #64748b; }
+  .report-stamp strong { display: block; font-size: 14px; color: #0f172a; }
+  .section { margin-bottom: 22px; }
+  .section-title { font-size: 14px; font-weight: 700; color: #0369a1; border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 6px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
+  .kpi-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; text-align: center; }
+  .kpi-value { font-size: 26px; font-weight: 800; color: #0369a1; }
+  .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: #64748b; margin-top: 4px; }
+  .leave-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .leave-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; }
+  .leave-value { font-size: 22px; font-weight: 800; }
+  .badge-green  { color: #047857; }
+  .badge-yellow { color: #b45309; }
+  .badge-red    { color: #dc2626; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: #f1f5f9; padding: 9px 10px; font-weight: 700; color: #475569;
+    border-bottom: 2px solid #e2e8f0; text-align: left; }
+  td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 99px;
+    font-size: 11px; font-weight: 600; }
+  .b-present { background: #d1fae5; color: #065f46; }
+  .b-late    { background: #fee2e2; color: #7f1d1d; }
+  .b-absent  { background: #fef9c3; color: #78350f; }
+  .footer { margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 12px;
+    font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; }
+  @media print {
+    .no-print { display: none; }
+    body { font-size: 12px; }
+    .kpi-value { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Print button (hidden in print) -->
+<div class="no-print" style="padding:12px 18px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;
+     display:flex;align-items:center;gap:12px;">
+  <button onclick="window.print()" style="background:#0369a1;color:#fff;border:none;
+      padding:9px 20px;border-radius:6px;font-weight:700;cursor:pointer;font-size:13px;">
+    &#128438; Save / Print as PDF
+  </button>
+  <button onclick="window.close()" style="background:#fff;color:#64748b;border:1px solid #e2e8f0;
+      padding:9px 16px;border-radius:6px;cursor:pointer;font-size:13px;">
+    Close
+  </button>
+  <span style="font-size:12px;color:#64748b;margin-left:8px;">
+    Use your browser's print dialog to Save as PDF
+  </span>
+</div>
+
+<div style="padding:28px 36px;max-width:960px;margin:0 auto;">
+
+  <!-- Header -->
+  <div class="report-header">
+    <div>
+      <div>
+        <span class="logo-box">ACT</span>
+        <span style="font-size:14px;font-weight:600;color:#64748b;">HRMS</span>
+      </div>
+      <div class="report-title" style="margin-top:8px;">
+        Dean Department Briefing Report
+      </div>
+      <div class="report-meta">
+        Department: <strong>{{ dept.name|default:"All Departments" }}</strong>
+        &nbsp;&bull;&nbsp; Period: <strong>{{ today }}</strong>
+      </div>
+    </div>
+    <div class="report-stamp">
+      <strong>Generated: {{ today }}</strong>
+      <span>By: {{ generated_by }}</span><br>
+      <span style="color:#0369a1;font-weight:700;font-size:11px;margin-top:4px;display:block;">
+        CONFIDENTIAL — INTERNAL USE ONLY
+      </span>
+    </div>
+  </div>
+
+  <!-- 1. Attendance KPI Cards -->
+  <div class="section">
+    <div class="section-title">&#x1F4CA; Attendance Summary — Today</div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-value">{{ total_staff }}</div>
+        <div class="kpi-label">Total Staff</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" style="color:#047857;">{{ present_count }}</div>
+        <div class="kpi-label">Present</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" style="color:#dc2626;">{{ absent_count }}</div>
+        <div class="kpi-label">Absent</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" style="color:#b45309;">{{ late_count }}</div>
+        <div class="kpi-label">Late Arrivals</div>
+      </div>
+    </div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="kpi-card">
+        <div class="kpi-value" style="color:#7c3aed;">{{ on_leave_count }}</div>
+        <div class="kpi-label">On Leave</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" style="color:#0369a1;">{% if total_staff %}{{ present_count|floatformat:0 }}{% endif %}</div>
+        <div class="kpi-label">Attendance Rate</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" style="color:#4f46e5;">{{ avg_kpi }}</div>
+        <div class="kpi-label">Avg KPI Score</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Leave Summary -->
+  <div class="section">
+    <div class="section-title">&#x1F4C5; Leave Summary</div>
+    <div class="leave-grid">
+      <div class="leave-card">
+        <div class="leave-value badge-green">{{ approved_leaves }}</div>
+        <div class="kpi-label">Approved</div>
+      </div>
+      <div class="leave-card">
+        <div class="leave-value badge-yellow">{{ pending_leaves }}</div>
+        <div class="kpi-label">Pending</div>
+      </div>
+      <div class="leave-card">
+        <div class="leave-value badge-red">{{ rejected_leaves }}</div>
+        <div class="kpi-label">Rejected</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Attendance Detail Table -->
+  <div class="section">
+    <div class="section-title">&#x1F4CB; Daily Attendance Detail</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Employee</th>
+          <th>Position</th>
+          <th>Time In</th>
+          <th>Time Out</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for att in att_logs %}
+        <tr>
+          <td style="color:#94a3b8;">{{ forloop.counter }}</td>
+          <td><strong>{{ att.employee.get_full_name }}</strong></td>
+          <td style="color:#64748b;">{{ att.employee.position.title|default:"Staff" }}</td>
+          <td>{% if att.time_in %}{{ att.time_in|date:"H:i" }}{% else %}—{% endif %}</td>
+          <td>{% if att.time_out %}{{ att.time_out|date:"H:i" }}{% else %}—{% endif %}</td>
+          <td>
+            {% if att.status == 'Present' %}
+              <span class="badge b-present">Present</span>
+            {% elif att.status == 'Late' %}
+              <span class="badge b-late">Late</span>
+            {% else %}
+              <span class="badge b-absent">{{ att.status }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:16px;">
+          No attendance records for today.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span>ACT HRMS — Dean Department Briefing Report</span>
+    <span>Generated: {{ today }} &nbsp;|&nbsp; {{ generated_by }}</span>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,336 @@
+{% extends 'dean/base_dean.html' %}
+{% block title %}Dean Dashboard — ACT HRMS{% endblock %}
+{% block topbar_title %}Department Management &amp; Oversight{% endblock %}
+
+{% block extra_styles %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+.dept-selector-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  background:linear-gradient(135deg,#f0f7ff,#e8f4fd);
+  border:1px solid rgba(3,105,161,0.18);border-radius:var(--radius-lg);
+  padding:14px 20px;margin-bottom:24px;}
+.charts-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin-bottom:24px;}
+.charts-grid-wide{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:24px;margin-bottom:24px;}
+.chart-panel{height:280px;position:relative;}
+.section-anchor{scroll-margin-top:100px;}
+.filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:11px 16px;background:#f8fafc;border-bottom:1px solid var(--border-color);}
+.analytics-title{font-family:var(--font-display);font-size:17px;font-weight:800;
+  color:var(--text-main);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.spin{width:16px;height:16px;border:2px solid var(--border-color);
+  border-top-color:var(--dean-accent);border-radius:50%;
+  animation:_spin 0.7s linear infinite;display:none;}
+@keyframes _spin{to{transform:rotate(360deg);}}
+@media(max-width:900px){.charts-grid-2,.charts-grid-wide{grid-template-columns:1fr;}}
+@media print{.dean-topbar,.dean-sidebar,.action-row,.dept-selector-bar,.filter-row,
+  .mobile-header,.no-print{display:none!important;}
+  .dean-main{margin:0;width:100%;padding:24px;}}
+</style>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+const deanChartData = {
+  attendanceLabels: JSON.parse('{{ chart_att_labels_json|escapejs }}'),
+  present: JSON.parse('{{ chart_att_present_json|escapejs }}'),
+  late: JSON.parse('{{ chart_att_late_json|escapejs }}'),
+  absent: JSON.parse('{{ chart_att_absent_json|escapejs }}'),
+  status: JSON.parse('{{ chart_status_dist_json|escapejs }}'),
+  leave: JSON.parse('{{ chart_leave_bar_json|escapejs }}'),
+  lateTrend: JSON.parse('{{ chart_late_trend_json|escapejs }}'),
+  kpiNames: JSON.parse('{{ chart_kpi_names_json|escapejs }}'),
+  kpiScores: JSON.parse('{{ chart_kpi_scores_json|escapejs }}')
+};
+
+function applyFilters() {
+  const params = new URLSearchParams(window.location.search);
+  params.set('dept_id', document.getElementById('deptSelect').value);
+  params.set('days', document.getElementById('daysSelect').value);
+  document.getElementById('chartSpinner').style.display = 'block';
+  window.location.search = params.toString();
+}
+
+function processDeanLeave(reqId, action) {
+  const comments = window.prompt(`Optional note for ${action}ing this leave request:`);
+  if (comments === null) return;
+  fetch('{% url "dean_leave_action_api" %}', {
+    method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+    body: JSON.stringify({request_id: reqId, action, comments})
+  }).then(response => response.json()).then(data => {
+    if (!data.success) throw new Error(data.error || 'Unable to update the leave request.');
+    document.getElementById(`req-card-${reqId}`)?.remove();
+  }).catch(error => alert(error.message));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (!window.Chart) { console.error('Chart.js failed to load.'); return; }
+  const common = {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}};
+  new Chart(document.getElementById('deanAttTrendChart'), {type: 'line', data: {labels: deanChartData.attendanceLabels, datasets: [
+    {label: 'Present', data: deanChartData.present, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,.12)', fill: true, tension: .35},
+    {label: 'Late', data: deanChartData.late, borderColor: '#f59e0b', tension: .35},
+    {label: 'Absent', data: deanChartData.absent, borderColor: '#ef4444', tension: .35}
+  ]}, options: {...common, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}});
+  new Chart(document.getElementById('deanStatusPieChart'), {type: 'doughnut', data: {labels: ['Present', 'Absent', 'On Leave'], datasets: [{data: [deanChartData.status.present, deanChartData.status.absent, deanChartData.status.on_leave], backgroundColor: ['#10b981', '#ef4444', '#0369a1'], borderWidth: 2}]}, options: common});
+  new Chart(document.getElementById('deanLeaveOverviewChart'), {type: 'bar', data: {labels: ['Approved', 'Pending', 'Rejected'], datasets: [{label: 'Requests', data: [deanChartData.leave.approved, deanChartData.leave.pending, deanChartData.leave.rejected], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderRadius: 6}]}, options: {...common, plugins: {...common.plugins, legend: {display: false}}, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}});
+  new Chart(document.getElementById('deanLateTrendChart'), {type: 'line', data: {labels: deanChartData.lateTrend.map(item => item.date), datasets: [{label: 'Late arrivals', data: deanChartData.lateTrend.map(item => item.late), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,.12)', fill: true, tension: .35}]}, options: {...common, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}}});
+  new Chart(document.getElementById('deanKpiChart'), {type: 'bar', data: {labels: deanChartData.kpiNames, datasets: [{label: 'KPI score', data: deanChartData.kpiScores, backgroundColor: '#0369a1', borderRadius: 6}]}, options: {...common, indexAxis: 'y', plugins: {...common.plugins, legend: {display: false}}, scales: {x: {beginAtZero: true, max: 5}}}});
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+
+<!-- ── Header Hero ──────────────────────────────────────────── -->
+<div class="dashboard-hero">
+  <div>
+    <h1 class="dashboard-title">
+      <span class="dashboard-title-icon">
+        <i data-lucide="graduation-cap" style="width:22px;height:22px;"></i>
+      </span>
+      Dean Dashboard
+    </h1>
+    <p class="dashboard-subtitle">
+      Department-level management: attendance monitoring, leave approvals, KPI tracking, and analytics.
+    </p>
+  </div>
+  <div class="action-row">
+    <a href="{% url 'tablet_kiosk' %}" class="btn btn-ghost" title="Open QR quick attendance">
+      <i data-lucide="qr-code" style="width:15px;height:15px;color:var(--dean-accent);"></i> QR Attendance
+    </a>
+    <a href="{% url 'dean_export_attendance' %}{% if active_dept %}?dept_id={{ active_dept.id }}{% endif %}"
+       class="btn btn-ghost" title="Download attendance CSV">
+      <i data-lucide="file-spreadsheet" style="width:15px;height:15px;color:#10b981;"></i> Attendance CSV
+    </a>
+    <a href="{% url 'dean_export_leave' %}{% if active_dept %}?dept_id={{ active_dept.id }}{% endif %}"
+       class="btn btn-ghost" title="Download leave CSV">
+      <i data-lucide="file-text" style="width:15px;height:15px;color:var(--dean-accent);"></i> Leave CSV
+    </a>
+    <a id="pdfBtn"
+       href="{% url 'dean_export_pdf' %}{% if active_dept %}?dept_id={{ active_dept.id }}{% endif %}"
+       class="btn btn-ghost" target="_blank" title="Open printable PDF briefing">
+      <i data-lucide="file-down" style="width:15px;height:15px;color:#7c3aed;"></i> PDF Briefing
+    </a>
+    <button class="btn btn-primary" onclick="window.print()">
+      <i data-lucide="printer" style="width:15px;height:15px;"></i> Print
+    </button>
+  </div>
+</div>
+
+<!-- ── Filters: Department + Period ────────────────────────── -->
+<form class="dept-selector-bar" method="get" action="{% url 'dean_dashboard' %}">
+  <i data-lucide="building-2" style="width:17px;height:17px;color:var(--dean-accent);"></i>
+  <strong style="font-size:14px;">Department:</strong>
+  <select id="deptSelect" name="dept_id" class="form-select" style="min-width:200px;" onchange="this.form.requestSubmit()">
+    {% for d in departments %}
+    <option value="{{ d.id }}" {% if active_dept and active_dept.id == d.id %}selected{% endif %}>{{ d.name }}</option>
+    {% endfor %}
+  </select>
+
+  <i data-lucide="calendar-range" style="width:16px;height:16px;color:var(--dean-accent);margin-left:8px;"></i>
+  <strong style="font-size:14px;">Period:</strong>
+  <select id="daysSelect" name="days" class="form-select" style="min-width:130px;" onchange="this.form.requestSubmit()">
+    <option value="7"  {% if period_days == 7  %}selected{% endif %}>Last 7 Days</option>
+    <option value="14" {% if period_days == 14 %}selected{% endif %}>Last 14 Days</option>
+    <option value="30" {% if period_days == 30 %}selected{% endif %}>Last 30 Days</option>
+  </select>
+
+  <button type="submit" class="btn btn-primary" style="padding:9px 16px;font-size:13px;">
+    <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Apply
+  </button>
+  <div class="spin" id="chartSpinner"></div>
+
+  {% if active_dept %}
+  <span class="badge badge-dean" style="margin-left:auto;">
+    <i data-lucide="check-circle" style="width:12px;height:12px;margin-right:4px;"></i>
+    {{ active_dept.name }}
+  </span>
+  {% endif %}
+</form>
+
+
+<!-- ── KPI Cards ────────────────────────────────────────────── -->
+<div class="dashboard-kpi-grid">
+  <div class="metric-card">
+    <div>
+      <div class="metric-label">Total Staff</div>
+      <div class="metric-value">{{ employee_count }}</div>
+      <div class="metric-caption">
+        <i data-lucide="users" style="width:13px;height:13px;color:var(--dean-accent);"></i>
+        Department headcount
+      </div>
+    </div>
+    <span class="metric-icon" style="background:var(--dean-light);color:var(--dean-accent);">
+      <i data-lucide="users" style="width:22px;height:22px;"></i>
+    </span>
+  </div>
+  <div class="metric-card">
+    <div>
+      <div class="metric-label">Active Employees</div>
+      <div class="metric-value" style="color:#047857;">{{ active_count }}</div>
+      <div class="metric-caption">
+        <i data-lucide="user-check" style="width:13px;height:13px;color:var(--success);"></i>
+        {{ on_leave_count }} on leave
+      </div>
+    </div>
+    <span class="metric-icon" style="background:var(--success-light);color:var(--success);">
+      <i data-lucide="user-check" style="width:22px;height:22px;"></i>
+    </span>
+  </div>
+  <div class="metric-card">
+    <div>
+      <div class="metric-label">Present Today</div>
+      <div class="metric-value" style="color:var(--dean-accent);">{{ present_today }}</div>
+      <div class="metric-caption" style="color:var(--dean-accent);">
+        <i data-lucide="clock" style="width:13px;height:13px;"></i>
+        Daily clock-ins
+      </div>
+    </div>
+    <span class="metric-icon" style="background:var(--dean-light);color:var(--dean-accent);">
+      <i data-lucide="calendar-check" style="width:22px;height:22px;"></i>
+    </span>
+  </div>
+  <div class="metric-card">
+    <div>
+      <div class="metric-label">Absent Today</div>
+      <div class="metric-value" style="color:{% if absent_today > 0 %}#dc2626{% else %}var(--text-main){% endif %};">
+        {{ absent_today }}
+      </div>
+      <div class="metric-caption" style="color:#f59e0b;">
+        <i data-lucide="alert-circle" style="width:13px;height:13px;"></i>
+        Missing / Unclocked
+      </div>
+    </div>
+    <span class="metric-icon" style="background:var(--danger-light);color:var(--danger);">
+      <i data-lucide="user-x" style="width:22px;height:22px;"></i>
+    </span>
+  </div>
+</div>
+
+
+<!-- ── ANALYTICS: Chart Row 1 — Att Trend (wide) + Status Pie ── -->
+<!-- Department work areas used by the sidebar navigation -->
+<div id="section-attendance" class="card section-anchor" style="margin-bottom:24px;">
+  <div class="card-header">
+    <i data-lucide="clock-3" style="width:18px;height:18px;color:var(--dean-accent);"></i>
+    <h3>Daily Attendance Monitoring</h3>
+    <span class="badge badge-dean">Today</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Staff Member</th><th>Time In</th><th>Time Out</th><th>Status</th><th>Tracking</th></tr></thead>
+      <tbody>
+        {% for log in attendance_logs %}
+        <tr>
+          <td><strong>{{ log.employee.get_full_name }}</strong><div style="font-size:11px;color:var(--text-light);">{{ log.employee.position.title|default:"Staff Member" }}</div></td>
+          <td>{% if log.time_in %}{{ log.time_in|date:"H:i" }}{% else %}<span style="color:var(--text-light);">--:--</span>{% endif %}</td>
+          <td>{% if log.time_out %}{{ log.time_out|date:"H:i" }}{% else %}<span style="color:var(--text-light);">Active shift</span>{% endif %}</td>
+          <td>{% if log.status == 'Late' or log.is_late %}<span class="badge badge-warning">Late</span>{% elif log.status == 'Present' %}<span class="badge badge-success">Present</span>{% else %}<span class="badge badge-danger">Absent</span>{% endif %}</td>
+          <td>{% if log.has_qr %}<span class="tech-tag qr-tag">QR</span>{% endif %}{% if log.has_sig %}<span class="tech-tag sig-tag">Signed</span>{% endif %}{% if not log.has_qr and not log.has_sig %}<span style="color:var(--text-light);font-size:12px;">PIN</span>{% endif %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text-light);">No staff records found for today.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="section-leave" class="card section-anchor" style="margin-bottom:24px;">
+  <div class="card-header">
+    <i data-lucide="file-check" style="width:18px;height:18px;color:var(--dean-accent);"></i>
+    <h3>Leave Approvals</h3><span class="badge badge-warning">{{ pending_leaves|length }} Pending</span>
+  </div>
+  <div class="card-body">
+    {% for req in pending_leaves %}
+    <div id="req-card-{{ req.id }}" style="display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--border-color);">
+      <div style="flex:1;"><strong>{{ req.employee.get_full_name }}</strong><div style="font-size:12px;color:var(--text-light);">{{ req.leave_type.name }} · {{ req.start_date|date:"M d, Y" }} – {{ req.end_date|date:"M d, Y" }}</div></div>
+      <button class="btn btn-primary" style="padding:7px 12px;font-size:12px;" onclick="processDeanLeave('{{ req.id }}', 'approve')">Approve</button>
+      <button class="btn btn-ghost" style="padding:7px 12px;font-size:12px;color:var(--danger);" onclick="processDeanLeave('{{ req.id }}', 'reject')">Reject</button>
+    </div>
+    {% empty %}<div style="padding:20px 0;text-align:center;color:var(--text-light);">There are no pending leave requests.</div>{% endfor %}
+  </div>
+</div>
+
+<div class="analytics-title">
+  <i data-lucide="bar-chart-3" style="width:20px;height:20px;color:var(--dean-accent);"></i>
+  Department Analytics
+  <span class="badge badge-dean" id="periodLabel">Last {{ period_days }} Days</span>
+  <div class="spin" id="chartSpinner2"></div>
+</div>
+
+<div class="charts-grid-wide">
+  <!-- Chart 1: Daily Attendance Trend (multi-line) -->
+  <div class="card">
+    <div class="card-header">
+      <i data-lucide="trending-up" style="width:18px;height:18px;color:var(--dean-accent);"></i>
+      <h3>Daily Attendance Trend</h3>
+      <span class="badge badge-dean">Present / Late / Absent</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-panel">
+        <canvas id="deanAttTrendChart" aria-label="Daily attendance trend line chart"></canvas>
+      </div>
+    </div>
+  </div>
+  <!-- Chart 2: Today Status Distribution (Pie) -->
+  <div class="card">
+    <div class="card-header">
+      <i data-lucide="pie-chart" style="width:18px;height:18px;color:var(--dean-accent);"></i>
+      <h3>Today's Status</h3>
+      <span class="badge badge-dean">Distribution</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-panel">
+        <canvas id="deanStatusPieChart" aria-label="Attendance status distribution pie chart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Chart Row 2 — Leave Overview Bar + Late Arrivals Trend ── -->
+<div class="charts-grid-2">
+  <!-- Chart 3: Leave Overview (horizontal bar) -->
+  <div class="card">
+    <div class="card-header">
+      <i data-lucide="calendar-x" style="width:18px;height:18px;color:var(--dean-accent);"></i>
+      <h3>Leave Requests Overview</h3>
+      <span class="badge badge-dean">By Status</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-panel">
+        <canvas id="deanLeaveOverviewChart" aria-label="Leave requests by status bar chart"></canvas>
+      </div>
+    </div>
+  </div>
+  <!-- Chart 4: Late Arrivals Trend (line) -->
+  <div class="card">
+    <div class="card-header">
+      <i data-lucide="alert-triangle" style="width:18px;height:18px;color:#f59e0b;"></i>
+      <h3>Late Arrivals Trend</h3>
+      <span class="badge badge-warning">Punctuality</span>
+    </div>
+    <div class="card-body">
+      <div class="chart-panel">
+        <canvas id="deanLateTrendChart" aria-label="Late arrivals trend line chart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Chart 5: Per-Employee KPI Bar (full width) ─────────────── -->
+<div id="section-kpi" class="card section-anchor" style="margin-bottom:28px;">
+  <div class="card-header">
+    <i data-lucide="award" style="width:18px;height:18px;color:var(--dean-accent);"></i>
+    <h3>Staff KPI Performance</h3>
+    <span class="badge badge-dean">Individual Scores</span>
+    <span style="margin-left:auto;font-size:12px;color:var(--text-light);">
+      Dept Avg: <strong style="color:var(--dean-accent);">{{ dept_perf_score }}</strong> / 5.0
+    </span>
+  </div>
+  <div class="card-body">
+    <div class="chart-panel" style="height:{% if employees|length > 10 %}360px{% else %}260px{% endif %};">
+      <canvas id="deanKpiChart" aria-label="Staff KPI performance horizontal bar chart"></canvas>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.dashboard-page -->
+{% endblock %}

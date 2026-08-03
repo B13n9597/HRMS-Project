@@ -1,76 +1,358 @@
 {% extends 'hr/hr_base.html' %}
 
-{% block title %}President Executive Dashboard - ACT HRMS{% endblock %}
+{% block title %}President & CEO Executive Dashboard - ACT HRMS{% endblock %}
 
 {% block extra_styles %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-.exec-alerts { display: grid; gap: 12px; }
-.exec-alert { display: flex; gap: 14px; padding: 15px; border-radius: var(--radius-md); border: 1px solid transparent; }
-.exec-alert.danger { background: var(--danger-light); border-color: rgba(239,68,68,0.18); color: var(--danger-dark); }
-.exec-alert.warning { background: var(--warning-light); border-color: rgba(245,158,11,0.2); color: #78350f; }
-.exec-alert.info { background: var(--primary-light); border-color: rgba(2,93,162,0.18); color: var(--primary-hover); }
+.dashboard-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; margin-bottom: 28px; }
+.metric-card { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 22px; box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; transition: var(--transition); }
+.metric-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: rgba(2, 93, 162, 0.24); }
+.metric-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); margin-bottom: 8px; }
+.metric-value { font-family: var(--font-display); font-size: 30px; line-height: 1; font-weight: 800; color: var(--text-main); }
+.metric-caption { display: inline-flex; align-items: center; gap: 5px; color: var(--text-light); font-size: 12px; font-weight: 600; margin-top: 10px; }
+.metric-icon { width: 48px; height: 48px; border-radius: var(--radius-md); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+.charts-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin-bottom: 28px; }
+.chart-panel-lg { height: 280px; position: relative; }
+
 .exec-list { display: grid; gap: 12px; }
 .exec-list-item { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #fff; }
 .rank-badge { width: 30px; height: 30px; border-radius: var(--radius-sm); background: var(--primary-light); color: var(--primary); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-family: var(--font-display); }
-@media print { .topbar, .sidebar, .action-row, .mobile-header { display:none !important; } .main-content { margin:0; width:100%; padding:24px; } }
+
+@media (max-width: 1200px) {
+    .charts-grid-3 { grid-template-columns: 1fr; }
+    .dashboard-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media print { .topbar, .sidebar, .action-row, .mobile-header { display: none !important; } .main-content { margin: 0; width: 100%; padding: 24px; } }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="dashboard-page">
+    <!-- Executive Header Hero -->
     <div class="dashboard-hero">
         <div>
-            <h1 class="dashboard-title"><span class="dashboard-title-icon"><i data-lucide="crown" style="width:24px;height:24px;"></i></span>President Dashboard</h1>
-            <p class="dashboard-subtitle">Executive view of workforce scale, institutional performance, attendance health, leave movement, and department-level signals.</p>
+            <h1 class="dashboard-title">
+                <span class="dashboard-title-icon"><i data-lucide="crown" style="width:24px;height:24px;"></i></span>
+                President & CEO Executive Dashboard
+            </h1>
+            <p class="dashboard-subtitle">Institution-wide strategic oversight: organization scale, advanced attendance analytics, leave distribution, department comparison, and audit trail.</p>
         </div>
         <div class="action-row">
-            <span class="badge badge-primary" style="padding:9px 14px;"><i data-lucide="radio" style="width:14px;height:14px;margin-right:5px;"></i> Live Sync</span>
-            <button class="btn btn-ghost" onclick="window.print()"><i data-lucide="printer" style="width:16px;height:16px;"></i> Print Briefing</button>
+            <a href="{% url 'ceo_export_institution_report' %}" class="btn btn-ghost" title="Export Institution Workforce Report CSV">
+                <i data-lucide="building-2" style="width:16px;height:16px;color:#025da2;"></i> Export Dept Metrics
+            </a>
+            <a href="{% url 'ceo_export_audit_logs' %}" class="btn btn-ghost" title="Export System Audit Logs CSV">
+                <i data-lucide="shield-check" style="width:16px;height:16px;color:#10b981;"></i> Export Audit Logs
+            </a>
+            <button class="btn btn-primary" onclick="window.print()">
+                <i data-lucide="printer" style="width:16px;height:16px;"></i> Print Briefing
+            </button>
         </div>
     </div>
 
+    <!-- 1. Organization Overview Cards -->
     <div class="dashboard-kpi-grid">
-        <div class="metric-card"><div><div class="metric-label">Total Employees</div><div class="metric-value">{{ employee_count }}</div><div class="metric-caption">Organization-wide headcount</div></div><span class="metric-icon" style="background:var(--primary-light);color:var(--primary);"><i data-lucide="building-2" style="width:24px;height:24px;"></i></span></div>
-        <div class="metric-card"><div><div class="metric-label">Performance Index</div><div class="metric-value">{{ overall_kpi }} <span style="font-size:16px;color:var(--text-light);font-weight:600;">/ 5.0</span></div><div class="metric-caption" style="color:var(--success-dark);"><i data-lucide="award" style="width:14px;height:14px;"></i> Strong benchmark</div></div><span class="metric-icon" style="background:var(--success-light);color:var(--success);"><i data-lucide="sparkles" style="width:24px;height:24px;"></i></span></div>
-        <div class="metric-card"><div><div class="metric-label">Attendance Rate</div><div class="metric-value">{{ attendance_rate }}%</div><div class="metric-caption">Current daily attendance</div></div><span class="metric-icon" style="background:rgba(139,92,246,0.1);color:#7c3aed;"><i data-lucide="clock-3" style="width:24px;height:24px;"></i></span></div>
-        <div class="metric-card"><div><div class="metric-label">Leave Requests</div><div class="metric-value">{{ total_leave_requests }}</div><div class="metric-caption" style="color:var(--warning);">{{ pending_leaves }} pending review</div></div><span class="metric-icon" style="background:var(--warning-light);color:var(--warning);"><i data-lucide="calendar-days" style="width:24px;height:24px;"></i></span></div>
+        <div class="metric-card">
+            <div>
+                <div class="metric-label">Total Employees</div>
+                <div class="metric-value">{{ employee_count }}</div>
+                <div class="metric-caption"><i data-lucide="building" style="width:14px;height:14px;color:var(--primary);"></i> Across {{ department_count }} departments</div>
+            </div>
+            <span class="metric-icon" style="background:var(--primary-light);color:var(--primary);"><i data-lucide="users" style="width:24px;height:24px;"></i></span>
+        </div>
+        <div class="metric-card">
+            <div>
+                <div class="metric-label">Performance Index</div>
+                <div class="metric-value" style="color:var(--primary);">{{ overall_kpi }} <span style="font-size:16px;color:var(--text-light);font-weight:600;">/ 5.0</span></div>
+                <div class="metric-caption" style="color:#047857;"><i data-lucide="award" style="width:14px;height:14px;"></i> Institution benchmark</div>
+            </div>
+            <span class="metric-icon" style="background:var(--success-light);color:var(--success);"><i data-lucide="sparkles" style="width:24px;height:24px;"></i></span>
+        </div>
+        <div class="metric-card">
+            <div>
+                <div class="metric-label">Attendance Rate</div>
+                <div class="metric-value" style="color:#7c3aed;">{{ attendance_rate }}%</div>
+                <div class="metric-caption"><i data-lucide="clock" style="width:14px;height:14px;"></i> Today's institutional rate</div>
+            </div>
+            <span class="metric-icon" style="background:rgba(124,58,237,0.1);color:#7c3aed;"><i data-lucide="activity" style="width:24px;height:24px;"></i></span>
+        </div>
+        <div class="metric-card">
+            <div>
+                <div class="metric-label">Leave Movement</div>
+                <div class="metric-value">{{ total_leave_requests }}</div>
+                <div class="metric-caption" style="color:#b45309;"><i data-lucide="alert-circle" style="width:14px;height:14px;"></i> {{ pending_leaves }} pending review</div>
+            </div>
+            <span class="metric-icon" style="background:var(--warning-light);color:var(--warning);"><i data-lucide="calendar-days" style="width:24px;height:24px;"></i></span>
+        </div>
     </div>
 
-    <div class="dashboard-grid-2-1">
-        <div class="card"><div class="card-header"><i data-lucide="line-chart" style="width:20px;height:20px;color:var(--primary);"></i><h3>Performance Trends Over Time</h3></div><div class="card-body"><div class="chart-panel"><canvas id="orgPerfTrendChart"></canvas></div></div></div>
-        <div class="card"><div class="card-header"><i data-lucide="pie-chart" style="width:20px;height:20px;color:var(--primary);"></i><h3>Department Contribution</h3></div><div class="card-body"><div class="chart-panel"><canvas id="deptPieChart"></canvas></div></div></div>
+    <!-- 2. Advanced Analytics Dashboard (3 Charts Grid) -->
+    <div class="charts-grid-3">
+        <!-- 2.1 Attendance Trend (Line Chart) -->
+        <div class="card">
+            <div class="card-header">
+                <i data-lucide="trending-up" style="width:20px;height:20px;color:var(--primary);"></i>
+                <h3>1. Attendance Trend (Line)</h3>
+            </div>
+            <div class="card-body">
+                <div class="chart-panel-lg">
+                    <canvas id="attTrendLineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2.2 Leave Distribution (Pie Chart) -->
+        <div class="card">
+            <div class="card-header">
+                <i data-lucide="pie-chart" style="width:20px;height:20px;color:var(--primary);"></i>
+                <h3>2. Leave Distribution (Pie)</h3>
+            </div>
+            <div class="card-body">
+                <div class="chart-panel-lg">
+                    <canvas id="leaveDistPieChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2.3 Department Performance Comparison (Bar Chart) -->
+        <div class="card">
+            <div class="card-header">
+                <i data-lucide="bar-chart-2" style="width:20px;height:20px;color:var(--primary);"></i>
+                <h3>3. Dept Performance (Bar)</h3>
+            </div>
+            <div class="card-body">
+                <div class="chart-panel-lg">
+                    <canvas id="deptPerfBarChart"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <!-- 3. Approval Oversight & 5. Audit Logs Grid -->
     <div class="dashboard-grid-2">
+        <!-- 3. Approval Oversight (Escalated & HR Decision Audit Visibility) -->
         <div class="card">
-            <div class="card-header"><i data-lucide="shield-alert" style="width:20px;height:20px;color:var(--primary);"></i><h3>Alerts & Insights</h3></div>
-            <div class="card-body"><div class="exec-alerts">
-                <div class="exec-alert danger"><i data-lucide="alert-triangle" style="width:20px;height:20px;flex-shrink:0;"></i><div><strong style="display:block;font-size:14px;margin-bottom:3px;">Capacity Watch</strong><span style="font-size:13px;">School of Medicine shows a temporary 12% staffing gap from approved sabbaticals.</span></div></div>
-                <div class="exec-alert warning"><i data-lucide="timer" style="width:20px;height:20px;flex-shrink:0;"></i><div><strong style="display:block;font-size:14px;margin-bottom:3px;">KPI Review Deadline</strong><span style="font-size:13px;">88% of reviews are complete. Remaining submissions need supervisor sign-off.</span></div></div>
-                <div class="exec-alert info"><i data-lucide="check-circle-2" style="width:20px;height:20px;flex-shrink:0;"></i><div><strong style="display:block;font-size:14px;margin-bottom:3px;">Retention Signal</strong><span style="font-size:13px;">Employee retention remains stable at 96.4% year-to-date.</span></div></div>
-            </div></div>
+            <div class="card-header">
+                <i data-lucide="check-square" style="width:20px;height:20px;color:var(--primary);"></i>
+                <h3>Approval Oversight & Leave Audit</h3>
+                <span class="badge badge-primary">Institutional Visibility</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Leave Type</th>
+                            <th>Status</th>
+                            <th>Approved By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in escalated_leaves %}
+                        <tr>
+                            <td>
+                                <div class="emp-name-cell">
+                                    <div class="emp-avatar">{{ req.employee.first_name|slice:":1" }}{{ req.employee.last_name|slice:":1" }}</div>
+                                    <strong>{{ req.employee.get_full_name }}</strong>
+                                </div>
+                            </td>
+                            <td><span class="badge badge-primary">{{ req.employee.department.name|default:"General" }}</span></td>
+                            <td style="font-size:13px;">{{ req.leave_type.name }}</td>
+                            <td>
+                                {% if req.status == 'Approved' %}
+                                    <span class="badge badge-success">Approved</span>
+                                {% elif req.status == 'Rejected' %}
+                                    <span class="badge badge-danger">Rejected</span>
+                                {% else %}
+                                    <span class="badge badge-warning">{{ req.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size:12px;color:var(--text-muted);">
+                                {% if req.approved_by %}
+                                    <i data-lucide="user-check" style="width:12px;height:12px;color:var(--success);"></i> {{ req.approved_by.get_full_name }}
+                                {% else %}
+                                    <span style="color:var(--text-light);">Pending Review</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-light);">No leave oversight records.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
+
+        <!-- 5. System Audit Logs -->
         <div class="card">
-            <div class="card-header"><i data-lucide="trophy" style="width:20px;height:20px;color:var(--primary);"></i><h3>Department Summary</h3><span class="badge badge-primary">Read-only</span></div>
-            <div class="card-body"><div class="dashboard-grid-2" style="gap:16px;margin:0;">
-                <div><h4 style="font-family:var(--font-display);font-size:15px;margin-bottom:12px;">Top Performing</h4><div class="exec-list">{% for d in top_departments %}<div class="exec-list-item"><div style="display:flex;align-items:center;gap:10px;"><span class="rank-badge">{{ forloop.counter }}</span><div><strong style="font-size:13px;">{{ d.name }}</strong><div style="font-size:12px;color:var(--text-light);">{{ d.count }} staff</div></div></div><span class="badge badge-success">{{ d.score }}</span></div>{% empty %}<div style="font-size:13px;color:var(--text-light);">No metrics available.</div>{% endfor %}</div></div>
-                <div><h4 style="font-family:var(--font-display);font-size:15px;margin-bottom:12px;">Needs Attention</h4><div class="exec-list">{% for d in low_departments %}<div class="exec-list-item"><div><strong style="font-size:13px;">{{ d.name }}</strong><div style="font-size:12px;color:var(--text-light);">{{ d.count }} staff</div></div><span class="badge badge-warning">{{ d.score }}</span></div>{% empty %}<div style="font-size:13px;color:var(--text-light);">No underperforming departments.</div>{% endfor %}</div></div>
-            </div></div>
+            <div class="card-header">
+                <i data-lucide="shield" style="width:20px;height:20px;color:var(--primary);"></i>
+                <h3>System Activity Audit Logs</h3>
+                <a href="{% url 'ceo_export_audit_logs' %}" class="badge badge-primary" style="text-decoration:none;">Export All</a>
+            </div>
+            <div class="table-wrap" style="max-height:360px;overflow-y:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Record ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in audit_logs %}
+                        <tr>
+                            <td style="font-size:12px;color:var(--text-light);">{{ log.timestamp|date:"M d, H:i" }}</td>
+                            <td><strong>{{ log.user.get_full_name|default:log.user.username }}</strong></td>
+                            <td><span class="badge badge-primary" style="font-size:11px;">{{ log.action_type }}</span></td>
+                            <td style="font-size:12px;font-family:monospace;">#{{ log.record_id }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-light);">No audit logs logged yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header"><i data-lucide="table-2" style="width:20px;height:20px;color:var(--primary);"></i><h3>Organization-Wide Department Metrics</h3></div>
-        <div class="table-wrap"><table><thead><tr><th>Department</th><th>Employees</th><th>KPI Score</th><th>Attendance</th><th>Status</th></tr></thead><tbody>{% for d in dept_performance_json %}<tr><td><strong>{{ d.name }}</strong></td><td>{{ d.count }}</td><td><strong style="color:var(--primary);">{{ d.score }} / 5.0</strong></td><td>{{ d.attendance }}%</td><td>{% if d.score >= 4.2 %}<span class="badge badge-success">Top Performing</span>{% elif d.score >= 3.8 %}<span class="badge badge-primary">On Target</span>{% else %}<span class="badge badge-warning">Under Review</span>{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No department metrics available.</td></tr>{% endfor %}</tbody></table></div>
+    <!-- Department Benchmark Comparison Table -->
+    <div class="card" style="margin-top:28px;">
+        <div class="card-header">
+            <i data-lucide="grid" style="width:20px;height:20px;color:var(--primary);"></i>
+            <h3>Organization-Wide Department Performance & Attendance Metrics</h3>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Headcount</th>
+                        <th>KPI Index (/5.0)</th>
+                        <th>Attendance Rate</th>
+                        <th>Performance Benchmark</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in dept_performance_json %}
+                    <tr>
+                        <td><strong>{{ d.name }}</strong></td>
+                        <td>{{ d.count }} Employees</td>
+                        <td><strong style="color:var(--primary);">{{ d.score }} / 5.0</strong></td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div style="width:80px;height:6px;background:#e2e8f0;border-radius:99px;overflow:hidden;">
+                                    <div style="height:100%;width:{{ d.attendance }}%;background:var(--success);border-radius:inherit;"></div>
+                                </div>
+                                <strong>{{ d.attendance }}%</strong>
+                            </div>
+                        </td>
+                        <td>
+                            {% if d.score >= 4.2 %}
+                                <span class="badge badge-success"><i data-lucide="trending-up" style="width:12px;height:12px;margin-right:4px;"></i> Top Performing</span>
+                            {% elif d.score >= 3.8 %}
+                                <span class="badge badge-primary"><i data-lucide="check" style="width:12px;height:12px;margin-right:4px;"></i> On Target</span>
+                            {% else %}
+                                <span class="badge badge-warning"><i data-lucide="alert-circle" style="width:12px;height:12px;margin-right:4px;"></i> Needs Attention</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-light);">No department performance metrics available.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const common = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { boxWidth: 12, color: '#475569' } } }, scales: { x: { grid: { display: false } }, y: { border: { display: false }, grid: { color: '#e2e8f0' } } } };
-    new Chart(document.getElementById('orgPerfTrendChart'), { type: 'line', data: { labels: ['2023 H1','2023 H2','2024 H1','2024 H2','2025 H1','2025 H2','2026 H1'], datasets: [{ label: 'Institutional Performance Index', data: [3.95,4.05,4.12,4.20,4.25,4.30,4.35], borderColor: '#025da2', backgroundColor: 'rgba(2,93,162,0.08)', fill: true, tension: 0.35, borderWidth: 3, pointRadius: 4 }] }, options: { ...common, scales: { ...common.scales, y: { ...common.scales.y, min: 3.5, max: 5 } } } });
-    new Chart(document.getElementById('deptPieChart'), { type: 'doughnut', data: { labels: [{% for d in dept_performance_json %}'{{ d.name|escapejs }}',{% empty %}'Computer Science','Business','Engineering'{% endfor %}], datasets: [{ data: [{% for d in dept_performance_json %}{{ d.count }},{% empty %}15,12,10{% endfor %}], backgroundColor: ['#025da2','#10b981','#f59e0b','#7c3aed','#ef4444','#06b6d4'], borderColor: '#fff', borderWidth: 3 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '62%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, color: '#475569' } } } } });
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'top', labels: { boxWidth: 12, color: '#475569', font: { family: 'Inter' } } }
+        }
+    };
+
+    // 1. Attendance Trend Line Chart
+    const attLabels = JSON.parse('{{ att_trend_labels_json|escapejs }}');
+    const attValues = JSON.parse('{{ att_trend_values_json|escapejs }}');
+    
+    new Chart(document.getElementById('attTrendLineChart'), {
+        type: 'line',
+        data: {
+            labels: attLabels,
+            datasets: [{
+                label: 'Attendance Rate (%)',
+                data: attValues,
+                borderColor: '#025da2',
+                backgroundColor: 'rgba(2, 93, 162, 0.08)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 3,
+                pointRadius: 4
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: { y: { min: 0, max: 100 } }
+        }
+    });
+
+    // 2. Leave Distribution Pie Chart
+    const leaveLabels = JSON.parse('{{ leave_dist_labels_json|escapejs }}');
+    const leaveCounts = JSON.parse('{{ leave_dist_counts_json|escapejs }}');
+    
+    new Chart(document.getElementById('leaveDistPieChart'), {
+        type: 'pie',
+        data: {
+            labels: leaveLabels.length ? leaveLabels : ['Annual', 'Sick', 'Maternity', 'Study'],
+            datasets: [{
+                data: leaveCounts.length ? leaveCounts : [14, 6, 3, 5],
+                backgroundColor: ['#025da2', '#10b981', '#f59e0b', '#7c3aed', '#ef4444', '#06b6d4'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: commonOptions
+    });
+
+    // 3. Department Performance Comparison Bar Chart
+    const deptPerfData = JSON.parse('{{ dept_perf_json|escapejs }}');
+    const deptNames = deptPerfData.map(d => d.name);
+    const deptScores = deptPerfData.map(d => d.score);
+    const deptAtts = deptPerfData.map(d => d.attendance);
+
+    new Chart(document.getElementById('deptPerfBarChart'), {
+        type: 'bar',
+        data: {
+            labels: deptNames.length ? deptNames : ['Computer Science', 'Business', 'Engineering'],
+            datasets: [
+                {
+                    label: 'KPI Score (/5.0 x20)',
+                    data: deptScores.map(s => s * 20),
+                    backgroundColor: '#025da2',
+                    borderRadius: 6
+                },
+                {
+                    label: 'Attendance Rate (%)',
+                    data: deptAtts,
+                    backgroundColor: '#10b981',
+                    borderRadius: 6
+                }
+            ]
+        },
+        options: {
+            ...commonOptions,
+            scales: { y: { min: 0, max: 100 } }
+        }
+    });
 });
 </script>
 {% endblock %}

@@ -11,9 +11,9 @@ from hr.views.attendance_views import is_hr
 from hr.models import (
     Employee, Payroll, PayrollRecord, PerformanceEvaluation,
     Application, SystemSetting, BiannualKPIScore, EmployeeCertificate,
-    TrainingRequest, DisciplinaryIncident, Grievance, Department,
+    TrainingRequest, DisciplinaryIncident, Grievance, Department, EmployeeHistory,
 )
-from hr.services import leave_service
+from hr.services import leave_service, employee_service
 from hr.services.setting_service import get_settings_grouped_list, save_settings, seed_defaults
 from hr.forms import TrainingRequestForm, GrievanceForm, DisciplinaryIncidentForm, TrainingCompletionForm
 
@@ -228,7 +228,7 @@ def my_kpi(request):
         'periods':               [('H1', 'Jan–Jun'), ('H2', 'Jul–Dec')],
         'years':                 [2024, 2025, 2026],
         'active_page':           'my_kpi',
-        'base_template':         'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
+        'base_template':         employee_service.get_base_template(request.user),
     }
     return render(request, 'hr/my_kpi.html', context)
 
@@ -400,7 +400,7 @@ def my_salary_slips(request):
         'employee':        employee,
         'payroll_records': payroll_records,
         'active_page':     'my_salary_slips',
-        'base_template':   'hr/hr_base.html' if is_hr(request.user) else 'hr/employee_base.html',
+        'base_template':   employee_service.get_base_template(request.user),
     }
     return render(request, 'hr/my_salary_slips.html', context)
 
@@ -411,7 +411,7 @@ def departments_view(request):
     if not is_hr(request.user):
         return redirect('/dashboard/employee/')
     from hr.models import Department, Employee
-    departments = Department.objects.all().order_by('name')
+    departments = Department.objects.select_related('manager').filter(is_deleted=False).order_by('name')
     context = {
         'departments': departments,
         'active_page': 'departments',
@@ -553,7 +553,6 @@ def training_view(request):
     query = request.GET.get('q', '').strip()
     dept_id = request.GET.get('department_id', '')
     year = request.GET.get('year', str(timezone.localdate().year))
-    status_f = request.GET.get('status', '')
 
     requests = TrainingRequest.objects.select_related('employee', 'employee__department', 'department').filter(is_deleted=False).order_by('-request_date')
     if query:
@@ -566,8 +565,6 @@ def training_view(request):
         requests = requests.filter(department_id=dept_id)
     if year:
         requests = requests.filter(start_date__year=year)
-    if status_f:
-        requests = requests.filter(status=status_f)
 
     departments = Department.objects.order_by('name')
     employees = Employee.objects.select_related('department').order_by('last_name', 'first_name')
@@ -586,9 +583,7 @@ def training_view(request):
         'search_query': query,
         'dept_id': dept_id,
         'year': year,
-        'status_f': status_f,
-        'years': [2024, 2025, 2026],
-        'statuses': ['Submitted', 'Supervisor Review', 'Supervisor Rejected', 'HR Review', 'HR Rejected', 'Approved', 'Completed'],
+        'years': sorted({item.year for item in TrainingRequest.objects.filter(is_deleted=False, start_date__isnull=False).values_list('start_date', flat=True)}, reverse=True),
         'approved_count': approved_count,
         'completed_count': completed_count,
         'total_training_cost': total_training_cost,
@@ -666,12 +661,18 @@ def hr_grievances(request):
 
 @login_required(login_url='/login/')
 def career_development_view(request):
-    """Simple career development dashboard for HR and employees."""
+    """HR career progression view based on recorded lifecycle and training data."""
     if not is_hr(request.user):
         return redirect('/dashboard/employee/')
 
     context = {
         'active_page': 'career_development',
+        'recent_events': EmployeeHistory.objects.select_related('employee', 'department', 'position').filter(
+            is_deleted=False, event_type__in=['hired', 'probation_passed', 'promoted', 'retired']
+        ).order_by('-start_date')[:30],
+        'promotion_count': EmployeeHistory.objects.filter(is_deleted=False, event_type='promoted').count(),
+        'retirement_count': EmployeeHistory.objects.filter(is_deleted=False, event_type='retired').count(),
+        'completed_training_count': TrainingRequest.objects.filter(is_deleted=False, status='Completed').count(),
     }
     return render(request, 'hr/career_development.html', context)
 

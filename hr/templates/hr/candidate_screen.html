@@ -37,7 +37,7 @@
           <th>Position</th>
           <th>Count</th>
           <th>Type</th>
-          <th>Reason &amp; Skills</th>
+          <th>Reason &amp; Qualification</th>
           <th>Preferred Start</th>
           <th>Request Date</th>
           <th>Status</th>
@@ -55,7 +55,7 @@
           <td style="max-width:240px;">
             <div style="font-size:13px;color:var(--text-main);">{{ req.reason }}</div>
             {% if req.required_skills %}
-              <div style="font-size:11px;color:var(--text-light);margin-top:2px;">Skills: {{ req.required_skills }}</div>
+              <div style="font-size:11px;color:var(--text-light);margin-top:2px;">Qualification: {{ req.required_skills }}</div>
             {% endif %}
           </td>
           <td>{{ req.preferred_start_date|date:"d M Y" }}</td>
