@@ -7,6 +7,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.shortcuts import redirect, render
+from django.utils import timezone
 
 from hr.forms import BulkEmployeeUploadForm, EmployeeCreateForm
 from hr.models import Attendance, LeaveRequest, TrainingRequest, DisciplinaryIncident, Grievance, Notification
@@ -15,6 +16,7 @@ from hr.services import attendance_service, employee_service
 from hr.services.kpi_service import current_biannual_period, get_employee_kpi_summary
 
 
+@ensure_csrf_cookie
 def login_view(request):
     if request.user.is_authenticated:
         return redirect(employee_service.get_dashboard_redirect(request.user))
@@ -119,8 +121,8 @@ def hr_dashboard(request):
             "employees": employee_service.get_all_employees()[:8],
             "attendance_logs": employee_service.get_all_attendance_logs()[:8],
             "employee_count": employee_service.get_all_employees().count(),
-            "active_count": employee_service.get_all_employees().filter(status__name__iexact("Active")).count(),
-            "present_today": Attendance.objects.filter(date__exact=__import__("django").utils.timezone.localdate()).count(),
+            "active_count": employee_service.get_all_employees().filter(status__name__iexact="Active").count(),
+            "present_today": Attendance.objects.filter(date__exact=timezone.localdate()).count(),
             "pending_leaves": LeaveRequest.objects.filter(status="Pending").count(),
             "notifications": notifications,
             "notifications_count": unread_count,
