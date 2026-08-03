@@ -14,6 +14,8 @@ from hr.models import (
     JobPosting, Application, Applicant, SystemSetting, Role, EmployeeStatus,
     EmployeeHistory, Salary,Attendance
 )
+from hr.services.leave_service import ensure_leave_balances, sabbatical_eligibility, get_leave_types_for_employee, submit_leave_request
+from django.core.exceptions import ValidationError
 
 # Helper: check if user is HR/Admin
 def is_hr(user):
@@ -268,8 +270,9 @@ def api_employees(request):
     if query:
         queryset = queryset.filter(
             Q(first_name__icontains=query) | Q(last_name__icontains=query) |
+            Q(user__username__icontains=query) | Q(user__email__icontains=query) |
             Q(employee_id__icontains=query) | Q(department__name__icontains=query) |
-            Q(position__title__icontains=query) | Q(user__email__icontains=query)
+            Q(position__title__icontains=query)
         )
 
     if page:
@@ -352,14 +355,29 @@ def api_leaves(request):
         
     if request.method == 'GET':
         # Get balances
+        # Ensure leave balances (creates sabbatical/annual entries as needed)
+        ensure_leave_balances(employee)
         balances = LeaveBalance.objects.filter(employee=employee).select_related('leave_type')
         balances_data = []
         for b in balances:
-            balances_data.append({
-                'leave_type': b.leave_type.name,
-                'remaining_days': b.remaining_days,
-                'max_days': b.leave_type.max_days,
-            })
+            name = b.leave_type.name
+            if name.lower() == 'sabbatical':
+                elig = sabbatical_eligibility(employee)
+                balances_data.append({
+                    'leave_type': name,
+                    'remaining_days': b.remaining_days,
+                    'max_days': b.leave_type.max_days,
+                    'sabbatical_eligible': elig['eligible'],
+                    'years_completed': elig['years_completed'],
+                    'years_until': elig['years_until'],
+                    'eligible_date': elig['eligible_date'].strftime('%Y-%m-%d') if elig['eligible_date'] else None,
+                })
+            else:
+                balances_data.append({
+                    'leave_type': name,
+                    'remaining_days': b.remaining_days,
+                    'max_days': b.leave_type.max_days,
+                })
             
         # Get history
         requests = LeaveRequest.objects.filter(employee=employee).select_related('leave_type', 'approved_by').order_by('-start_date')
@@ -377,7 +395,7 @@ def api_leaves(request):
             })
             
         # Get available leave types for dropdown
-        leave_types = LeaveType.objects.all()
+        leave_types = get_leave_types_for_employee(employee)
         types_data = [{'id': t.id, 'name': t.name, 'max_days': t.max_days} for t in leave_types]
         
         return JsonResponse({
@@ -405,36 +423,15 @@ def api_leaves(request):
         except Exception as e:
             return JsonResponse({'success': False, 'error': 'Invalid form data'}, status=400)
             
-        leave_type = get_object_or_404(LeaveType, id=leave_type_id)
-        
-        # Calculate requested days
-        requested_days = (end_date - start_date).days + 1
-        if requested_days <= 0:
-            return JsonResponse({'success': False, 'error': 'End date must be after or equal to start date'}, status=400)
-            
-        # Check leave balance
-        balance, created = LeaveBalance.objects.get_or_create(
-            employee=employee,
-            leave_type=leave_type,
-            defaults={'remaining_days': leave_type.max_days}
-        )
-        
-        if balance.remaining_days < requested_days:
-            return JsonResponse({'success': False, 'error': f'Insufficient leave balance. You only have {balance.remaining_days} days remaining.'}, status=400)
-            
-        # Create Leave Request
-        req = LeaveRequest.objects.create(
-            employee=employee,
-            leave_type=leave_type,
-            start_date=start_date,
-            end_date=end_date,
-            requested_days=requested_days,
-            status='Pending',
-            comments=comments,
-            contact_phone=contact_phone,
-            contact_address=contact_address,
-            attachment=attachment
-        )
+        try:
+            req = submit_leave_request(employee.pk, {
+                'leave_type_id': int(leave_type_id),
+                'start_date': start_date, 'end_date': end_date, 'reason': comments,
+                'document': attachment,
+                'contact_info_during_leave': ' '.join(part for part in (contact_phone, contact_address) if part),
+            })
+        except (ValidationError, ValueError) as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=400)
         
         return JsonResponse({
             'success': True,

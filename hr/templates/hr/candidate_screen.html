@@ -168,7 +168,7 @@
       <thead>
         <tr>
           <th>Applicant</th><th>Job Title</th><th>Department</th>
-          <th>Applied</th><th>Education</th><th>Experience</th>
+          <th>Applied</th><th>Screening education</th><th>Education &amp; experience</th>
           <th>Score</th><th>Status</th><th>Move to</th>
         </tr>
       </thead>
@@ -177,13 +177,18 @@
         <tr>
           <td>
             <div style="font-weight:600;">{{ c.applicant.first_name }} {{ c.applicant.last_name }}</div>
-            <div style="font-size:12px;color:var(--text-light);">{{ c.applicant.email }}</div>
+            <div style="font-size:12px;color:var(--text-light);">{{ c.applicant.email }} · {{ c.applicant.phone }}</div>
+            <div style="font-size:12px;margin-top:3px;">{% if c.applicant.cv %}<a href="{{ c.applicant.cv.url }}" target="_blank">View CV</a>{% else %}No CV{% endif %} · {% if c.applicant.fayda_id %}<a href="{{ c.applicant.fayda_id.url }}" target="_blank">View Fayda ID</a>{% else %}No ID{% endif %}</div>
           </td>
           <td>{{ c.job.title }}</td>
           <td>{{ c.job.department.name|default:"—" }}</td>
           <td>{{ c.applied_date|date:"d M Y" }}</td>
           <td>{{ c.education_level|default:"—" }}</td>
-          <td>{{ c.experience_years }} yr{{ c.experience_years|pluralize }}</td>
+          <td>
+            {{ c.applicant.qualification }}
+            <div style="font-size:12px;color:var(--text-light);">{{ c.applicant.field_of_study }} · {{ c.applicant.institution }}</div>
+            {% if c.applicant.work_experience %}<div style="font-size:12px;color:var(--text-light);">{{ c.applicant.work_experience|truncatechars:45 }}</div>{% endif %}
+          </td>
           <td>
             {% if c.screening_score %}
               {% if c.screening_score >= 70 %}<span class="badge badge-success">{{ c.screening_score }}/100</span>
@@ -204,12 +209,7 @@
             <form method="POST" style="display:flex;gap:4px;flex-wrap:wrap;">
               {% csrf_token %}
               <input type="hidden" name="application_id" value="{{ c.id }}">
-              {% if c.status == "Applied" %}
-                <button name="new_status" value="Screening" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">Screen</button>
-              {% elif c.status == "Screening" or c.status == "Qualified" %}
-                <button name="new_status" value="Interviewed" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">Interview</button>
-                <button name="new_status" value="Rejected" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;color:var(--danger);">Reject</button>
-              {% elif c.status == "Interviewed" %}
+              {% if c.status != "Selected" and c.status != "Rejected" and c.status != "Rejected_Auto" %}
                 <button name="new_status" value="Selected" class="btn btn-primary" style="font-size:11px;padding:4px 8px;">Select</button>
                 <button name="new_status" value="Rejected" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;color:var(--danger);">Reject</button>
               {% elif c.status == "Selected" %}

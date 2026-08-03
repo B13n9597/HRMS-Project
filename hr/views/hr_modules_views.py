@@ -14,6 +14,7 @@ from hr.models import (
     TrainingRequest, DisciplinaryIncident, Grievance, Department, EmployeeHistory,
 )
 from hr.services import leave_service, employee_service
+from hr.views.recruitment_views import convert_application_to_employee
 from hr.services.setting_service import get_settings_grouped_list, save_settings, seed_defaults
 from hr.forms import TrainingRequestForm, GrievanceForm, DisciplinaryIncidentForm, TrainingCompletionForm
 
@@ -238,35 +239,30 @@ def candidate_screen(request):
     if not is_hr(request.user):
         return redirect('/dashboard/employee/')
 
-    from hr.services.employee_service import get_employee_for_user
-    hr_emp = get_employee_for_user(request.user)
+    try:
+        hr_emp = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'HR profile not found.')
+        return redirect('/')
 
     if request.method == 'POST':
         action = request.POST.get('action')
+        hr_comment = request.POST.get('hr_comment', '').strip()
 
-        if action in ('approve_hiring_request', 'reject_hiring_request'):
-            req_id     = request.POST.get('hiring_request_id')
-            hr_comment = request.POST.get('hr_comment', '').strip()
-
-            if not hr_comment:
-                messages.error(request, "HR comment/reason is mandatory when approving or rejecting a hiring request.")
-                return redirect('candidate_screen')
-
+        if action == 'approve_hiring_request':
+            req_id = request.POST.get('hiring_request_id')
             try:
                 from hr.models import HiringRequest
                 h_req = HiringRequest.objects.get(pk=req_id)
-                new_status = 'Approved' if action == 'approve_hiring_request' else 'Rejected'
-                
-                h_req.status        = new_status
-                h_req.hr_comment    = hr_comment
-                h_req.reviewed_by   = hr_emp
+                new_status = 'Approved'
+
+                h_req.status = new_status
+                h_req.hr_comment = hr_comment
+                h_req.reviewed_by = hr_emp
                 h_req.decision_date = timezone.now()
                 h_req.save()
 
-                if new_status == 'Approved':
-                    messages.success(request, f"Hiring request for '{h_req.position_title}' approved.")
-                else:
-                    messages.warning(request, f"Hiring request for '{h_req.position_title}' rejected.")
+                messages.success(request, f"Hiring request for '{h_req.position_title}' approved.")
             except Exception as e:
                 messages.error(request, f"Error updating hiring request: {e}")
             return redirect('candidate_screen')
@@ -294,35 +290,43 @@ def candidate_screen(request):
 
         else:
             # Handle pipeline status change
-            app_id     = request.POST.get('application_id')
+            app_id = request.POST.get('application_id')
             new_status = request.POST.get('new_status')
             if app_id and new_status:
                 try:
+                    if new_status not in {'Selected', 'Hired', 'Rejected'}:
+                        messages.error(request, "Applications can only be selected, hired, or rejected from this screen.")
+                        return redirect('candidate_screen')
                     app = Application.objects.get(pk=app_id)
                     app.status = new_status
                     app.save(update_fields=['status'])
-                    if new_status == 'Screening':
-                        app.run_auto_screening()
-                    messages.success(request, f"Application status updated to {new_status}.")
+                    if new_status in {'Selected', 'Hired'}:
+                        employee, created = convert_application_to_employee(app)
+                        if created:
+                            messages.success(request, f"{employee.get_full_name()} converted to employee and setup email sent.")
+                            messages.success(request, "Employee conversion complete.", extra_tags='toast')
+                        else:
+                            messages.info(request, "Applicant was already converted to an employee.")
+                            messages.info(request, "Employee already exists.", extra_tags='toast')
+                        return redirect('staff_directory')
+                    else:
+                        messages.success(request, f"Application status updated to {new_status}.")
                 except Application.DoesNotExist:
                     messages.error(request, "Application not found.")
                 except Exception as e:
                     messages.error(request, str(e))
             return redirect('candidate_screen')
 
-    query    = request.GET.get('q', '').strip()
+    # Retrieve search parameters
+    query = request.GET.get('q', '').strip()
     status_f = request.GET.get('status', '')
-    dept_id  = request.GET.get('department_id', '')
-
-    from django.db.models import Q
-    candidates = Application.objects.select_related(
-        'applicant', 'job', 'job__department'
-    ).order_by('-applied_date')
+    dept_id = request.GET.get('department_id', '')
+    candidates = Application.objects.select_related('applicant', 'job', 'job__department').order_by('-applied_date')
 
     if query:
         candidates = candidates.filter(
             Q(applicant__first_name__icontains=query) |
-            Q(applicant__last_name__icontains=query)  |
+            Q(applicant__last_name__icontains=query) |
             Q(applicant__email__icontains=query)
         )
     if status_f:
@@ -330,32 +334,28 @@ def candidate_screen(request):
     if dept_id:
         candidates = candidates.filter(job__department_id=dept_id)
 
-    from hr.models import Department, HiringRequest
-    departments     = Department.objects.all()
-    hiring_requests = HiringRequest.objects.select_related(
-        'requested_by', 'department', 'reviewed_by', 'created_vacancy'
-    ).order_by('-request_date')
+    departments = Department.objects.all()
+    hiring_requests = HiringRequest.objects.select_related('requested_by', 'department', 'reviewed_by', 'created_vacancy').order_by('-request_date')
 
     pipeline_counts = {
-        'Applied':       candidates.filter(status='Applied').count(),
-        'Screening':     candidates.filter(status__in=['Screening','Qualified','Rejected_Auto']).count(),
-        'Interviewed':   candidates.filter(status='Interviewed').count(),
-        'Selected':      candidates.filter(status='Selected').count(),
-        'Rejected':      candidates.filter(status='Rejected').count(),
+        'Applied': candidates.filter(status='Applied').count(),
+        'Screening': candidates.filter(status__in=['Screening', 'Qualified', 'Rejected_Auto']).count(),
+        'Interviewed': candidates.filter(status='Interviewed').count(),
+        'Selected': candidates.filter(status='Selected').count(),
+        'Rejected': candidates.filter(status='Rejected').count(),
     }
 
     context = {
-        'candidates':      candidates,
-        'departments':     departments,
+        'candidates': candidates,
+        'departments': departments,
         'hiring_requests': hiring_requests,
         'pipeline_counts': pipeline_counts,
-        'search_query':    query,
-        'status_f':        status_f,
-        'dept_id':         dept_id,
-        'active_page':     'candidate_screen',
+        'search_query': query,
+        'status_f': status_f,
+        'dept_id': dept_id,
+        'active_page': 'candidate_screen',
         'status_choices': [
-            'Applied', 'Screening', 'Qualified', 'Interviewed', 'Selected',
-            'Rejected_Auto', 'Rejected',
+            'Applied', 'Screening', 'Qualified', 'Interviewed', 'Selected', 'Rejected_Auto', 'Rejected',
         ],
     }
     return render(request, 'hr/candidate_screen.html', context)

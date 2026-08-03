@@ -112,10 +112,24 @@
 {% if my_balances %}
 <div class="balance-grid">
     {% for b in my_balances %}
+    {# Only show sabbatical cards that have the eligibility note; skip the plain duplicate #}
+    {% with tname=b.leave_type_name %}
+    {% if tname != 'Sabbatical' and tname != 'sabbatical' or b.sabbatical_info %}
     <div class="balance-card">
         <div class="days">{{ b.remaining_days }}</div>
-        <div class="type-name">{{ b.leave_type.name }} days left</div>
+        <div class="type-name">{{ b.leave_type_name }} days left</div>
+        {% if b.sabbatical_info %}
+            {% if b.sabbatical_info.eligible %}
+                <div style="font-size:12px;color:var(--success-dark);margin-top:6px;">Sabbatical eligible</div>
+            {% else %}
+                <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Eligible in {{ b.sabbatical_info.years_until }} year{% if b.sabbatical_info.years_until > 1 %}s{% endif %} ({{ b.sabbatical_info.eligible_date }})</div>
+            {% endif %}
+        {% endif %}
     </div>
+    {% endif %}
+    {% endwith %}
+    {% empty %}
+    <p class="text-muted">No balances available</p>
     {% endfor %}
 </div>
 {% endif %}

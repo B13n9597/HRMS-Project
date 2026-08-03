@@ -11,7 +11,7 @@
                 <p>Manage employee profiles, onboard individuals, or bulk-import a full roster.</p>
             </div>
             <div class="action-row" style="display: flex; gap: 12px; align-items: center;">
-                <input type="text" id="directorySearchInput" class="form-input" placeholder="Search employee..." style="padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 14px; width: 250px;">
+                <input type="text" id="directorySearchInput" class="form-input" placeholder="Search employee..." value="{{ search_query|default:'' }}" style="padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 14px; width: 250px;">
                 <button class="btn btn-primary" id="openCreateModalBtn">
                     <i data-lucide="user-plus" style="width:16px;height:16px;"></i>
                     Create Employee
@@ -91,7 +91,7 @@
                         <tr class="empty-state">
                             <td colspan="5">
                                 <i data-lucide="loader-2" style="width:20px;height:20px;animation:spin 1s linear infinite;vertical-align:middle;"></i>
-                                Loading employee directory¦
+                                Loading employee directory...
                             </td>
                         </tr>
                     </tbody>

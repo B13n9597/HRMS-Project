@@ -1,123 +1,287 @@
 {% extends 'hr/employee_base.html' %}
 {% block title %}My Grievances — ACT HRMS{% endblock %}
-{% block content %}
+
+{% block extra_styles %}
 <style>
-    .confidential-banner { background: #f8fafc; border: 1px solid var(--border-color); border-left: 4px solid var(--warning); border-radius: var(--radius-sm); padding: 12px 14px; color: var(--text-muted); font-size: 12px; margin-bottom: 18px; }
-    .inline-check { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: #f8fafc; }
-    .inline-check input { width: 16px; height: 16px; }
-    .inline-check label { margin: 0; font-size: 13px; font-weight: 700; color: var(--text-main); }
+/* ── Form skin (same design language as training form) ─────── */
+.f-row  { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+.f-row.full { grid-template-columns: 1fr; }
+.f-group { display: flex; flex-direction: column; gap: 5px; padding-bottom: 18px; }
+.f-group label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--text-light);
+}
+.f-group label .req { color: var(--danger); margin-left: 2px; }
+.f-input, .f-select, .f-textarea {
+    width: 100%; padding: 11px 14px;
+    border: 1.5px solid var(--border-color); border-radius: var(--radius-sm);
+    font-size: 14px; font-family: var(--font-sans);
+    background: #f8fafc; color: var(--text-main);
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    appearance: none;
+}
+.f-input:focus, .f-select:focus, .f-textarea:focus {
+    outline: none; border-color: var(--primary);
+    background: #fff; box-shadow: 0 0 0 3px rgba(2,93,162,.1);
+}
+.f-textarea { resize: vertical; min-height: 100px; }
+.f-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px;
+}
+.f-error { font-size: 12px; color: var(--danger); margin-top: 3px; }
+.f-divider { border: none; border-top: 1px solid var(--border-color); margin: 2px 0 18px; }
+
+/* File upload */
+.f-file-wrap {
+    border: 1.5px dashed var(--border-color); border-radius: var(--radius-sm);
+    padding: 16px 18px; background: #f8fafc; cursor: pointer;
+    display: flex; align-items: center; gap: 14px;
+    transition: border-color .2s; position: relative;
+}
+.f-file-wrap:hover { border-color: var(--primary); background: #f0f7ff; }
+.f-file-icon { width: 38px; height: 38px; border-radius: var(--radius-sm); background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.f-file-text { font-size: 13px; color: var(--text-muted); }
+.f-file-text strong { display: block; font-size: 14px; color: var(--text-main); margin-bottom: 2px; }
+.f-file-wrap input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* Confidential toggle */
+.f-checkbox-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: #fffbeb; border: 1.5px solid #fde68a;
+    border-radius: var(--radius-sm); padding: 14px 16px;
+}
+.f-checkbox-row input[type=checkbox] {
+    width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0;
+    accent-color: var(--primary); cursor: pointer;
+}
+.f-checkbox-row .check-text strong {
+    font-size: 14px; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 2px;
+}
+.f-checkbox-row .check-text span { font-size: 12px; color: var(--text-muted); }
+
+/* Confidential notice banner */
+.conf-banner {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid var(--warning);
+    border-radius: var(--radius-sm); padding: 13px 16px;
+    font-size: 13px; color: #78350f; margin-bottom: 24px;
+}
+.conf-banner i { flex-shrink: 0; margin-top: 1px; }
+
+@media (max-width: 640px) { .f-row { grid-template-columns: 1fr; } }
 </style>
+{% endblock %}
+
+{% block content %}
 <div class="page-header">
     <div class="page-header-left">
         <h1>My Grievances</h1>
-        <p>Submit and track employee relations cases in a confidential, role-scoped workflow.</p>
+        <p>Submit and track employee relations cases through a confidential, role-scoped workflow.</p>
     </div>
 </div>
 
 {% if messages %}
     {% for message in messages %}
-    <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+    <div class="alert alert-{{ message.tags|default:'info' }}" style="margin-bottom:16px;">{{ message }}</div>
     {% endfor %}
 {% endif %}
 
-<div class="card" style="margin-bottom: 22px;">
+<!-- ── Submit Grievance ───────────────────────────────────── -->
+<div class="card" style="margin-bottom:28px;">
     <div class="card-header">
+        <i data-lucide="alert-circle" style="width:18px;height:18px;color:var(--warning);"></i>
         <h3>Submit Grievance</h3>
     </div>
-    <div class="card-body">
-        <div class="confidential-banner">Confidential grievances are restricted to authorized HR personnel.</div>
+    <div class="card-body" style="padding:28px 32px;">
+
+        <div class="conf-banner">
+            <i data-lucide="shield-alert" style="width:18px;height:18px;color:#b45309;"></i>
+            <div>
+                <strong style="font-weight:700;">Privacy Notice</strong><br>
+                Confidential grievances are visible only to authorized HR personnel and the case officer.
+                Standard grievances may be reviewed by your direct supervisor.
+            </div>
+        </div>
+
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             <input type="hidden" name="action" value="submit_grievance">
-            <div class="form-grid-2">
-                <div class="form-field">
-                    <label for="{{ form.category.id_for_label }}">{{ form.category.label }}</label>
+
+            <!-- Row 1: Category + Subject -->
+            <div class="f-row">
+                <div class="f-group">
+                    <label for="{{ form.category.id_for_label }}">Category <span class="req">*</span></label>
                     {{ form.category }}
-                    {% if form.category.errors %}<div class="form-error">{{ form.category.errors|join:', ' }}</div>{% endif %}
+                    {% if form.category.errors %}<div class="f-error">{{ form.category.errors|join:', ' }}</div>{% endif %}
                 </div>
-                <div class="form-field">
-                    <label for="{{ form.subject.id_for_label }}">{{ form.subject.label }}</label>
+                <div class="f-group">
+                    <label for="{{ form.subject.id_for_label }}">Subject <span class="req">*</span></label>
                     {{ form.subject }}
-                    {% if form.subject.errors %}<div class="form-error">{{ form.subject.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field">
-                    <label for="{{ form.incident_date.id_for_label }}">{{ form.incident_date.label }}</label>
-                    {{ form.incident_date }}
-                    {% if form.incident_date.errors %}<div class="form-error">{{ form.incident_date.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field">
-                    <label for="{{ form.evidence.id_for_label }}">{{ form.evidence.label }}</label>
-                    {{ form.evidence }}
-                    {% if form.evidence.errors %}<div class="form-error">{{ form.evidence.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field" style="grid-column: 1 / -1;">
-                    <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
-                    {{ form.description }}
-                    {% if form.description.errors %}<div class="form-error">{{ form.description.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field" style="grid-column: 1 / -1;">
-                    <label for="{{ form.desired_resolution.id_for_label }}">{{ form.desired_resolution.label }}</label>
-                    {{ form.desired_resolution }}
-                    {% if form.desired_resolution.errors %}<div class="form-error">{{ form.desired_resolution.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field" style="grid-column: 1 / -1;">
-                    <div class="inline-check">
-                        {{ form.confidential }}
-                        <label for="{{ form.confidential.id_for_label }}">{{ form.confidential.label }}</label>
-                    </div>
-                    {% if form.confidential.errors %}<div class="form-error">{{ form.confidential.errors|join:', ' }}</div>{% endif %}
+                    {% if form.subject.errors %}<div class="f-error">{{ form.subject.errors|join:', ' }}</div>{% endif %}
                 </div>
             </div>
-            <div class="form-actions" style="margin-top: 18px;">
-                <button class="btn btn-primary" type="submit">Submit Grievance</button>
+            <hr class="f-divider">
+
+            <!-- Row 2: Incident Date + Evidence File -->
+            <div class="f-row">
+                <div class="f-group">
+                    <label for="{{ form.incident_date.id_for_label }}">Incident Date <span class="req">*</span></label>
+                    {{ form.incident_date }}
+                    {% if form.incident_date.errors %}<div class="f-error">{{ form.incident_date.errors|join:', ' }}</div>{% endif %}
+                </div>
+                <div class="f-group">
+                    <label>Supporting Evidence</label>
+                    <div class="f-file-wrap">
+                        <div class="f-file-icon">
+                            <i data-lucide="paperclip" style="width:17px;height:17px;"></i>
+                        </div>
+                        <div class="f-file-text">
+                            <strong>Attach a file</strong>
+                            PDF, JPG or PNG — max 5 MB
+                        </div>
+                        {{ form.evidence }}
+                    </div>
+                    {% if form.evidence.errors %}<div class="f-error">{{ form.evidence.errors|join:', ' }}</div>{% endif %}
+                </div>
+            </div>
+            <hr class="f-divider">
+
+            <!-- Row 3: Description (full width) -->
+            <div class="f-row full">
+                <div class="f-group">
+                    <label for="{{ form.description.id_for_label }}">Description <span class="req">*</span></label>
+                    {{ form.description }}
+                    {% if form.description.errors %}<div class="f-error">{{ form.description.errors|join:', ' }}</div>{% endif %}
+                </div>
+            </div>
+            <hr class="f-divider">
+
+            <!-- Row 4: Desired Resolution (full width) -->
+            <div class="f-row full">
+                <div class="f-group">
+                    <label for="{{ form.desired_resolution.id_for_label }}">Desired Resolution</label>
+                    {{ form.desired_resolution }}
+                    {% if form.desired_resolution.errors %}<div class="f-error">{{ form.desired_resolution.errors|join:', ' }}</div>{% endif %}
+                </div>
+            </div>
+            <hr class="f-divider">
+
+            <!-- Confidential toggle -->
+            <div class="f-row full">
+                <div class="f-group" style="padding-bottom:0;">
+                    <label>Visibility</label>
+                    <div class="f-checkbox-row">
+                        {{ form.confidential }}
+                        <div class="check-text">
+                            <strong>Mark as Confidential</strong>
+                            <span>Limits visibility to HR officers with case access only.</span>
+                        </div>
+                    </div>
+                    {% if form.confidential.errors %}<div class="f-error">{{ form.confidential.errors|join:', ' }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div style="margin-top:24px;display:flex;gap:12px;">
+                <button class="btn btn-primary" type="submit">
+                    <i data-lucide="send" style="width:15px;height:15px;"></i>
+                    Submit Grievance
+                </button>
+                <button type="reset" class="btn btn-ghost">Clear</button>
             </div>
         </form>
     </div>
 </div>
 
+<!-- ── Grievance History ──────────────────────────────────── -->
 <div class="card">
     <div class="card-header">
+        <i data-lucide="list-checks" style="width:18px;height:18px;color:var(--primary);"></i>
         <h3>My Grievance History</h3>
+        <span class="badge badge-primary" style="margin-left:auto;">{{ grievances|length }} cases</span>
     </div>
-    <div class="card-body">
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Subject</th>
-                        <th>Category</th>
-                        <th>Submitted</th>
-                        <th>Status</th>
-                        <th>Confidential</th>
-                        <th>HR Response</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in grievances %}
-                    <tr>
-                        <td>{{ item.subject }}</td>
-                        <td>{{ item.category }}</td>
-                        <td>{{ item.submitted_at|date:'Y-m-d' }}</td>
-                        <td>
-                            {% if item.status == 'Resolved' or item.status == 'Closed' %}
-                                <span class="badge badge-success">{{ item.status }}</span>
-                            {% elif item.status == 'Action Required' or item.status == 'Investigation' %}
-                                <span class="badge badge-warning">{{ item.status }}</span>
-                            {% else %}
-                                <span class="badge badge-primary">{{ item.status }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{% if item.confidential %}<span class="badge badge-warning">CONFIDENTIAL</span>{% else %}<span class="badge badge-success">Standard</span>{% endif %}</td>
-                        <td>{{ item.response|default:'Awaiting review' }}</td>
-                        <td>{% if item.status == 'Resolved' %}Closed{% else %}In Progress{% endif %}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="7" style="text-align:center;">No grievances submitted yet.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Category</th>
+                    <th>Submitted</th>
+                    <th>Status</th>
+                    <th>Visibility</th>
+                    <th>HR Response</th>
+                    <th>Case State</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in grievances %}
+                <tr>
+                    <td><strong>{{ item.subject }}</strong></td>
+                    <td style="font-size:13px;color:var(--text-muted);">{{ item.category }}</td>
+                    <td style="font-size:13px;white-space:nowrap;color:var(--text-muted);">
+                        {{ item.submitted_at|date:'M d, Y' }}
+                    </td>
+                    <td>
+                        {% if item.status == 'Resolved' or item.status == 'Closed' %}
+                            <span class="badge badge-success">{{ item.status }}</span>
+                        {% elif item.status == 'Action Required' or item.status == 'Investigation' %}
+                            <span class="badge badge-warning">{{ item.status }}</span>
+                        {% else %}
+                            <span class="badge badge-primary">{{ item.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.confidential %}
+                            <span class="badge badge-warning">
+                                <i data-lucide="lock" style="width:11px;height:11px;margin-right:3px;"></i>
+                                Confidential
+                            </span>
+                        {% else %}
+                            <span class="badge badge-success">Standard</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:13px;color:var(--text-muted);max-width:200px;">
+                        {{ item.response|default:'Awaiting review' }}
+                    </td>
+                    <td>
+                        {% if item.status == 'Resolved' or item.status == 'Closed' %}
+                            <span style="font-size:12px;font-weight:600;color:var(--success);">● Closed</span>
+                        {% else %}
+                            <span style="font-size:12px;font-weight:600;color:var(--warning);">● In Progress</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:40px;color:var(--text-light);">
+                        <i data-lucide="inbox" style="width:36px;height:36px;display:block;margin:0 auto 10px;opacity:.3;"></i>
+                        No grievances submitted yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    /* Apply styling classes to all Django-rendered form widgets */
+    document.querySelectorAll('form input[type=text],'
+        + 'form input[type=date],'
+        + 'form input[type=email],'
+        + 'form input[type=number]').forEach(function (el) {
+        if (!el.classList.contains('f-input')) el.classList.add('f-input');
+    });
+    document.querySelectorAll('form select').forEach(function (el) {
+        if (!el.classList.contains('f-select')) el.classList.add('f-select');
+    });
+    document.querySelectorAll('form textarea').forEach(function (el) {
+        if (!el.classList.contains('f-textarea')) el.classList.add('f-textarea');
+    });
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+});
+</script>
 {% endblock %}

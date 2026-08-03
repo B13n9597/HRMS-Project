@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 
 from hr.holiday_checker import is_day_off
-from hr.models import LeaveRequest, LeaveBalance, LeaveType, Employee, SystemSetting
+from hr.models import LeaveRequest, LeaveBalance, LeaveType, LeavePolicy, Employee, SystemSetting
 
 
 # ── Policy leave types ──────────────────────────────────────────────────────
@@ -20,15 +20,24 @@ POLICY_LEAVE_TYPES = [
     {'name': 'Mourning',    'max_days': 3,  'description': 'Bereavement/mourning leave (3 days).'},
     {'name': 'Unpaid',      'max_days': 30, 'description': 'Unpaid leave approved by HR.'},
     {'name': 'Educational', 'max_days': 14, 'description': 'Study/exam leave.'},
+    {'name': 'Sabbatical',  'max_days': 365, 'description': 'Sabbatical: one year off after 4 years of service.'},
 ]
+
+
 
 
 def seed_leave_types():
     """Ensure all 7 policy leave types exist in the DB."""
     for lt in POLICY_LEAVE_TYPES:
-        LeaveType.objects.get_or_create(
+        leave_type, _ = LeaveType.objects.get_or_create(
             name=lt['name'],
             defaults={'max_days': lt['max_days'], 'description': lt['description']}
+        )
+        # Policies are data-driven, so HR can extend the rules without changing code.
+        name_key = lt['name'].lower()
+        allowed_gender = 'Female' if 'maternity' in name_key else ('Male' if 'paternity' in name_key else '')
+        LeavePolicy.objects.get_or_create(
+            leave_type=leave_type, defaults={'allowed_gender': allowed_gender}
         )
 
 
@@ -44,18 +53,58 @@ def get_annual_leave_days_for_employee(employee: Employee) -> int:
     return min(18 + years, 30)
 
 
+def get_sabbatical_days_for_employee(employee: Employee) -> int:
+    """
+    Sabbatical: eligible after 4 completed years of service.
+    Returns 365 days when eligible, otherwise 0.
+    """
+    if not employee.hire_date:
+        return 0
+    today = timezone.localdate()
+    years = (today - employee.hire_date).days // 365
+    return 365 if years >= 4 else 0
+
+
+def sabbatical_eligibility(employee: Employee) -> dict:
+    """Return sabbatical eligibility info for an employee.
+
+    Returns dict: { 'eligible': bool, 'years_completed': int, 'years_until': int, 'eligible_date': date or None }
+    """
+    if not employee.hire_date:
+        return {'eligible': False, 'years_completed': 0, 'years_until': 4, 'eligible_date': None}
+    today = timezone.localdate()
+    days = (today - employee.hire_date).days
+    years_completed = days // 365
+    if years_completed >= 4:
+        return {'eligible': True, 'years_completed': years_completed, 'years_until': 0, 'eligible_date': employee.hire_date.replace(year=employee.hire_date.year + 4)}
+    else:
+        years_until = 4 - years_completed
+        eligible_date = employee.hire_date.replace(year=employee.hire_date.year + 4)
+        return {'eligible': False, 'years_completed': years_completed, 'years_until': years_until, 'eligible_date': eligible_date}
+
+
 def ensure_leave_balances(employee: Employee):
     """
     Create or refresh leave balances for an employee.
-    Called on first login, leave submission, and by the annual reset management command.
+
+    Rules:
+    - All leave types start at full policy allocation when the employee is hired.
+    - Sabbatical starts at 0 and becomes 365 only after 4 completed years of service.
+    - Annual leave starts at 18 days and gains 1 day per year of service (max 30).
+    - Approved leave deductions are handled by approve_request(); this function
+      never reduces remaining_days below what has already been used.
+    - Called on first login, leave submission, and by management commands.
     """
     seed_leave_types()
-    today = timezone.localdate()
     for lt in LeaveType.objects.all():
-        if lt.name.lower() == 'annual':
+        name = lt.name.lower()
+
+        if name == 'annual':
             allocated = get_annual_leave_days_for_employee(employee)
+        elif 'sabbatical' in name:
+            allocated = get_sabbatical_days_for_employee(employee)  # 0 until 4 years
         else:
-            allocated = lt.max_days
+            allocated = lt.max_days  # full policy allocation
 
         balance, created = LeaveBalance.objects.get_or_create(
             employee=employee,
@@ -66,12 +115,16 @@ def ensure_leave_balances(employee: Employee):
                 'remaining_days': allocated,
             }
         )
+
         if not created:
-            if lt.name.lower() == 'annual' and balance.allocated_days != allocated:
-                extra = allocated - balance.allocated_days
-                balance.allocated_days = allocated
-                balance.remaining_days = max(0, balance.remaining_days + extra)
-                balance.save(update_fields=['allocated_days', 'remaining_days'])
+            # Only recalculate types whose allocation can change over time
+            if name in ('annual',) or 'sabbatical' in name:
+                if balance.allocated_days != allocated:
+                    delta = allocated - balance.allocated_days
+                    balance.allocated_days = allocated
+                    # Carry the delta into remaining (e.g. annual gains 1 day/year)
+                    balance.remaining_days = max(0, balance.remaining_days + delta)
+                    balance.save(update_fields=['allocated_days', 'remaining_days'])
 
 
 def is_working_day(date) -> bool:
@@ -94,6 +147,23 @@ def count_working_days(start_date, end_date) -> int:
 def get_all_leave_types():
     seed_leave_types()
     return LeaveType.objects.all().order_by('name')
+
+
+def get_leave_types_for_employee(employee: Employee):
+    """Return only leave types allowed by the employee's recorded gender."""
+    seed_leave_types()
+    return [leave_type for leave_type in LeaveType.objects.select_related('policy').order_by('name')
+            if is_leave_type_available(employee, leave_type)]
+
+
+def is_leave_type_available(employee: Employee, leave_type: LeaveType) -> bool:
+    """Single policy check shared by dropdowns and all request submission paths."""
+    policy = getattr(leave_type, 'policy', None)
+    required_gender = policy.allowed_gender if policy else ''
+    if not required_gender:
+        name = leave_type.name.lower()
+        required_gender = 'Female' if 'maternity' in name else ('Male' if 'paternity' in name else '')
+    return not required_gender or employee.gender == required_gender
 
 
 def get_pending_requests():
@@ -163,6 +233,9 @@ def submit_leave_request(employee_id: int, data: dict) -> LeaveRequest:
     employee   = get_object_or_404(Employee, pk=employee_id)
     leave_type = get_object_or_404(LeaveType, pk=data.get('leave_type_id'))
 
+    if leave_type not in get_leave_types_for_employee(employee):
+        raise ValidationError(f"{leave_type.name} leave is not available for this employee.")
+
     start = data.get('start_date')
     end   = data.get('end_date')
 
@@ -185,7 +258,7 @@ def submit_leave_request(employee_id: int, data: dict) -> LeaveRequest:
             f"{leave_type.name} days remaining."
         )
 
-    req = LeaveRequest.objects.create(
+    req = LeaveRequest(
         employee                  = employee,
         leave_type                = leave_type,
         start_date                = start,
@@ -195,6 +268,8 @@ def submit_leave_request(employee_id: int, data: dict) -> LeaveRequest:
         contact_info_during_leave = data.get('contact_info_during_leave', ''),
         status                    = 'Pending',
     )
+    req.full_clean()
+    req.save()
 
     doc = data.get('document')
     if doc:

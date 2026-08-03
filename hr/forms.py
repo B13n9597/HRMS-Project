@@ -1,4 +1,6 @@
 from django import forms
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.contrib.auth.models import User
 
 from hr.models import (
@@ -11,7 +13,69 @@ from hr.models import (
     Position,
     Role,
     TrainingRequest,
+    Applicant,
+    Application,
+    JobPosting,
 )
+
+
+phone_validator = RegexValidator(
+    regex=r'^\+?[0-9][0-9\s\-()]{6,19}$',
+    message='Enter a valid phone number (digits, spaces, +, - and parentheses only).',
+)
+
+
+class PublicApplicationForm(forms.ModelForm):
+    """Public-facing application form with server-side file and duplicate checks."""
+    job = forms.ModelChoiceField(queryset=JobPosting.objects.none(), label='Position applied for')
+
+    class Meta:
+        model = Applicant
+        fields = [
+            'first_name', 'middle_name', 'last_name', 'gender', 'marital_status',
+            'email', 'phone', 'emergency_contact', 'fayda_id', 'cv', 'qualification',
+            'field_of_study', 'institution', 'work_experience',
+        ]
+        widgets = {
+            'gender': forms.Select(), 'marital_status': forms.Select(),
+            'work_experience': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['job'].queryset = JobPosting.objects.filter(
+            is_deleted=False, closing_date__gte=__import__('django').utils.timezone.localdate()
+        ).order_by('title')
+        for field_name in ('phone', 'emergency_contact'):
+            self.fields[field_name].validators.append(phone_validator)
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].lower()
+        if Applicant.objects.filter(email__iexact=email).exists():
+            raise ValidationError('An application with this email already exists.')
+        return email
+
+    def clean_fayda_id(self):
+        return self._validate_upload(self.cleaned_data['fayda_id'], {'.pdf', '.jpg', '.jpeg', '.png'}, 'Fayda ID')
+
+    def clean_cv(self):
+        return self._validate_upload(self.cleaned_data['cv'], {'.pdf', '.doc', '.docx'}, 'CV')
+
+    @staticmethod
+    def _validate_upload(upload, extensions, label):
+        import os
+        if upload.size > 5 * 1024 * 1024:
+            raise ValidationError(f'{label} must be 5 MB or smaller.')
+        if os.path.splitext(upload.name)[1].lower() not in extensions:
+            raise ValidationError(f'{label} must be one of: {", ".join(sorted(extensions))}.')
+        return upload
+
+    def save_application(self):
+        applicant = self.save()
+        return Application.objects.create(
+            applicant=applicant, job=self.cleaned_data['job'],
+            applied_date=__import__('django').utils.timezone.localdate(),
+        )
 
 
 class EmployeeCreateForm(forms.Form):

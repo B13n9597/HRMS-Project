@@ -1,6 +1,7 @@
 import csv
 import csv
 import json
+from collections import defaultdict
 from datetime import timedelta, date
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
@@ -47,9 +48,14 @@ def dean_dashboard_view(request):
     today = timezone.localdate()
     
     # 1. Department Overview Cards
-    total_staff = dept_employees.count()
-    active_staff_count = dept_employees.filter(status__name__iexact='Active').count()
-    on_leave_staff_count = dept_employees.filter(status__name__iexact='On Leave').count()
+    staff_counts = dept_employees.aggregate(
+        total=Count('id'),
+        active=Count('id', filter=Q(status__name__iexact='Active')),
+        on_leave=Count('id', filter=Q(status__name__iexact='On Leave')),
+    )
+    total_staff = staff_counts['total']
+    active_staff_count = staff_counts['active']
+    on_leave_staff_count = staff_counts['on_leave']
     
     # Attendance for today
     today_attendances = Attendance.objects.select_related('employee', 'employee__department', 'employee__position').filter(
@@ -121,17 +127,22 @@ def dean_dashboard_view(request):
     period_days = max(7, min(int(request.GET.get('days', 30)), 90))
     date_range  = [today - timedelta(days=i) for i in range(period_days - 1, -1, -1)]
 
-    # 5a. Attendance trend: present / late / absent per day
-    att_trend_labels, att_present, att_late, att_absent = [], [], [], []
+    # Fetch the entire trend with one grouped query instead of several queries per day.
+    daily_counts = defaultdict(dict)
+    for row in (Attendance.objects.filter(employee__in=dept_employees, date__range=(date_range[0], date_range[-1]))
+                .values('date', 'status').annotate(total=Count('id'))):
+        daily_counts[row['date']][row['status']] = row['total']
+
+    att_trend_labels, att_present, att_late, att_absent, late_trend = [], [], [], [], []
     for d in date_range:
-        qs_day  = Attendance.objects.filter(employee__in=dept_employees, date=d)
-        present = qs_day.filter(status='Present').count()
-        late    = qs_day.filter(status='Late').count()
-        absent  = max(0, total_staff - present - late)
+        counts = daily_counts[d]
+        present = counts.get('Present', 0)
+        late = counts.get('Late', 0)
         att_trend_labels.append(d.strftime('%b %d'))
         att_present.append(present)
         att_late.append(late)
-        att_absent.append(absent)
+        att_absent.append(max(0, total_staff - present - late))
+        late_trend.append({'date': d.strftime('%b %d'), 'late': late})
 
     # 5b. Today status distribution (for pie)
     status_dist = {
@@ -141,15 +152,14 @@ def dean_dashboard_view(request):
     }
 
     # 5c. Leave by status (for bar chart)
-    leave_approved = LeaveRequest.objects.filter(employee__in=dept_employees, status='Approved', is_deleted=False).count()
-    leave_pending  = LeaveRequest.objects.filter(employee__in=dept_employees, status='Pending',  is_deleted=False).count()
-    leave_rejected = LeaveRequest.objects.filter(employee__in=dept_employees, status='Rejected', is_deleted=False).count()
-
-    # 5d. Late arrivals per day
-    late_trend = []
-    for d in date_range:
-        lc = Attendance.objects.filter(employee__in=dept_employees, date=d, status='Late').count()
-        late_trend.append({'date': d.strftime('%b %d'), 'late': lc})
+    leave_counts = LeaveRequest.objects.filter(employee__in=dept_employees, is_deleted=False).aggregate(
+        approved=Count('id', filter=Q(status='Approved')),
+        pending=Count('id', filter=Q(status='Pending')),
+        rejected=Count('id', filter=Q(status='Rejected')),
+    )
+    leave_approved = leave_counts['approved']
+    leave_pending = leave_counts['pending']
+    leave_rejected = leave_counts['rejected']
 
     # 5e. Per-employee KPI bar chart data (max 20 employees)
     kpi_emp_names, kpi_emp_scores = [], []

@@ -9,6 +9,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.core.paginator import Paginator
 
 from hr.services.attendance_service import (
     get_todays_attendance,
@@ -69,8 +70,12 @@ def attendance_logs(request):
 
     departments = Department.objects.all()
 
+    paginator = Paginator(records, 50)
+    page_obj = paginator.get_page(request.GET.get('page'))
     context = {
-        'records':     records,
+        'records':     page_obj,
+        'page_obj':    page_obj,
+        'total_records': paginator.count,
         'departments': departments,
         'month':       month,
         'year':        year,

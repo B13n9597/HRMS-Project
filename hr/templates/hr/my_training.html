@@ -1,189 +1,386 @@
 {% extends 'hr/employee_base.html' %}
 {% block title %}My Training — ACT HRMS{% endblock %}
-{% block content %}
+
+{% block extra_styles %}
 <style>
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; margin-bottom: 22px; }
-    .summary-card { padding: 20px; }
-    .summary-card .stat-label { font-size: 12px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
-    .summary-card .stat-value { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--text-main); margin-top: 6px; }
-    .summary-card .subtle { margin-top: 8px; font-size: 13px; color: var(--text-muted); }
-    .progress-track { width: 100%; height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin: 12px 0 8px; }
-    .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #2dd4bf); border-radius: 999px; }
-    .section-heading { margin: 0 0 10px; font-family: var(--font-display); font-size: 18px; font-weight: 700; }
-    .section-subtle { margin: 0 0 18px; color: var(--text-muted); font-size: 13px; }
-    .file-note { margin-top: 6px; color: var(--text-muted); font-size: 12px; }
-    .accent-note { padding: 12px 14px; border-radius: var(--radius-sm); background: var(--primary-light); color: var(--primary); font-size: 12px; font-weight: 700; margin-bottom: 18px; }
-    @media (max-width: 768px) {
-        .summary-grid { grid-template-columns: 1fr; }
-    }
+/* ── CPD Summary card ─────────────────────────────────────── */
+.cpd-card { padding: 28px 32px; }
+.cpd-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.cpd-score { font-family: var(--font-display); font-size: 40px; font-weight: 800; color: var(--primary); line-height: 1; }
+.cpd-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-light); margin-bottom: 6px; }
+.cpd-meta { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+.progress-track { width: 100%; height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin: 14px 0 8px; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #2dd4bf); border-radius: 999px; transition: width .4s ease; }
+
+/* ── Shared form skin ─────────────────────────────────────── */
+.f-section { margin-bottom: 0; }
+.f-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
+.f-row.full { grid-template-columns: 1fr; }
+.f-group { display: flex; flex-direction: column; gap: 5px; padding-bottom: 18px; }
+.f-group label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--text-light);
+}
+.f-group label .req { color: var(--danger); margin-left: 2px; }
+.f-input, .f-select, .f-textarea {
+    width: 100%; padding: 10px 14px;
+    border: 1.5px solid var(--border-color); border-radius: var(--radius-sm);
+    font-size: 14px; font-family: var(--font-sans);
+    background: #f8fafc; color: var(--text-main);
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    appearance: none;
+}
+.f-input:focus, .f-select:focus, .f-textarea:focus {
+    outline: none; border-color: var(--primary);
+    background: #fff; box-shadow: 0 0 0 3px rgba(2,93,162,.1);
+}
+.f-textarea { resize: vertical; min-height: 90px; }
+.f-select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px; }
+.f-file-wrap {
+    border: 1.5px dashed var(--border-color); border-radius: var(--radius-sm);
+    padding: 16px 18px; background: #f8fafc; cursor: pointer;
+    display: flex; align-items: center; gap: 14px; transition: border-color .2s;
+}
+.f-file-wrap:hover { border-color: var(--primary); background: #f0f7ff; }
+.f-file-icon { width: 38px; height: 38px; border-radius: var(--radius-sm); background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.f-file-text { font-size: 13px; color: var(--text-muted); }
+.f-file-text strong { display: block; font-size: 14px; color: var(--text-main); margin-bottom: 2px; }
+.f-file-wrap input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.f-error { font-size: 12px; color: var(--danger); margin-top: 3px; }
+.f-divider { border: none; border-top: 1px solid var(--border-color); margin: 4px 0 20px; }
+
+/* ── Completion panel (slide-open below table row) ────────── */
+.completion-trigger {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: var(--radius-sm);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    border: 1.5px solid var(--primary); background: var(--primary-light);
+    color: var(--primary); transition: var(--transition);
+}
+.completion-trigger:hover { background: var(--primary); color: #fff; }
+.completion-panel {
+    display: none; background: #f8fafc;
+    border-top: 2px solid var(--primary);
+    padding: 24px 28px;
+}
+.completion-panel.open { display: block; }
+.completion-panel-inner { max-width: 640px; }
+.completion-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.completion-header h4 { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text-main); }
+.completion-close { background: none; border: none; cursor: pointer; color: var(--text-light); font-size: 20px; line-height: 1; padding: 2px 6px; border-radius: 4px; }
+.completion-close:hover { background: #e2e8f0; color: var(--text-main); }
+
+@media (max-width: 640px) { .f-row { grid-template-columns: 1fr; } }
 </style>
+{% endblock %}
+
+{% block content %}
 <div class="page-header">
     <div class="page-header-left">
         <h1>My Training</h1>
-        <p>Request training, track CPD progress, and upload evidence for completion.</p>
+        <p>Request training, track CPD progress, and submit post-training feedback.</p>
     </div>
 </div>
 
 {% if messages %}
     {% for message in messages %}
-    <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+    <div class="alert alert-{{ message.tags|default:'info' }}" style="margin-bottom:16px;">{{ message }}</div>
     {% endfor %}
 {% endif %}
 
-<div class="summary-grid">
-    <div class="card summary-card">
-        <div class="stat-label">Completed CPD Points</div>
-        <div class="stat-value">{{ total_cpd }} / {{ academic_target|default:60 }}</div>
-        <div class="progress-track">
-            {% if academic_target %}
-                {% widthratio total_cpd academic_target 100 as progress_pct %}
-            {% else %}
-                {% widthratio total_cpd 60 100 as progress_pct %}
-            {% endif %}
-            <div class="progress-fill" style="width: {{ progress_pct|default:0 }}%;"></div>
+<!-- ── CPD Progress Card ──────────────────────────────────── -->
+<div class="card cpd-card" style="margin-bottom:24px;">
+    <div class="cpd-top">
+        <div>
+            <div class="cpd-label">CPD Progress</div>
+            <div class="cpd-score">{{ total_cpd }}<span style="font-size:22px;color:var(--text-light);font-weight:600;"> / {{ academic_target|default:60 }}</span></div>
+            <div class="cpd-meta">{{ remaining_cpd }} points remaining to reach your target</div>
         </div>
-        <div class="subtle">Remaining Points: {{ remaining_cpd }}</div>
-        <div class="subtle">
-            Status: 
+        <div>
             {% if academic_target and total_cpd >= academic_target %}
-                <span class="badge badge-success">Target Achieved</span>
-            {% elif academic_target and total_cpd >= academic_target|floatformat:0|add:'-15' %}
-                <span class="badge badge-warning">On Track</span>
+                <span class="badge badge-success" style="font-size:13px;padding:8px 16px;">🎯 Target Achieved</span>
             {% else %}
-                <span class="badge badge-danger">Below Target</span>
+                <span class="badge badge-warning" style="font-size:13px;padding:8px 16px;">In Progress</span>
             {% endif %}
         </div>
     </div>
+    <div class="progress-track">
+        {% if academic_target %}
+            {% widthratio total_cpd academic_target 100 as pct %}
+        {% else %}
+            {% widthratio total_cpd 60 100 as pct %}
+        {% endif %}
+        <div class="progress-fill" style="width:{{ pct|default:0 }}%;"></div>
+    </div>
+    <div style="font-size:12px;color:var(--text-light);">{{ pct|default:0 }}% complete</div>
 </div>
 
-<div class="card" style="margin-bottom: 22px;">
+<!-- ── Request Training Form ──────────────────────────────── -->
+<div class="card" style="margin-bottom:24px;">
     <div class="card-header">
+        <i data-lucide="graduation-cap" style="width:18px;height:18px;color:var(--primary);"></i>
         <h3>Request Training</h3>
     </div>
-    <div class="card-body">
-        <p class="section-subtle">Submit a new training request and attach supporting evidence for supervisor review.</p>
-        <form method="post" enctype="multipart/form-data">
+    <div class="card-body" style="padding:28px 32px;">
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:24px;">
+            Submit a training request and attach supporting documents for supervisor review.
+        </p>
+        <form method="post" enctype="multipart/form-data" class="f-section">
             {% csrf_token %}
             <input type="hidden" name="action" value="request_training">
-            <div class="form-grid-2">
-                <div class="form-field">
-                    <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+
+            <div class="f-row">
+                <div class="f-group">
+                    <label for="{{ form.title.id_for_label }}">Training Title <span class="req">*</span></label>
                     {{ form.title }}
-                    {% if form.title.errors %}<div class="form-error">{{ form.title.errors|join:', ' }}</div>{% endif %}
+                    {% if form.title.errors %}<div class="f-error">{{ form.title.errors|join:', ' }}</div>{% endif %}
                 </div>
-                <div class="form-field">
-                    <label for="{{ form.provider.id_for_label }}">{{ form.provider.label }}</label>
+                <div class="f-group">
+                    <label for="{{ form.provider.id_for_label }}">Provider / Institution <span class="req">*</span></label>
                     {{ form.provider }}
-                    {% if form.provider.errors %}<div class="form-error">{{ form.provider.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field">
-                    <label for="{{ form.type.id_for_label }}">{{ form.type.label }}</label>
-                    {{ form.type }}
-                    {% if form.type.errors %}<div class="form-error">{{ form.type.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field">
-                    <label for="{{ form.funding_source.id_for_label }}">{{ form.funding_source.label }}</label>
-                    {{ form.funding_source }}
-                    {% if form.funding_source.errors %}<div class="form-error">{{ form.funding_source.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field">
-                    <label for="{{ form.start_date.id_for_label }}">{{ form.start_date.label }}</label>
-                    {{ form.start_date }}
-                    {% if form.start_date.errors %}<div class="form-error">{{ form.start_date.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field">
-                    <label for="{{ form.end_date.id_for_label }}">{{ form.end_date.label }}</label>
-                    {{ form.end_date }}
-                    {% if form.end_date.errors %}<div class="form-error">{{ form.end_date.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field">
-                    <label for="{{ form.cost.id_for_label }}">{{ form.cost.label }}</label>
-                    {{ form.cost }}
-                    {% if form.cost.errors %}<div class="form-error">{{ form.cost.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field" style="grid-column: 1 / -1;">
-                    <label for="{{ form.business_justification.id_for_label }}">{{ form.business_justification.label }}</label>
-                    {{ form.business_justification }}
-                    {% if form.business_justification.errors %}<div class="form-error">{{ form.business_justification.errors|join:', ' }}</div>{% endif %}
-                </div>
-                <div class="form-field" style="grid-column: 1 / -1;">
-                    <label for="{{ form.supporting_document.id_for_label }}">{{ form.supporting_document.label }}</label>
-                    {{ form.supporting_document }}
-                    <div class="file-note">Accepted formats: PDF, JPG, PNG</div>
-                    {% if form.supporting_document.errors %}<div class="form-error">{{ form.supporting_document.errors|join:', ' }}</div>{% endif %}
+                    {% if form.provider.errors %}<div class="f-error">{{ form.provider.errors|join:', ' }}</div>{% endif %}
                 </div>
             </div>
-            <div class="form-actions" style="margin-top: 18px;">
-                <button class="btn btn-primary" type="submit">Submit Training Request</button>
+            <hr class="f-divider">
+
+            <div class="f-row">
+                <div class="f-group">
+                    <label for="{{ form.type.id_for_label }}">Training Type</label>
+                    {{ form.type }}
+                    {% if form.type.errors %}<div class="f-error">{{ form.type.errors|join:', ' }}</div>{% endif %}
+                </div>
+                <div class="f-group">
+                    <label for="{{ form.funding_source.id_for_label }}">Funding Source</label>
+                    {{ form.funding_source }}
+                    {% if form.funding_source.errors %}<div class="f-error">{{ form.funding_source.errors|join:', ' }}</div>{% endif %}
+                </div>
+            </div>
+            <hr class="f-divider">
+
+            <div class="f-row">
+                <div class="f-group">
+                    <label for="{{ form.start_date.id_for_label }}">Start Date <span class="req">*</span></label>
+                    {{ form.start_date }}
+                    {% if form.start_date.errors %}<div class="f-error">{{ form.start_date.errors|join:', ' }}</div>{% endif %}
+                </div>
+                <div class="f-group">
+                    <label for="{{ form.end_date.id_for_label }}">End Date</label>
+                    {{ form.end_date }}
+                    {% if form.end_date.errors %}<div class="f-error">{{ form.end_date.errors|join:', ' }}</div>{% endif %}
+                </div>
+            </div>
+            <hr class="f-divider">
+
+            <div class="f-row">
+                <div class="f-group">
+                    <label for="{{ form.cost.id_for_label }}">Estimated Cost (ETB)</label>
+                    {{ form.cost }}
+                    {% if form.cost.errors %}<div class="f-error">{{ form.cost.errors|join:', ' }}</div>{% endif %}
+                </div>
+            </div>
+            <hr class="f-divider">
+
+            <div class="f-row full">
+                <div class="f-group">
+                    <label for="{{ form.business_justification.id_for_label }}">Business Justification <span class="req">*</span></label>
+                    {{ form.business_justification }}
+                    {% if form.business_justification.errors %}<div class="f-error">{{ form.business_justification.errors|join:', ' }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="f-row full">
+                <div class="f-group" style="padding-bottom:0;">
+                    <label>Supporting Document</label>
+                    <div class="f-file-wrap" style="position:relative;">
+                        <div class="f-file-icon">
+                            <i data-lucide="paperclip" style="width:18px;height:18px;"></i>
+                        </div>
+                        <div class="f-file-text">
+                            <strong>Attach a file</strong>
+                            PDF, JPG or PNG — max 5 MB
+                        </div>
+                        {{ form.supporting_document }}
+                    </div>
+                    {% if form.supporting_document.errors %}<div class="f-error">{{ form.supporting_document.errors|join:', ' }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div style="margin-top:24px;display:flex;gap:12px;">
+                <button class="btn btn-primary" type="submit">
+                    <i data-lucide="send" style="width:15px;height:15px;"></i>
+                    Submit Request
+                </button>
+                <button type="reset" class="btn btn-ghost">Clear</button>
             </div>
         </form>
     </div>
 </div>
 
+<!-- ── Request History Table ──────────────────────────────── -->
 <div class="card">
     <div class="card-header">
+        <i data-lucide="list-checks" style="width:18px;height:18px;color:var(--primary);"></i>
         <h3>Request History</h3>
+        <span class="badge badge-primary" style="margin-left:auto;">{{ requests_with_forms|length }} records</span>
     </div>
-    <div class="card-body">
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Training</th>
-                        <th>Requested By</th>
-                        <th>Source</th>
-                        <th>Provider</th>
-                        <th>Type</th>
-                        <th>Dates</th>
-                        <th>Status</th>
-                        <th>CPD</th>
-                        <th>Post-training Feedback</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item, completion_form in requests_with_forms %}
-                    <tr>
-                        <td>{{ item.title }}</td>
-                        <td>{{ item.requested_by.get_full_name|default:'-' }}</td>
-                        <td>{{ item.get_request_source_display|default:'-' }}</td>
-                        <td>{{ item.provider }}</td>
-                        <td>{{ item.type }}</td>
-                        <td>{{ item.start_date|default:'-' }} → {{ item.end_date|default:'-' }}</td>
-                        <td>
-                            {% if item.status == 'Completed' %}
-                                <span class="badge badge-success">{{ item.status }}</span>
-                            {% elif item.status == 'Supervisor Rejected' or item.status == 'HR Rejected' %}
-                                <span class="badge badge-danger">{{ item.status }}</span>
-                            {% elif item.status == 'Approved' or item.status == 'HR Review' %}
-                                <span class="badge badge-primary">{{ item.status }}</span>
-                            {% else %}
-                                <span class="badge badge-warning">{{ item.status }}</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ item.cpd_points }}</td>
-                        <td>
-                            <form method="post" enctype="multipart/form-data">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="submit_completion">
-                                <input type="hidden" name="request_id" value="{{ item.id }}">
-                                <div class="form-grid-2">
+
+    {% if requests_with_forms %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Training</th>
+                    <th>Provider</th>
+                    <th>Type</th>
+                    <th>Dates</th>
+                    <th>Status</th>
+                    <th>CPD</th>
+                    <th>Feedback</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item, completion_form in requests_with_forms %}
+                <tr>
+                    <td>
+                        <strong>{{ item.title }}</strong>
+                        {% if item.requested_by %}
+                        <div style="font-size:11px;color:var(--text-light);margin-top:2px;">
+                            By {{ item.requested_by.get_full_name|default:'—' }}
+                            {% if item.get_request_source_display %}&bull; {{ item.get_request_source_display }}{% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:13px;color:var(--text-muted);">{{ item.provider|default:'—' }}</td>
+                    <td style="font-size:13px;">{{ item.type|default:'—' }}</td>
+                    <td style="font-size:12px;white-space:nowrap;color:var(--text-muted);">
+                        {{ item.start_date|default:'—' }}<br>
+                        {% if item.end_date %}<span style="color:var(--text-light);">→ {{ item.end_date }}</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if item.status == 'Completed' %}
+                            <span class="badge badge-success">{{ item.status }}</span>
+                        {% elif item.status == 'Supervisor Rejected' or item.status == 'HR Rejected' %}
+                            <span class="badge badge-danger">{{ item.status }}</span>
+                        {% elif item.status == 'Approved' or item.status == 'HR Review' %}
+                            <span class="badge badge-primary">{{ item.status }}</span>
+                        {% else %}
+                            <span class="badge badge-warning">{{ item.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.cpd_points %}
+                        <strong style="color:var(--primary);">{{ item.cpd_points }}</strong>
+                        <span style="font-size:11px;color:var(--text-light);"> pts</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if item.status == 'Approved' or item.status == 'Completed' %}
+                        <button
+                            type="button"
+                            class="completion-trigger"
+                            onclick="toggleCompletion('panel-{{ item.id }}', this)">
+                            <i data-lucide="clipboard-check" style="width:13px;height:13px;"></i>
+                            {% if item.status == 'Completed' %}Edit Feedback{% else %}Add Feedback{% endif %}
+                        </button>
+                        {% else %}
+                        <span style="font-size:12px;color:var(--text-light);">Awaiting approval</span>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <!-- Completion feedback panel (spans full row width) -->
+                {% if item.status == 'Approved' or item.status == 'Completed' %}
+                <tr class="completion-row" id="panel-{{ item.id }}" style="display:none;">
+                    <td colspan="7" style="padding:0;background:#f8fafc;border-top:none;">
+                        <div class="completion-panel open">
+                            <div class="completion-panel-inner">
+                                <div class="completion-header">
+                                    <h4>
+                                        <i data-lucide="clipboard-check" style="width:16px;height:16px;color:var(--primary);vertical-align:middle;margin-right:6px;"></i>
+                                        Post-Training Feedback — {{ item.title }}
+                                    </h4>
+                                    <button type="button" class="completion-close"
+                                            onclick="toggleCompletion('panel-{{ item.id }}', null)"
+                                            title="Close">✕</button>
+                                </div>
+                                <form method="post" enctype="multipart/form-data" class="f-section">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="submit_completion">
+                                    <input type="hidden" name="request_id" value="{{ item.id }}">
                                     {% for field in completion_form %}
-                                    <div class="form-field">
-                                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                        {{ field }}
+                                    <div class="f-row {% if field.field.widget.input_type == 'textarea' or forloop.last %}full{% endif %}">
+                                        <div class="f-group">
+                                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                            {{ field }}
+                                            {% if field.errors %}<div class="f-error">{{ field.errors|join:', ' }}</div>{% endif %}
+                                        </div>
                                     </div>
                                     {% endfor %}
-                                </div>
-                                <button class="btn btn-primary" type="submit" style="margin-top:8px;">Save Feedback</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="9" style="text-align:center;">No training requests yet.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                                    <div style="margin-top:8px;display:flex;gap:10px;">
+                                        <button class="btn btn-primary" type="submit" style="padding:9px 20px;">
+                                            <i data-lucide="save" style="width:14px;height:14px;"></i>
+                                            Save Feedback
+                                        </button>
+                                        <button type="button" class="btn btn-ghost"
+                                                onclick="toggleCompletion('panel-{{ item.id }}', null)">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:40px;color:var(--text-light);">
+                        <i data-lucide="inbox" style="width:36px;height:36px;display:block;margin:0 auto 10px;opacity:.3;"></i>
+                        No training requests submitted yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+    {% else %}
+    <div style="padding:48px;text-align:center;color:var(--text-light);">
+        <i data-lucide="inbox" style="width:40px;height:40px;display:block;margin:0 auto 12px;opacity:.3;"></i>
+        <p style="font-size:14px;font-weight:600;color:var(--text-main);margin-bottom:4px;">No training requests yet</p>
+        <p style="font-size:13px;">Use the form above to submit your first request.</p>
+    </div>
+    {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleCompletion(panelId, triggerBtn) {
+    var row = document.getElementById(panelId);
+    if (!row) return;
+    var isOpen = row.style.display !== 'none';
+    row.style.display = isOpen ? 'none' : 'table-row';
+    if (triggerBtn && !isOpen) {
+        triggerBtn.style.background = 'var(--primary)';
+        triggerBtn.style.color = '#fff';
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+document.addEventListener('DOMContentLoaded', function () {
+    /* Apply styling to all Django-rendered inputs inside training form */
+    document.querySelectorAll('.f-section input[type=text],'
+        + '.f-section input[type=number],'
+        + '.f-section input[type=date],'
+        + '.f-section input[type=email]').forEach(function (el) {
+        el.classList.add('f-input');
+    });
+    document.querySelectorAll('.f-section select').forEach(function (el) {
+        el.classList.add('f-select');
+    });
+    document.querySelectorAll('.f-section textarea').forEach(function (el) {
+        el.classList.add('f-textarea');
+    });
+});
+</script>
 {% endblock %}
