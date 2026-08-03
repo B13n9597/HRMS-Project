@@ -94,6 +94,7 @@ urlpatterns = [
 
     # ── Bulk / Tablet ─────────────────────────────────────────────
     path('api/employees/upload-csv/',                   api_views.api_upload_employees_csv,      name='api_employees_upload_csv'),
+    path('api/employees/import-preview/',               api_views.api_upload_employees_preview,  name='api_employees_import_preview'),
     path('api/attendance/tablet/authenticate/',         api_views.api_tablet_authenticate,       name='api_attendance_tablet_authenticate'),
     path('api/attendance/tablet/submit/',               api_views.api_tablet_submit,             name='api_attendance_tablet_submit'),
 
