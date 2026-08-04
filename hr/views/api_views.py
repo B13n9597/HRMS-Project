@@ -1141,6 +1141,81 @@ def api_upload_employees_csv(request):
         'errors': result['errors']
     })
 
+
+@login_required
+def api_upload_employees_preview(request):
+    """
+    POST /api/employees/import-preview/
+    Accepts an uploaded CSV/XLSX file (field name: `csv_file`) and returns a
+    validation preview without creating any Employee records.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+    if not is_hr(request.user):
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+
+    uploaded_file = request.FILES.get('csv_file')
+    if not uploaded_file:
+        return JsonResponse({'success': False, 'error': 'No file uploaded.'}, status=400)
+
+    from django.core.exceptions import ValidationError as DjangoValidationError
+    from hr.services.employee_service import (
+        _read_employee_upload_rows,
+        _employee_data_from_upload_row,
+        validate_employee_payload,
+    )
+
+    try:
+        rows = _read_employee_upload_rows(uploaded_file)
+    except DjangoValidationError as e:
+        return JsonResponse({'success': False, 'error': str(e.message if hasattr(e, 'message') else e)}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Failed to parse file: {str(e)}'}, status=500)
+
+    preview = []
+    errors = []
+    seen_emails = {}
+    seen_usernames = {}
+
+    for row_number, row in rows:
+        try:
+            parsed = _employee_data_from_upload_row(row)
+
+            # Check for duplicates inside the uploaded file
+            email = (parsed.get('email') or '').lower().strip()
+            username = (parsed.get('username') or '').strip()
+            if email:
+                seen_emails.setdefault(email, 0)
+                seen_emails[email] += 1
+                if seen_emails[email] > 1:
+                    raise DjangoValidationError(f"Duplicate email in upload: {email}")
+            if username:
+                seen_usernames.setdefault(username, 0)
+                seen_usernames[username] += 1
+                if seen_usernames[username] > 1:
+                    raise DjangoValidationError(f"Duplicate username in upload: {username}")
+
+            # Run the same payload validation used before creation so callers
+            # get consistent errors. This will catch missing required fields
+            # and invalid FK names.
+            try:
+                validate_employee_payload(parsed)
+            except DjangoValidationError as ve:
+                errors.append(f"Row {row_number}: {ve}")
+                preview.append({'row': row_number, 'data': parsed, 'valid': False, 'errors': str(ve)})
+                continue
+
+            preview.append({'row': row_number, 'data': parsed, 'valid': True, 'errors': None})
+        except DjangoValidationError as exc:
+            errors.append(f"Row {row_number}: {exc}")
+            preview.append({'row': row_number, 'data': row, 'valid': False, 'errors': str(exc)})
+        except Exception as exc:
+            errors.append(f"Row {row_number}: {exc}")
+            preview.append({'row': row_number, 'data': row, 'valid': False, 'errors': str(exc)})
+
+    return JsonResponse({'success': True, 'preview': preview, 'errors': errors})
+
     file_name = uploaded_file.name.lower()
     if not (file_name.endswith('.csv') or file_name.endswith('.xlsx') or file_name.endswith('.xls')):
         return JsonResponse({
