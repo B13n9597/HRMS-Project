@@ -95,8 +95,15 @@ def ensure_leave_balances(employee: Employee):
       never reduces remaining_days below what has already been used.
     - Called on first login, leave submission, and by management commands.
     """
+    _sync_gender_from_recruitment_application(employee)
     seed_leave_types()
     for lt in LeaveType.objects.all():
+        # Do not create a balance for leave that the employee cannot request.
+        # This also keeps newly hired employees' dashboards clean from the
+        # beginning, rather than only hiding the leave-type dropdown option.
+        if not is_leave_type_available(employee, lt):
+            continue
+
         name = lt.name.lower()
 
         if name == 'annual':
@@ -127,6 +134,18 @@ def ensure_leave_balances(employee: Employee):
                     balance.save(update_fields=['allocated_days', 'remaining_days'])
 
 
+def _sync_gender_from_recruitment_application(employee: Employee) -> None:
+    """Repair a legacy hired profile when its linked application has gender data."""
+    if employee.gender:
+        return
+
+    application = getattr(employee, 'source_application', None)
+    gender = getattr(getattr(application, 'applicant', None), 'gender', '')
+    if gender in dict(Employee.GENDER_CHOICES):
+        employee.gender = gender
+        employee.save(update_fields=['gender'])
+
+
 def is_working_day(date) -> bool:
     """Returns True if date is a working day (not weekend or holiday)."""
     return not is_day_off(date)
@@ -151,6 +170,7 @@ def get_all_leave_types():
 
 def get_leave_types_for_employee(employee: Employee):
     """Return only leave types allowed by the employee's recorded gender."""
+    _sync_gender_from_recruitment_application(employee)
     seed_leave_types()
     return [leave_type for leave_type in LeaveType.objects.select_related('policy').order_by('name')
             if is_leave_type_available(employee, leave_type)]
@@ -378,8 +398,10 @@ def cancel_request(request_id: int, employee: Employee) -> LeaveRequest:
 def get_leave_balance(employee_id: int) -> list:
     employee = get_object_or_404(Employee, pk=employee_id)
     ensure_leave_balances(employee)
+    allowed_type_ids = [leave_type.id for leave_type in get_leave_types_for_employee(employee)]
     return LeaveBalance.objects.filter(
         employee=employee,
+        leave_type_id__in=allowed_type_ids,
     ).select_related('leave_type')
 
 

@@ -4,8 +4,9 @@ from unittest.mock import patch
 from django.test import TestCase, Client, RequestFactory
 from django.contrib.auth.models import User
 from django.urls import reverse, NoReverseMatch
-from hr.models import Role, Employee, Department
+from hr.models import Role, Employee, Department, LeaveBalance
 from hr.services import employee_service
+from hr.services import leave_service
 
 
 class DashboardRoleAccessTestCase(TestCase):
@@ -203,3 +204,43 @@ class DashboardRoleAccessTestCase(TestCase):
         self.assertEqual(employee.user.email, 'ada@example.com')
         self.assertEqual(employee.user.username, 'ada')
         self.assertTrue(Employee.objects.filter(user=employee.user).exists())
+
+
+class GenderRestrictedLeaveTestCase(TestCase):
+    def setUp(self):
+        self.role, _ = Role.objects.get_or_create(name='Employee')
+        self.female_user = User.objects.create_user(username='female_leave_test', password='testpass123')
+        self.male_user = User.objects.create_user(username='male_leave_test', password='testpass123')
+        # The user-creation signal creates these employee profiles.
+        Employee.objects.filter(user=self.female_user).update(
+            first_name='Aster', last_name='Test', employee_id='TEST-FEMALE-LEAVE',
+            role=self.role, gender='Female',
+        )
+        Employee.objects.filter(user=self.male_user).update(
+            first_name='Abel', last_name='Test', employee_id='TEST-MALE-LEAVE',
+            role=self.role, gender='Male',
+        )
+        self.female_employee = Employee.objects.get(user=self.female_user)
+        self.male_employee = Employee.objects.get(user=self.male_user)
+
+    def test_balances_and_api_only_include_gender_eligible_leave_types(self):
+        female_balances = leave_service.get_leave_balance(self.female_employee.id)
+        male_balances = leave_service.get_leave_balance(self.male_employee.id)
+
+        self.assertNotIn('Paternity', [balance.leave_type.name for balance in female_balances])
+        self.assertNotIn('Maternity', [balance.leave_type.name for balance in male_balances])
+        self.assertFalse(LeaveBalance.objects.filter(
+            employee=self.female_employee, leave_type__name='Paternity'
+        ).exists())
+        self.assertFalse(LeaveBalance.objects.filter(
+            employee=self.male_employee, leave_type__name='Maternity'
+        ).exists())
+
+        client = Client(SERVER_NAME='localhost')
+        client.force_login(self.female_user)
+        response = client.get(reverse('api_leaves'))
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertNotIn('Paternity', [balance['leave_type'] for balance in payload['balances']])
+        self.assertNotIn('Paternity', [leave_type['name'] for leave_type in payload['leave_types']])

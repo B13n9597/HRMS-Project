@@ -109,8 +109,12 @@ def convert_application_to_employee(application):
     # If an Employee already exists for this user, link and return
     existing_emp = Employee.objects.filter(user=user).first()
     if existing_emp:
-        # Complete any missing fields (employee_id / attendance_pin) and send credentials if needed
+        # Complete legacy details from the application when an account already
+        # exists. Gender controls maternity/paternity leave eligibility.
         changed = False
+        if not existing_emp.gender and applicant.gender:
+            existing_emp.gender = applicant.gender
+            changed = True
         if not existing_emp.employee_id:
             existing_emp.employee_id = f'EMP-{existing_emp.pk:05d}'
             changed = True
@@ -119,7 +123,7 @@ def convert_application_to_employee(application):
             existing_emp.pin = existing_emp.attendance_pin
             changed = True
         if changed:
-            existing_emp.save(update_fields=['employee_id', 'attendance_pin', 'pin'])
+            existing_emp.save()
             from hr.services.employee_service import send_employee_credentials
             send_employee_credentials(existing_emp, applicant.email, existing_emp.attendance_pin)
             application.converted_employee = existing_emp
