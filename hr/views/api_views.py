@@ -14,7 +14,7 @@ from hr.models import (
     JobPosting, Application, Applicant, SystemSetting, Role, EmployeeStatus,
     EmployeeHistory, Salary,Attendance
 )
-from hr.services.leave_service import ensure_leave_balances, sabbatical_eligibility, get_leave_types_for_employee, submit_leave_request
+from hr.services.leave_service import get_leave_balance, sabbatical_eligibility, get_leave_types_for_employee, submit_leave_request
 from django.core.exceptions import ValidationError
 
 # Helper: check if user is HR/Admin
@@ -354,10 +354,9 @@ def api_leaves(request):
         return JsonResponse({'success': False, 'error': 'Employee profile missing'}, status=404)
         
     if request.method == 'GET':
-        # Get balances
-        # Ensure leave balances (creates sabbatical/annual entries as needed)
-        ensure_leave_balances(employee)
-        balances = LeaveBalance.objects.filter(employee=employee).select_related('leave_type')
+        # Use the shared employee-specific balance query so gender-restricted
+        # leave types are not exposed in the dashboard response.
+        balances = get_leave_balance(employee.pk)
         balances_data = []
         for b in balances:
             name = b.leave_type.name

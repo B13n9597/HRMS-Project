@@ -12,6 +12,7 @@ from hr.models import (
     Employee, Payroll, PayrollRecord, PerformanceEvaluation,
     Application, SystemSetting, BiannualKPIScore, EmployeeCertificate,
     TrainingRequest, DisciplinaryIncident, Grievance, Department, EmployeeHistory,
+    HiringRequest, JobPosting,
 )
 from hr.services import leave_service, employee_service
 from hr.views.recruitment_views import convert_application_to_employee
@@ -252,7 +253,6 @@ def candidate_screen(request):
         if action == 'approve_hiring_request':
             req_id = request.POST.get('hiring_request_id')
             try:
-                from hr.models import HiringRequest
                 h_req = HiringRequest.objects.get(pk=req_id)
                 new_status = 'Approved'
 
@@ -270,7 +270,6 @@ def candidate_screen(request):
         elif action == 'create_vacancy_from_request':
             req_id = request.POST.get('hiring_request_id')
             try:
-                from hr.models import HiringRequest, JobPosting
                 h_req = HiringRequest.objects.get(pk=req_id)
                 if h_req.status == 'Approved' and not h_req.created_vacancy:
                     vacancy = JobPosting.objects.create(
