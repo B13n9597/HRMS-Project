@@ -117,7 +117,32 @@
     {% if tname != 'Sabbatical' and tname != 'sabbatical' or b.sabbatical_info %}
     <div class="balance-card">
         <div class="days">{{ b.remaining_days }}</div>
-        <div class="type-name">{{ b.leave_type_name }} days left</div>
+        <div class="type-name">
+            {# Show gender label for pre/post maternity/paternity cards #}
+            {% with tl=b.leave_type_name|lower %}
+            {% if 'pre-maternity' in tl %}
+                Pre-Maternity days left
+                <span style="display:block;font-size:10px;color:var(--primary);font-weight:700;margin-top:2px;">♀ Female</span>
+            {% elif 'post-maternity' in tl %}
+                Post-Maternity days left
+                <span style="display:block;font-size:10px;color:var(--primary);font-weight:700;margin-top:2px;">♀ Female</span>
+            {% elif 'pre-paternity' in tl %}
+                Pre-Paternity days left
+                <span style="display:block;font-size:10px;color:#0369a1;font-weight:700;margin-top:2px;">♂ Male</span>
+            {% elif 'post-paternity' in tl %}
+                Post-Paternity days left
+                <span style="display:block;font-size:10px;color:#0369a1;font-weight:700;margin-top:2px;">♂ Male</span>
+            {% else %}
+                {{ b.leave_type_name }} days left
+            {% endif %}
+            {% endwith %}
+        </div>
+        {% if b.allocated_days is not None %}
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Allowed: {{ b.allocated_days }} days</div>
+        {% endif %}
+        {% if b.description %}
+            <div style="font-size:11px;color:var(--text-light);margin-top:6px;line-height:1.35;">{{ b.description }}</div>
+        {% endif %}
         {% if b.sabbatical_info %}
             {% if b.sabbatical_info.eligible %}
                 <div style="font-size:12px;color:var(--success-dark);margin-top:6px;">Sabbatical eligible</div>
@@ -146,20 +171,25 @@
             <div class="err-banner">{{ error_msg }}</div>
             {% endif %}
 
-            <form method="POST" enctype="multipart/form-data" novalidate>
+            <form id="employeeLeaveRequestForm" method="POST" enctype="multipart/form-data" novalidate>
                 {% csrf_token %}
                 <div class="form-field">
                     <label>Leave Type <span class="req">*</span></label>
                     <select name="leave_type_id" class="form-control" required>
                         <option value="">Select a type…</option>
-                        {% for lt in leave_types %}
-                            <option value="{{ lt.id }}">{{ lt.name }} (max {{ lt.max_days }} days)</option>
+                        {% for lt in leave_type_options %}
+                            <option value="{{ lt.id }}" {% if not lt.eligible %}disabled{% endif %}>
+                                {{ lt.name }} (max {{ lt.max_days }} days){% if not lt.eligible and lt.gender_note %} — {{ lt.gender_note }}{% endif %}
+                            </option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="form-field">
-                    <small style="display:block; margin-bottom:8px; color:var(--text-muted);">
+                    <small id="leaveDayRule" style="display:block; margin-bottom:8px; color:var(--text-muted);">
                         Leave days are counted as working days only; weekends and Ethiopian public holidays are excluded.
+                    </small>
+                    <small style="display:block; margin-top:6px; color:var(--text-muted); font-size:12px;">
+                        Gender-specific leave types are shown for visibility and will be disabled if not eligible.
                     </small>
                 </div>
                 <div class="form-field">
@@ -179,8 +209,8 @@
                     <input type="text" name="contact_info_during_leave" class="form-control" placeholder="e.g. +251 91 234 5678 or home address">
                 </div>
                 <div class="form-field">
-                    <label>Supporting Document <span style="font-size:11px;color:var(--text-light);">(optional — PDF or image)</span></label>
-                    <input type="file" name="document" class="form-control" accept=".pdf,.png,.jpg,.jpeg">
+                    <label>Supporting Document <span id="supportingDocumentHint" style="font-size:11px;color:var(--text-light);">(optional — PDF or image)</span></label>
+                    <input id="leaveDocument" type="file" name="document" class="form-control" accept=".pdf,.png,.jpg,.jpeg">
                 </div>
                 <button type="submit" name="action" value="submit" class="btn btn-primary" style="width:100%;">
                     <i data-lucide="send" style="width:15px;height:15px;"></i> Submit Request
@@ -261,4 +291,30 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('employeeLeaveRequestForm');
+    const type = form.querySelector('[name="leave_type_id"]');
+    const documentInput = document.getElementById('leaveDocument');
+    const hint = document.getElementById('supportingDocumentHint');
+    const dayRule = document.getElementById('leaveDayRule');
+    function updateRequirements() {
+        const name = type.options[type.selectedIndex]?.text.toLowerCase() || '';
+        const sick = name.includes('sick');
+        const consecutive = name.includes('pre-maternity') || name.includes('post-maternity') || name.includes('pre-paternity') || name.includes('post-paternity') || name.includes('matrimonial');
+        documentInput.required = sick;
+        hint.textContent = sick ? '(medical certificate required for Sick Leave)' : '(optional — PDF or image)';
+        hint.style.color = sick ? 'var(--danger)' : 'var(--text-light)';
+        dayRule.textContent = consecutive
+            ? 'This leave is counted as consecutive calendar days, including weekends and public holidays.'
+            : 'Leave days are counted as working days only; weekends and Ethiopian public holidays are excluded.';
+    }
+    type.addEventListener('change', updateRequirements);
+    form.addEventListener('submit', function () { updateRequirements(); });
+    updateRequirements();
+});
+</script>
 {% endblock %}

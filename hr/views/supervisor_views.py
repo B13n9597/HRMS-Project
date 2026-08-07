@@ -71,11 +71,16 @@ def supervisor_dashboard(request):
     pending_leaves = LeaveRequest.objects.filter(
         employee__in=all_employees, status='Pending'
     ).count()
+    maternity_leave_count = LeaveRequest.objects.filter(
+        employee__in=all_employees, leave_type__name__iexact='Maternity',
+        status__in=['Pending', 'Approved']
+    ).count()
 
     ctx = _supervisor_context(request.user, {
         'employees':      employees,
         'present_today':  present_today,
         'pending_leaves': pending_leaves,
+        'maternity_leave_count': maternity_leave_count,
         'employee_count': all_employees.count(),
         'search_query':   query,
         'status_f':       status,

@@ -287,18 +287,40 @@ def record_lifecycle_event(
     event_type: str,
     notes: str = "",
     recorded_by: Employee = None,
+    old_value: str = "",
+    new_value: str = "",
+    performed_by=None,          # User instance (HR officer, system)
+    event_date=None,            # date override; defaults to today
+    event_time=None,            # time override; defaults to current time
 ):
-    if event_type not in dict(EmployeeHistory.EVENT_CHOICES):
+    """
+    Create a career lifecycle event in EmployeeHistory.
+
+    Accepts any event_type defined in EmployeeHistory.EVENT_CHOICES.
+    Silently returns None for unknown event types so callers don't need
+    to guard against typos crashing the system.
+    """
+    valid_types = {k for k, _ in EmployeeHistory.EVENT_CHOICES}
+    if event_type not in valid_types:
         return None
+
+    # Default event_time to now so the timeline has sub-day ordering
+    if event_time is None:
+        from django.utils.timezone import localtime
+        event_time = localtime(timezone.now()).time()
+
     return EmployeeHistory.objects.create(
-        employee    = employee,
-        department  = employee.department,
-        position    = employee.position,
-        event_type  = event_type,
-        new_value   = employee.status.name if employee.status else "",
-        notes       = notes,
-        recorded_by = recorded_by,
-        start_date  = timezone.localdate(),
+        employee     = employee,
+        department   = employee.department,
+        position     = employee.position,
+        event_type   = event_type,
+        old_value    = old_value or "",
+        new_value    = new_value or (employee.status.name if employee.status else ""),
+        notes        = notes,
+        recorded_by  = recorded_by,
+        performed_by = performed_by,
+        start_date   = event_date or timezone.localdate(),
+        event_time   = event_time,
     )
  
  

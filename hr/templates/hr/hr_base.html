@@ -1150,7 +1150,7 @@
 
         <!-- EMPLOYEES -->
         <div class="nav-section">
-            <div class="nav-section-title {% if active_page in 'staff_directory,hr_lifecycle,departments,candidate_screen' %}open{% endif %}"
+            <div class="nav-section-title {% if active_page in 'staff_directory,hr_lifecycle,candidate_screen' %}open{% endif %}"
                  data-section="employees">
                 <span class="section-label">Employees</span>
                 <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
@@ -1158,16 +1158,13 @@
                     <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
             </div>
-            <div class="nav-section-items {% if active_page in 'staff_directory,hr_lifecycle,departments,candidate_screen' %}open{% endif %}"
+            <div class="nav-section-items {% if active_page in 'staff_directory,hr_lifecycle,candidate_screen' %}open{% endif %}"
                  id="section-employees">
                 <a href="{% url 'staff_directory' %}" class="nav-link {% if active_page == 'staff_directory' %}active{% endif %}">
                     <i data-lucide="users" style="width:18px;height:18px;"></i> Staff Directory
                 </a>
                 <a href="{% url 'hr_lifecycle' %}" class="nav-link {% if active_page == 'hr_lifecycle' %}active{% endif %}">
                     <i data-lucide="git-branch" style="width:18px;height:18px;"></i> Employee Lifecycle
-                </a>
-                <a href="{% url 'departments' %}" class="nav-link {% if active_page == 'departments' %}active{% endif %}">
-                    <i data-lucide="building-2" style="width:18px;height:18px;"></i> Departments
                 </a>
                 <a href="{% url 'candidate_screen' %}" class="nav-link {% if active_page == 'candidate_screen' %}active{% endif %}">
                     <i data-lucide="briefcase" style="width:18px;height:18px;"></i> Recruitment

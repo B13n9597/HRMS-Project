@@ -1499,7 +1499,7 @@
         accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
     >
     <small>
-        Required for Sick Leave, Study Leave and Maternity Leave
+        A medical certificate is required for Sick Leave
     </small>
 </div>
                 <button type="submit" class="btn" style="margin-top:16px;">Submit Application</button>
@@ -2691,6 +2691,11 @@
 
             const attachment =
                 document.getElementById('leaveAttachment').files[0];
+            const selectedLeaveName = document.getElementById('leaveTypeSelector').selectedOptions[0]?.textContent?.trim().toLowerCase() || '';
+            if (selectedLeaveName === 'sick' && !attachment) {
+                alert('A medical certificate is required for every Sick Leave request.');
+                return;
+            }
 
             const contactPhone =
                 document.getElementById('leaveContactPhone').value;

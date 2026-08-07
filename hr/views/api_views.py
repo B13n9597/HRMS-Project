@@ -14,7 +14,10 @@ from hr.models import (
     JobPosting, Application, Applicant, SystemSetting, Role, EmployeeStatus,
     EmployeeHistory, Salary,Attendance
 )
-from hr.services.leave_service import get_leave_balance, sabbatical_eligibility, get_leave_types_for_employee, submit_leave_request
+from hr.services.leave_service import (
+    approve_request, cancel_request, get_leave_balance, get_leave_types_for_employee,
+    reject_request, sabbatical_eligibility, submit_leave_request,
+)
 from django.core.exceptions import ValidationError
 
 # Helper: check if user is HR/Admin
@@ -456,20 +459,10 @@ def api_cancel_leave(request, request_id):
             'error': 'Employee profile missing'
         }, status=404)
 
-    leave_request = get_object_or_404(
-        LeaveRequest,
-        id=request_id,
-        employee=employee
-    )
-
-    if leave_request.status != 'Pending':
-        return JsonResponse({
-            'success': False,
-            'error': 'Only pending requests can be cancelled'
-        })
-
-    leave_request.status = 'Cancelled'
-    leave_request.save()
+    try:
+        cancel_request(request_id, employee)
+    except ValidationError as exc:
+        return JsonResponse({'success': False, 'error': str(exc)}, status=400)
 
     return JsonResponse({
         'success': True,
@@ -544,45 +537,23 @@ def api_admin_leaves(request):
         except Exception:
             return JsonResponse({'success': False, 'error': 'Invalid request body'}, status=400)
             
-        req = get_object_or_404(LeaveRequest, id=request_id)
-        if req.status != 'Pending':
-            return JsonResponse({'success': False, 'error': 'Leave request is already processed'}, status=400)
-            
         try:
             hr_employee = Employee.objects.get(user=request.user)
         except Employee.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'HR Employee profile missing'}, status=400)
             
         if action == 'approve':
-            # Deduct balance
-            balance, _ = LeaveBalance.objects.get_or_create(
-                employee=req.employee,
-                leave_type=req.leave_type,
-                defaults={
-                'remaining_days': req.leave_type.max_days
-                }
-           )
-            
-            if balance.remaining_days < req.requested_days:
-                return JsonResponse({
-                    'success': False,
-                    'error': f'Insufficient leave balance. Remaining: {balance.remaining_days} days'
-                }, status=400)
-
-            balance.remaining_days -= req.requested_days
-            balance.save()
-            
-            req.status = 'Approved'
-            req.approved_by = hr_employee
-            req.approved_date = timezone.localdate()
-            req.save()
+            try:
+                approve_request(request_id, hr_employee)
+            except ValidationError as exc:
+                return JsonResponse({'success': False, 'error': str(exc)}, status=400)
             return JsonResponse({'success': True, 'message': 'Leave request approved successfully!'})
             
         elif action == 'reject':
-            req.status = 'Rejected'
-            req.approved_by = hr_employee
-            req.approved_date = timezone.localdate()
-            req.save()
+            try:
+                reject_request(request_id, hr_employee)
+            except ValidationError as exc:
+                return JsonResponse({'success': False, 'error': str(exc)}, status=400)
             return JsonResponse({'success': True, 'message': 'Leave request rejected successfully!'})
             
         else:

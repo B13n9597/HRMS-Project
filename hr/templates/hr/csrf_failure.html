@@ -1,0 +1,21 @@
+{% extends 'hr/hr_base.html' %}
+
+{% block title %}CSRF Verification Failed{% endblock %}
+
+{% block content %}
+<div style="max-width:720px;margin:120px auto 60px;padding:30px 24px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 20px 45px rgba(15,23,42,.08);">
+    <h1 style="font-size:28px;margin-bottom:16px;color:#0f172a;">Action blocked for security reasons</h1>
+    <p style="font-size:15px;line-height:1.8;color:#475569;margin-bottom:24px;">
+        We could not verify the security token for your request. This protects your account and the system from unauthorized changes.
+    </p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <a href="javascript:window.location.reload();" class="btn btn-primary" style="padding:11px 18px;border-radius:10px;">Reload page</a>
+        <a href="/" class="btn btn-ghost" style="padding:11px 18px;border-radius:10px;">Go back to dashboard</a>
+    </div>
+    {% if reason %}
+    <div style="margin-top:22px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#475569;">
+        <strong>Details:</strong> {{ reason }}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
