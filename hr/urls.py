@@ -46,6 +46,7 @@ urlpatterns = [
     path('my-lifecycle/',                      lifecycle_views.my_lifecycle,        name='my_lifecycle'),
     path('payroll-center/',                    hr_modules_views.payroll_center,     name='payroll_center'),
     path('finance/',                           finance_views.finance_dashboard,     name='finance_dashboard'),
+    path('analytics/',                         hr_modules_views.hr_analytics_view, name='analytics_dashboard'),
     path('my-salary-slips/',                   hr_modules_views.my_salary_slips,    name='my_salary_slips'),
     path('performance-kpis/',                  hr_modules_views.performance_kpis,   name='performance_kpis'),
     path('my-kpi/',                            hr_modules_views.my_kpi,             name='my_kpi'),
@@ -125,6 +126,7 @@ urlpatterns = [
     path('my-lifecycle/',                      lifecycle_views.my_lifecycle,        name='my_lifecycle'),
     path('payroll-center/',                    hr_modules_views.payroll_center,     name='payroll_center'),
     path('finance/',                           finance_views.finance_dashboard,     name='finance_dashboard'),
+    path('analytics/',                         hr_modules_views.hr_analytics_view, name='analytics_dashboard'),
     path('my-salary-slips/',                   hr_modules_views.my_salary_slips,    name='my_salary_slips'),
     path('performance-kpis/',                  hr_modules_views.performance_kpis,   name='performance_kpis'),
     path('my-kpi/',                            hr_modules_views.my_kpi,             name='my_kpi'),
@@ -191,3 +193,10 @@ urlpatterns = [
     # ── Chatbot API ───────────────────────────────────────────────
     path('api/chatbot/', chatbot_views.chatbot_reply, name='chatbot_reply'),
 ]
+
+
+
+
+
+
+

@@ -110,18 +110,23 @@ def hr_dashboard(request):
     from hr.services.probation_service import run_probation_checks
     run_probation_checks()
 
+    employee_qs = employee_service.get_all_employees().select_related('department', 'position', 'status', 'role', 'user')
+    attendance_qs = employee_service.get_all_attendance_logs().select_related('employee', 'employee__department', 'employee__position')
+
     notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:8]
     unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    employee_count = employee_qs.count()
+    active_count = employee_qs.filter(status__name__iexact="Active").count()
 
     return render(
         request,
         "hr/dashboard_hr.html",
         {
             "active_page": "dashboard_hr",
-            "employees": employee_service.get_all_employees()[:8],
-            "attendance_logs": employee_service.get_all_attendance_logs()[:8],
-            "employee_count": employee_service.get_all_employees().count(),
-            "active_count": employee_service.get_all_employees().filter(status__name__iexact="Active").count(),
+            "employees": employee_qs[:8],
+            "attendance_logs": attendance_qs[:8],
+            "employee_count": employee_count,
+            "active_count": active_count,
             "present_today": Attendance.objects.filter(date__exact=timezone.localdate()).count(),
             "pending_leaves": LeaveRequest.objects.filter(status="Pending").count(),
             "notifications": notifications,

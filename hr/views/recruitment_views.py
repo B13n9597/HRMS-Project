@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from hr.forms import PublicApplicationForm
-from hr.models import Application, Employee, EmployeeStatus, Role
+from hr.models import Application, Employee, EmployeeStatus, Role, JobPosting
 from hr.views.attendance_views import is_hr
 
 
@@ -31,7 +31,7 @@ def recruitment_dashboard(request):
         messages.error(request, 'Access denied.')
         return redirect('/')
 
-    applications = Application.objects.select_related('applicant', 'job', 'converted_employee').order_by('-id')
+    applications = Application.objects.select_related('applicant', 'job', 'job__department', 'converted_employee').order_by('-id')
     job_id, qualification, status = (request.GET.get(key, '').strip() for key in ('job', 'qualification', 'status'))
     if job_id:
         applications = applications.filter(job_id=job_id)
@@ -39,6 +39,8 @@ def recruitment_dashboard(request):
         applications = applications.filter(applicant__qualification__icontains=qualification)
     if status:
         applications = applications.filter(status=status)
+
+    jobs = JobPosting.objects.select_related('department').order_by('title')
 
     # Automatically onboard any existing Selected/Hired applications that were not converted yet.
     pending_conversion = applications.filter(status__in=['Selected', 'Hired'], converted_employee__isnull=True)
@@ -65,6 +67,18 @@ def recruitment_dashboard(request):
             else:
                 messages.success(request, 'Application updated.')
         return redirect('recruitment_dashboard')
+
+    jobs = list(application.job for application in applications)
+    context = {
+        'jobs': jobs,
+        'applications': applications,
+        'job_id': job_id,
+        'qualification': qualification,
+        'status_filter': status,
+        'statuses': Application.STATUS_CHOICES,
+        'active_page': 'candidate_screen',
+    }
+    return render(request, 'hr/recruitment_dashboard.html', context)
 
 
 @transaction.atomic

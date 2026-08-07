@@ -54,231 +54,33 @@
         </div>
     </div>
 
-    <!-- Right Column -->
-    <div>
-        <!-- Recent Attendance — uses context variable from view -->
-        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
-            <div class="card-header">
-                <i data-lucide="clock" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>Recent Attendance (This Month)</h3>
-            </div>
-            {% if attendance %}
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th><th>Time In</th><th>Time Out</th><th>Status</th><th>Signature</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for att in attendance %}
-                        <tr>
-                            <td>{{ att.date|date:"d M Y" }}</td>
-                            <td>{{ att.time_in|time:"H:i"|default:"—" }}</td>
-                            <td>{{ att.time_out|time:"H:i"|default:"—" }}</td>
-                            <td>
-                                <span class="badge {% if att.status == 'Present' %}badge-success{% elif att.status == 'Late' %}badge-warning{% elif att.status == 'Absent' %}badge-danger{% else %}badge-primary{% endif %}">
-                                    {{ att.status }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if att.signature %}
-                                    <img src="{{ att.signature.url }}" alt="Signature" style="max-width:60px;max-height:40px;cursor:pointer;" onclick="viewSignature('{{ att.signature.url }}', '{{ att.employee.get_full_name }}', '{{ att.date }}');" title="Click to view full signature">
-                                {% elif att.signature_text %}
-                                    <span style="font-size:12px;padding:4px 8px;background:#f0f0f0;border-radius:4px;">{{ att.signature_text }}</span>
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div style="padding: 32px; text-align: center; color: var(--text-muted);">
-                No attendance records found for this period.
-            </div>
-            {% endif %}
+    <div class="card" style="padding: 24px; overflow: hidden;">
+        <div class="card-header">
+            <i data-lucide="git-branch" style="width:18px;height:18px;color:var(--primary);"></i>
+            <h3>Lifecycle Timeline</h3>
         </div>
-
-        <!-- KPI Scores — uses context variable from view -->
-        {% if kpi_scores %}
-        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
-            <div class="card-header">
-                <i data-lucide="bar-chart-3" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>KPI Evaluation Scores</h3>
+        {% if history %}
+        <div class="timeline">
+            {% for event in history %}
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">
+                        {{ event.get_event_type_display|default:event.event_type|title }}
+                    </div>
+                    <div class="timeline-meta">
+                        {{ event.start_date|date:"d M Y"|default:"—" }}
+                        {% if event.department %} • {{ event.department.name }}{% endif %}
+                        {% if event.position %} • {{ event.position.title }}{% endif %}
+                    </div>
+                    <div class="timeline-desc">{{ event.notes|default:event.new_value|default:"Lifecycle event recorded." }}</div>
+                </div>
             </div>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr><th>Period</th><th>Type</th><th>JK</th><th>WQ</th><th>AT</th><th>TW</th><th>ET</th><th>Overall</th><th>By</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for s in kpi_scores %}
-                        <tr>
-                            <td>{{ s.year }} {{ s.period }}</td>
-                            <td><span class="badge badge-primary" style="font-size:11px;">{{ s.evaluation_type|title }}</span></td>
-                            <td>{{ s.job_knowledge }}/5</td>
-                            <td>{{ s.work_quality }}/5</td>
-                            <td>{{ s.attendance }}/5</td>
-                            <td>{{ s.teamwork }}/5</td>
-                            <td>{{ s.ethics }}/5</td>
-                            <td><strong>{{ s.overall_score|default:"—" }}</strong></td>
-                            <td style="font-size:12px;color:var(--text-light);">{{ s.evaluator.get_full_name|default:"—" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            {% endfor %}
         </div>
-        {% endif %}
-
-        <!-- Certificates -->
-        {% if certificates %}
-        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
-            <div class="card-header">
-                <i data-lucide="file-badge" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>Certificates &amp; Documents</h3>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Title</th><th>Type</th><th>Issued By</th><th>Date</th><th>File</th></tr></thead>
-                    <tbody>
-                        {% for cert in certificates %}
-                        <tr>
-                            <td style="font-weight:600;">{{ cert.title }}</td>
-                            <td><span class="badge badge-primary" style="font-size:11px;">{{ cert.get_cert_type_display }}</span></td>
-                            <td>{{ cert.issued_by|default:"—" }}</td>
-                            <td>{{ cert.issued_date|date:"d M Y"|default:"—" }}</td>
-                            <td>
-                                {% if cert.document %}
-                                <a href="{{ cert.document.url }}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">View</a>
-                                {% else %}—{% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Leave Requests -->
-        {% if leave_requests %}
-        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
-            <div class="card-header">
-                <i data-lucide="file-check" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>Leave Requests</h3>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Type</th><th>Start Date</th><th>End Date</th><th>Days</th><th>Status</th><th>Recommendation</th></tr></thead>
-                    <tbody>
-                        {% for req in leave_requests %}
-                        <tr>
-                            <td><strong>{{ req.leave_type.name }}</strong></td>
-                            <td>{{ req.start_date|date:"d M Y" }}</td>
-                            <td>{{ req.end_date|date:"d M Y" }}</td>
-                            <td><strong>{{ req.requested_days }}</strong></td>
-                            <td>
-                                <span class="badge {% if req.status == 'Approved' %}badge-success{% elif req.status == 'Pending' %}badge-warning{% elif req.status == 'Rejected' or req.status == 'Cancelled' %}badge-danger{% else %}badge-primary{% endif %}">
-                                    {{ req.status }}
-                                </span>
-                            </td>
-                            <td style="font-size:12px;">
-                                {% if req.supervisor_recommendation == 'recommended' %}
-                                    <span class="badge badge-success">Recommended</span>
-                                {% elif req.supervisor_recommendation == 'not_recommended' %}
-                                    <span class="badge badge-danger">Not Recommended</span>
-                                {% else %}
-                                    <span style="color:var(--text-muted);">—</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% endif %}
-
-        <!-- Leave Balance -->
-        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
-            <div class="card-header">
-                <i data-lucide="calendar" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>Leave Balance</h3>
-            </div>
-            {% if leave_balances %}
-            <div class="card-body"><div class="chart-panel" style="height:300px;"><canvas id="leaveBalanceChart" aria-label="Leave balance chart"></canvas></div></div>
-            <div class="table-wrap" style="display:none;">
-                <table>
-                    <thead><tr><th>Leave Type</th><th>Allocated</th><th>Used</th><th>Remaining</th><th>Updated</th></tr></thead>
-                    <tbody>
-                        {% for lb in leave_balances %}
-                        <tr>
-                            <td>{{ lb.leave_type.name }}</td>
-                            <td>{{ lb.allocated_days|default:lb.remaining_days }}</td>
-                            <td>{{ lb.used_days|default:0 }}</td>
-                            <td><strong style="color:{% if lb.remaining_days > 5 %}var(--success){% elif lb.remaining_days > 0 %}var(--warning){% else %}var(--danger){% endif %};">{{ lb.remaining_days }} days</strong></td>
-                            <td>{{ lb.last_updated|date:"d M Y"|default:"—" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div style="padding: 32px; text-align: center; color: var(--text-muted);">No leave balance records found.</div>
-            {% endif %}
-        </div>
-
-        <!-- Payroll Records -->
-        {% if payroll_records %}
-        <div class="card" style="overflow: hidden;">
-            <div class="card-header">
-                <i data-lucide="credit-card" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>Payroll Records</h3>
-            </div>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Period</th><th>Base Salary</th><th>Gross</th><th>Deductions</th><th>Net Salary</th><th>Status</th></tr></thead>
-                    <tbody>
-                        {% for pr in payroll_records %}
-                        <tr>
-                            <td style="font-weight:600;">{{ pr.period_start|date:"d M" }} – {{ pr.period_end|date:"d M Y" }}</td>
-                            <td>{{ pr.base_salary|floatformat:2 }}</td>
-                            <td><strong>{{ pr.gross_salary|floatformat:2 }}</strong></td>
-                            <td>{{ pr.total_deductions|floatformat:2 }}</td>
-                            <td><strong style="color:var(--success);">{{ pr.net_salary|floatformat:2 }}</strong></td>
-                            <td>
-                                <span class="badge {% if pr.payment_status == 'Paid' %}badge-success{% elif pr.payment_status == 'Pending' %}badge-warning{% elif pr.payment_status == 'On Hold' %}badge-danger{% else %}badge-primary{% endif %}">
-                                    {{ pr.payment_status }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        {% else %}
+        <div style="padding: 32px; text-align: center; color: var(--text-muted);">No lifecycle events recorded yet.</div>
         {% endif %}
     </div>
 </div>
-{% endblock %}
-{% block extra_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const canvas = document.getElementById('leaveBalanceChart');
-  if (!canvas || !window.Chart) return;
-  new Chart(canvas, {
-    type: 'bar',
-    data: { labels: JSON.parse('{{ leave_balance_labels_json|escapejs }}'), datasets: [
-      {label: 'Used days', data: JSON.parse('{{ leave_balance_used_json|escapejs }}'), backgroundColor: '#f59e0b', borderRadius: 5},
-      {label: 'Remaining days', data: JSON.parse('{{ leave_balance_remaining_json|escapejs }}'), backgroundColor: '#10b981', borderRadius: 5}
-    ]},
-    options: {responsive: true, maintainAspectRatio: false, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}, plugins: {legend: {position: 'bottom'}}}
-  });
-});
-</script>
 {% endblock %}

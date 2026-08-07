@@ -696,6 +696,85 @@ def hr_reports_view(request):
 
 
 @login_required(login_url='/login/')
+def hr_analytics_view(request):
+    """HR Analytics — organization-wide analytics dashboard for HR users."""
+    if not is_hr(request.user):
+        return redirect('/dashboard/employee/')
+
+    from django.db.models import Avg, Count, Q
+    from hr.models import (
+        Employee, Department, Attendance, LeaveRequest, PayrollRecord,
+        BiannualKPIScore, TrainingRequest, HiringRequest, Application, JobPosting,
+    )
+
+    today = timezone.localdate()
+    employees_qs = Employee.objects.select_related('department', 'status', 'role').filter(is_deleted=False)
+    departments = Department.objects.filter(is_deleted=False)
+
+    total_employees = employees_qs.count()
+    active_employees = employees_qs.filter(status__name__iexact='Active').count()
+    on_leave_employees = employees_qs.filter(status__name__iexact='On Leave').count()
+
+    attendance_today = Attendance.objects.filter(date=today)
+    present_today = attendance_today.filter(status__in=['Present', 'Late']).count()
+    attendance_rate = round((present_today / max(total_employees, 1)) * 100, 1) if total_employees else 0
+
+    department_distribution = list(
+        departments.annotate(employee_count=Count('employees', filter=Q(employees__is_deleted=False)))
+        .values('name', 'employee_count')
+        .order_by('-employee_count', 'name')
+    )
+
+    leave_statistics = LeaveRequest.objects.filter(is_deleted=False).aggregate(
+        approved=Count('id', filter=Q(status='Approved')),
+        pending=Count('id', filter=Q(status='Pending')),
+        rejected=Count('id', filter=Q(status='Rejected')),
+    )
+
+    recruitment_statistics = {
+        'total_applications': Application.objects.filter(is_deleted=False).count(),
+        'selected_candidates': Application.objects.filter(is_deleted=False, status='Selected').count(),
+        'hired_candidates': Application.objects.filter(is_deleted=False, status='Hired').count(),
+        'pending_hiring_requests': HiringRequest.objects.filter(status='Pending').count(),
+        'active_job_postings': JobPosting.objects.filter(is_deleted=False).count(),
+    }
+
+    payroll_summary = PayrollRecord.objects.aggregate(
+        total=Count('id'),
+        pending=Count('id', filter=Q(payment_status='Pending')),
+        paid=Count('id', filter=Q(payment_status='Paid')),
+        on_hold=Count('id', filter=Q(payment_status='On Hold')),
+    )
+
+    performance_summary = BiannualKPIScore.objects.aggregate(
+        avg_score=Avg('overall_score'),
+        total_scores=Count('id'),
+    )
+
+    training_statistics = TrainingRequest.objects.filter(is_deleted=False).aggregate(
+        total=Count('id'),
+        completed=Count('id', filter=Q(status='Completed')),
+        pending=Count('id', filter=Q(status__in=['Submitted', 'Pending', 'Approved', 'HR Review', 'Supervisor Review'])),
+    )
+
+    context = {
+        'total_employees': total_employees,
+        'active_employees': active_employees,
+        'on_leave_employees': on_leave_employees,
+        'present_today': present_today,
+        'attendance_rate': attendance_rate,
+        'department_distribution': department_distribution,
+        'leave_statistics': leave_statistics,
+        'recruitment_statistics': recruitment_statistics,
+        'payroll_summary': payroll_summary,
+        'performance_summary': performance_summary,
+        'training_statistics': training_statistics,
+        'active_page': 'analytics_dashboard',
+    }
+    return render(request, 'hr/hr_analytics.html', context)
+
+
+@login_required(login_url='/login/')
 def roles_permissions_view(request):
     """Roles & Permissions management page."""
     if not is_hr(request.user):

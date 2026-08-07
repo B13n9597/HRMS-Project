@@ -1221,7 +1221,7 @@
 
         <!-- PAYROLL -->
         <div class="nav-section">
-            <div class="nav-section-title {% if active_page in 'finance_dashboard,salary_slips_hr,my_salary_slips' %}open{% endif %}"
+            <div class="nav-section-title {% if active_page in 'finance_dashboard,payroll_center,my_salary_slips' %}open{% endif %}"
                  data-section="payroll">
                 <span class="section-label">Payroll</span>
                 <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
@@ -1229,12 +1229,12 @@
                     <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
             </div>
-            <div class="nav-section-items {% if active_page in 'finance_dashboard,salary_slips_hr,my_salary_slips' %}open{% endif %}"
+            <div class="nav-section-items {% if active_page in 'finance_dashboard,payroll_center,my_salary_slips' %}open{% endif %}"
                  id="section-payroll">
-                <a href="{% url 'finance_dashboard' %}" class="nav-link {% if active_page == 'finance_dashboard' %}active{% endif %}">
+                <a href="{% url 'payroll_center' %}" class="nav-link {% if active_page == 'payroll_center' %}active{% endif %}">
                     <i data-lucide="landmark" style="width:18px;height:18px;"></i> Payroll Center
                 </a>
-                <a href="{% url 'my_salary_slips' %}" class="nav-link {% if active_page == 'salary_slips_hr' %}active{% endif %}">
+                <a href="{% url 'finance_dashboard' %}" class="nav-link {% if active_page == 'finance_dashboard' %}active{% endif %}">
                     <i data-lucide="file-text" style="width:18px;height:18px;"></i> Salary Slips
                 </a>
             </div>
@@ -1242,7 +1242,7 @@
 
         <!-- REPORTS -->
         <div class="nav-section">
-            <div class="nav-section-title {% if active_page in 'hr_reports,analytics' %}open{% endif %}"
+            <div class="nav-section-title {% if active_page in 'hr_reports,analytics_dashboard' %}open{% endif %}"
                  data-section="reports">
                 <span class="section-label">Reports</span>
                 <svg class="nav-section-chevron" viewBox="0 0 24 24" fill="none"
@@ -1250,12 +1250,12 @@
                     <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
             </div>
-            <div class="nav-section-items {% if active_page in 'hr_reports,analytics' %}open{% endif %}"
+            <div class="nav-section-items {% if active_page in 'hr_reports,analytics_dashboard' %}open{% endif %}"
                  id="section-reports">
                 <a href="{% url 'hr_reports' %}" class="nav-link {% if active_page == 'hr_reports' %}active{% endif %}">
                     <i data-lucide="clipboard-list" style="width:18px;height:18px;"></i> HR Reports
                 </a>
-                <a href="{% url 'dashboard_dean' %}" class="nav-link {% if active_page == 'analytics' %}active{% endif %}">
+                <a href="{% url 'analytics_dashboard' %}" class="nav-link {% if active_page == 'analytics_dashboard' %}active{% endif %}">
                     <i data-lucide="trending-up" style="width:18px;height:18px;"></i> Analytics
                 </a>
             </div>
