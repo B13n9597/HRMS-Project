@@ -92,33 +92,61 @@
       </div>
       <div class="card-body">
         <div class="timeline">
-          <!-- Hire date always first -->
-          <div class="t-item">
-            <div class="t-dot"></div>
-            <div class="t-date">{{ employee.hire_date|date:"d M Y"|default:"Joined" }}</div>
-            <div class="t-title">Joined — {{ employee.position.title|default:"Employee" }}</div>
-            <div class="t-desc">{{ employee.department.name|default:"General" }} Department</div>
-          </div>
-
           {% for h in history %}
+          {% with cat=h.get_event_category %}
           <div class="t-item">
-            <div class="t-dot"></div>
-            <div class="t-date">{{ h.start_date|date:"d M Y" }}</div>
+            <div class="t-dot" style="
+              {% if cat == 'green' %}background:#10b981;box-shadow:0 0 0 2px #10b981;
+              {% elif cat == 'purple' %}background:#7c3aed;box-shadow:0 0 0 2px #7c3aed;
+              {% elif cat == 'teal' %}background:#0369a1;box-shadow:0 0 0 2px #0369a1;
+              {% elif cat == 'amber' %}background:#f59e0b;box-shadow:0 0 0 2px #f59e0b;
+              {% elif cat == 'red' %}background:#ef4444;box-shadow:0 0 0 2px #ef4444;
+              {% else %}background:var(--primary);box-shadow:0 0 0 2px var(--primary);
+              {% endif %}"></div>
+
+            <div class="t-date">
+              {{ h.start_date|date:"d M Y" }}
+              {% if h.event_time %}<span style="font-weight:400;color:var(--text-light);margin-left:6px;">{{ h.event_time|time:"H:i" }}</span>{% endif %}
+            </div>
             <div class="t-title">{{ h.get_event_type_display }}</div>
-            {% if h.notes %}<div class="t-desc">{{ h.notes }}</div>{% endif %}
+
+            {% if h.department or h.position %}
+            <div class="t-desc">
+              {% if h.position %}{{ h.position.title }}{% endif %}
+              {% if h.position and h.department %} — {% endif %}
+              {% if h.department %}{{ h.department.name }}{% endif %}
+            </div>
+            {% endif %}
+
             {% if h.old_value and h.new_value %}
-            <div class="t-desc" style="font-size:12px;">{{ h.old_value }} → {{ h.new_value }}</div>
+            <div class="t-desc" style="font-size:12px;color:var(--text-light);">{{ h.old_value }} → {{ h.new_value }}</div>
+            {% elif h.new_value and not h.old_value %}
+            <div class="t-desc" style="font-size:12px;color:var(--text-light);">{{ h.new_value }}</div>
+            {% endif %}
+
+            {% if h.notes %}
+            <div class="t-desc" style="margin-top:4px;font-style:italic;">{{ h.notes }}</div>
+            {% endif %}
+
+            {% if h.performed_by %}
+            <div class="t-desc" style="font-size:11px;color:var(--text-light);margin-top:3px;">
+              <i data-lucide="user-check" style="width:11px;height:11px;vertical-align:middle;margin-right:3px;"></i>
+              {{ h.performed_by.get_full_name|default:h.performed_by.username }}
+            </div>
+            {% elif h.recorded_by %}
+            <div class="t-desc" style="font-size:11px;color:var(--text-light);margin-top:3px;">
+              <i data-lucide="user-check" style="width:11px;height:11px;vertical-align:middle;margin-right:3px;"></i>
+              {{ h.recorded_by.get_full_name }}
+            </div>
             {% endif %}
           </div>
+          {% endwith %}
           {% empty %}
-          <!-- Show current status as only item after hire -->
-          <div class="t-item">
+          <div class="t-item muted">
             <div class="t-dot"></div>
-            <div class="t-date">Present</div>
-            <div class="t-title">
-              {% if employee.status.name == "Active" %}Active Employee{% else %}{{ employee.status.name|default:"Active" }}{% endif %}
-            </div>
-            <div class="t-desc">No lifecycle events recorded yet.</div>
+            <div class="t-date">{{ employee.hire_date|date:"d M Y"|default:"Joined" }}</div>
+            <div class="t-title">Employee Created</div>
+            <div class="t-desc">{{ employee.department.name|default:"General" }} — {{ employee.position.title|default:"Employee" }}</div>
           </div>
           {% endfor %}
         </div>

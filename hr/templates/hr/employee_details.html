@@ -1,159 +1,265 @@
 {% extends 'hr/hr_base.html' %}
+{% block title %}{{ employee.get_full_name }} — Employee Details{% endblock %}
 
-{% block title %}Employee Details — {{ employee.get_full_name }}{% endblock %}
+{% block extra_styles %}
+<style>
+/* ── Timeline ─────────────────────────────────────────────── */
+.timeline { position:relative; padding-left:36px; }
+.timeline::before {
+    content:''; position:absolute; left:10px; top:0; bottom:0;
+    width:2px; background:var(--border-color);
+}
+.t-item { position:relative; margin-bottom:24px; }
+.t-dot {
+    position:absolute; left:-30px; top:3px;
+    width:16px; height:16px; border-radius:50%;
+    background:var(--primary); border:3px solid #fff;
+    box-shadow:0 0 0 2px var(--primary); z-index:1;
+}
+/* Colour variants per event category */
+.t-dot.green  { background:var(--success); box-shadow:0 0 0 2px var(--success); }
+.t-dot.purple { background:#7c3aed;        box-shadow:0 0 0 2px #7c3aed; }
+.t-dot.amber  { background:#f59e0b;        box-shadow:0 0 0 2px #f59e0b; }
+.t-dot.red    { background:var(--danger);  box-shadow:0 0 0 2px var(--danger); }
+.t-dot.grey   { background:var(--border-color); box-shadow:0 0 0 2px var(--border-color); }
+
+.t-date  { font-size:11px; font-weight:700; color:var(--primary);
+           text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px; }
+.t-title { font-size:14px; font-weight:700; color:var(--text-main); }
+.t-sub   { font-size:13px; color:var(--text-muted); margin-top:2px; }
+.t-note  { font-size:12px; color:var(--text-light); font-style:italic; margin-top:3px; }
+.t-by    { font-size:11px; color:var(--text-light); margin-top:3px; }
+
+/* ── Info grid ───────────────────────────────────────────── */
+.info-field { margin-bottom:14px; }
+.info-label { font-size:11px; font-weight:700; color:var(--text-light);
+              text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px; }
+.info-value { font-size:14px; font-weight:500; color:var(--text-main); }
+
+/* ── Section card header accent ─────────────────────────── */
+.section-label {
+    display:flex; align-items:center; gap:8px;
+    font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.06em; color:var(--text-light); margin-bottom:16px;
+}
+.section-label::after { content:''; flex:1; height:1px; background:var(--border-color); }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="page-header" style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-end;">
-    <div style="display: flex; align-items: center; gap: 16px;">
-        <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #025da2, #0ea5e9); color: #fff; font-size: 24px; font-weight: 700; display: flex; align-items: center; justify-content: center; font-family: var(--font-display);">
+
+<!-- ── Page Header ─────────────────────────────────────────── -->
+<div style="display:flex;justify-content:space-between;align-items:center;
+            margin-bottom:28px;padding-bottom:22px;border-bottom:1px solid var(--border-color);">
+    <div style="display:flex;align-items:center;gap:18px;">
+        <div style="width:64px;height:64px;border-radius:50%;flex-shrink:0;
+                    background:linear-gradient(135deg,#025da2,#0ea5e9);
+                    color:#fff;font-size:24px;font-weight:700;
+                    display:flex;align-items:center;justify-content:center;
+                    font-family:var(--font-display);">
             {{ employee.first_name|first }}{{ employee.last_name|first }}
         </div>
         <div>
-            <h1 style="font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px;">{{ employee.get_full_name }}</h1>
-            <p style="color: var(--text-muted); font-size: 14px;">
-                {{ employee.position.title|default:"—" }} &bull; {{ employee.department.name|default:"No Department" }}
+            <h1 style="font-family:var(--font-display);font-size:26px;font-weight:800;margin-bottom:4px;">
+                {{ employee.get_full_name }}
+            </h1>
+            <p style="color:var(--text-muted);font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span>{{ employee.position.title|default:"—" }}</span>
+                <span style="color:var(--border-color);">•</span>
+                <span>{{ employee.department.name|default:"No Department" }}</span>
+                <span style="color:var(--border-color);">•</span>
+                <span class="badge {% if employee.status.name == 'Active' %}badge-success
+                                   {% elif employee.status.name == 'Terminated' or employee.status.name == 'Resigned' %}badge-danger
+                                   {% else %}badge-warning{% endif %}">
+                    {{ employee.status.name|default:"Unknown" }}
+                </span>
             </p>
         </div>
     </div>
-    <div>
-        <a href="{% url 'hr_lifecycle' %}" class="btn btn-ghost">← Back to Lifecycle</a>
-    </div>
+    <a href="{% url 'hr_lifecycle' %}" class="btn btn-ghost">
+        <i data-lucide="arrow-left" style="width:15px;height:15px;"></i> Back to Lifecycle
+    </a>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
-    <!-- Personal Info -->
-    <div class="card" style="padding: 24px; align-self: start;">
-        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">Personal Information</h3>
-        <div style="margin-bottom: 12px;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Employee ID</label>
-            <div style="font-size: 14px; font-weight: 500;">{{ employee.employee_id|default:"—" }}</div>
-        </div>
-        <div style="margin-bottom: 12px;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Email Address</label>
-            <div style="font-size: 14px; font-weight: 500;">{{ employee.user.email|default:"No Email Provided" }}</div>
-        </div>
-        <div style="margin-bottom: 12px;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Phone Number</label>
-            <div style="font-size: 14px; font-weight: 500;">{{ employee.phone|default:"N/A" }}</div>
-        </div>
-        <div style="margin-bottom: 12px;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Date of Hire</label>
-            <div style="font-size: 14px; font-weight: 500;">{{ employee.hire_date|date:"F j, Y"|default:"N/A" }}</div>
-        </div>
-        <div style="margin-bottom: 12px;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Role</label>
-            <div style="font-size: 14px; font-weight: 500;">{{ employee.role.name|default:"—" }}</div>
-        </div>
-        <div style="margin-bottom: 0;">
-            <label style="font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;">Status</label>
-            <div style="font-size: 14px; font-weight: 500; margin-top: 4px;">
-                <span class="badge {% if employee.status.name == 'Active' %}badge-success{% elif employee.status.name == 'Terminated' or employee.status.name == 'Resigned' %}badge-danger{% else %}badge-warning{% endif %}">
-                    {{ employee.status.name|default:"Unknown" }}
-                </span>
-            </div>
-        </div>
-    </div>
+<!-- ── Main Grid ──────────────────────────────────────────── -->
+<div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;">
 
-    <!-- Right Column -->
+    <!-- ── LEFT: Personal Info ─────────────────────────────── -->
     <div>
-        <!-- Recent Attendance — uses context variable from view -->
-        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
-            <div class="card-header">
-                <i data-lucide="clock" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>Recent Attendance (This Month)</h3>
+        <div class="card" style="padding:24px;">
+            <div class="section-label">
+                <i data-lucide="user" style="width:14px;height:14px;"></i>
+                Personal Information
             </div>
-            {% if attendance %}
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th><th>Time In</th><th>Time Out</th><th>Status</th><th>Signature</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for att in attendance %}
-                        <tr>
-                            <td>{{ att.date|date:"d M Y" }}</td>
-                            <td>{{ att.time_in|time:"H:i"|default:"—" }}</td>
-                            <td>{{ att.time_out|time:"H:i"|default:"—" }}</td>
-                            <td>
-                                <span class="badge {% if att.status == 'Present' %}badge-success{% elif att.status == 'Late' %}badge-warning{% elif att.status == 'Absent' %}badge-danger{% else %}badge-primary{% endif %}">
-                                    {{ att.status }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if att.signature %}
-                                    <img src="{{ att.signature.url }}" alt="Signature" style="max-width:60px;max-height:40px;cursor:pointer;" onclick="viewSignature('{{ att.signature.url }}', '{{ att.employee.get_full_name }}', '{{ att.date }}');" title="Click to view full signature">
-                                {% elif att.signature_text %}
-                                    <span style="font-size:12px;padding:4px 8px;background:#f0f0f0;border-radius:4px;">{{ att.signature_text }}</span>
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+
+            <div class="info-field">
+                <div class="info-label">Employee ID</div>
+                <div class="info-value">{{ employee.employee_id|default:"—" }}</div>
             </div>
-            {% else %}
-            <div style="padding: 32px; text-align: center; color: var(--text-muted);">
-                No attendance records found for this period.
+            <div class="info-field">
+                <div class="info-label">Email Address</div>
+                <div class="info-value" style="word-break:break-all;">{{ employee.user.email|default:"—" }}</div>
             </div>
-            {% endif %}
+            <div class="info-field">
+                <div class="info-label">Phone Number</div>
+                <div class="info-value">{{ employee.phone|default:"—" }}</div>
+            </div>
+            <div class="info-field">
+                <div class="info-label">Date of Hire</div>
+                <div class="info-value">{{ employee.hire_date|date:"F j, Y"|default:"—" }}</div>
+            </div>
+            <div class="info-field">
+                <div class="info-label">Department</div>
+                <div class="info-value">{{ employee.department.name|default:"—" }}</div>
+            </div>
+            <div class="info-field">
+                <div class="info-label">Position</div>
+                <div class="info-value">{{ employee.position.title|default:"—" }}</div>
+            </div>
+            <div class="info-field">
+                <div class="info-label">Role</div>
+                <div class="info-value">{{ employee.role.name|default:"—" }}</div>
+            </div>
+            <div class="info-field" style="margin-bottom:0;">
+                <div class="info-label">Status</div>
+                <div class="info-value" style="margin-top:4px;">
+                    <span class="badge {% if employee.status.name == 'Active' %}badge-success
+                                       {% elif employee.status.name == 'Terminated' or employee.status.name == 'Resigned' %}badge-danger
+                                       {% else %}badge-warning{% endif %}">
+                        {{ employee.status.name|default:"Unknown" }}
+                    </span>
+                </div>
+            </div>
         </div>
 
-        <!-- KPI Scores — uses context variable from view -->
+        <!-- KPI Summary (compact) -->
         {% if kpi_scores %}
-        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
-            <div class="card-header">
-                <i data-lucide="bar-chart-3" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>KPI Evaluation Scores</h3>
+        <div class="card" style="padding:24px;margin-top:16px;">
+            <div class="section-label">
+                <i data-lucide="award" style="width:14px;height:14px;"></i>
+                KPI Scores
             </div>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr><th>Period</th><th>Type</th><th>JK</th><th>WQ</th><th>AT</th><th>TW</th><th>ET</th><th>Overall</th><th>By</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for s in kpi_scores %}
-                        <tr>
-                            <td>{{ s.year }} {{ s.period }}</td>
-                            <td><span class="badge badge-primary" style="font-size:11px;">{{ s.evaluation_type|title }}</span></td>
-                            <td>{{ s.job_knowledge }}/5</td>
-                            <td>{{ s.work_quality }}/5</td>
-                            <td>{{ s.attendance }}/5</td>
-                            <td>{{ s.teamwork }}/5</td>
-                            <td>{{ s.ethics }}/5</td>
-                            <td><strong>{{ s.overall_score|default:"—" }}</strong></td>
-                            <td style="font-size:12px;color:var(--text-light);">{{ s.evaluator.get_full_name|default:"—" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            {% for s in kpi_scores|slice:":5" %}
+            <div style="display:flex;justify-content:space-between;align-items:center;
+                        padding:9px 0;border-bottom:1px solid var(--border-color);">
+                <div>
+                    <div style="font-size:13px;font-weight:600;">{{ s.year }} {{ s.period }}</div>
+                    <div style="font-size:11px;color:var(--text-light);">{{ s.evaluation_type|title }}</div>
+                </div>
+                <div>
+                    {% if s.overall_score %}
+                    <span style="font-family:var(--font-display);font-size:18px;font-weight:800;
+                                 color:{% if s.overall_score >= 4 %}var(--success){% elif s.overall_score >= 3 %}var(--primary){% else %}var(--warning){% endif %};">
+                        {{ s.overall_score }}
+                    </span>
+                    <span style="font-size:11px;color:var(--text-light);">/5</span>
+                    {% else %}—{% endif %}
+                </div>
             </div>
+            {% endfor %}
         </div>
         {% endif %}
+    </div>
 
-        <!-- Certificates -->
+    <!-- ── RIGHT ───────────────────────────────────────────── -->
+    <div>
+
+        <!-- ── Career Lifecycle Timeline ───────────────────── -->
+        <div class="card" style="margin-bottom:24px;">
+            <div class="card-header">
+                <i data-lucide="git-branch" style="width:18px;height:18px;color:var(--primary);"></i>
+                <h3>Career Lifecycle Timeline</h3>
+                <span class="badge badge-primary" style="margin-left:auto;">{{ history|length }} event{{ history|length|pluralize }}</span>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% for h in history %}
+                    {% with cat=h.get_event_category %}
+                    <div class="t-item">
+                        {% if cat == 'green' %}<div class="t-dot green"></div>
+                        {% elif cat == 'purple' %}<div class="t-dot purple"></div>
+                        {% elif cat == 'teal' %}<div class="t-dot" style="background:#0369a1;box-shadow:0 0 0 2px #0369a1;"></div>
+                        {% elif cat == 'amber' %}<div class="t-dot amber"></div>
+                        {% elif cat == 'red' %}<div class="t-dot red"></div>
+                        {% else %}<div class="t-dot"></div>{% endif %}
+
+                        <div class="t-date">
+                            {{ h.start_date|date:"d M Y" }}
+                            {% if h.event_time %}<span style="font-weight:400;color:var(--text-light);margin-left:6px;">{{ h.event_time|time:"H:i" }}</span>{% endif %}
+                        </div>
+                        <div class="t-title">{{ h.get_event_type_display }}</div>
+
+                        {% if h.position or h.department %}
+                        <div class="t-sub">
+                            {% if h.position %}{{ h.position.title }}{% endif %}
+                            {% if h.position and h.department %} — {% endif %}
+                            {% if h.department %}{{ h.department.name }}{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if h.old_value and h.new_value %}
+                        <div class="t-sub" style="font-size:12px;">
+                            <span style="color:var(--text-light);">{{ h.old_value }}</span> → <strong>{{ h.new_value }}</strong>
+                        </div>
+                        {% elif h.new_value and not h.old_value %}
+                        <div class="t-sub" style="font-size:12px;">{{ h.new_value }}</div>
+                        {% endif %}
+
+                        {% if h.notes %}<div class="t-note">"{{ h.notes }}"</div>{% endif %}
+
+                        {% if h.performed_by %}
+                        <div class="t-by">
+                            <i data-lucide="user-check" style="width:11px;height:11px;vertical-align:middle;margin-right:3px;"></i>
+                            {{ h.performed_by.get_full_name|default:h.performed_by.username }}
+                        </div>
+                        {% elif h.recorded_by %}
+                        <div class="t-by">
+                            <i data-lucide="user-check" style="width:11px;height:11px;vertical-align:middle;margin-right:3px;"></i>
+                            {{ h.recorded_by.get_full_name }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endwith %}
+                    {% empty %}
+                    <div class="t-item">
+                        <div class="t-dot green"></div>
+                        <div class="t-date">{{ employee.hire_date|date:"d M Y"|default:"—" }}</div>
+                        <div class="t-title">Employee Created</div>
+                        <div class="t-sub">
+                            {{ employee.department.name|default:"General" }}
+                            {% if employee.position %} — {{ employee.position.title }}{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Certificates ─────────────────────────────────── -->
         {% if certificates %}
-        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
+        <div class="card" style="margin-bottom:24px;">
             <div class="card-header">
                 <i data-lucide="file-badge" style="width:18px;height:18px;color:var(--primary);"></i>
                 <h3>Certificates &amp; Documents</h3>
             </div>
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>Title</th><th>Type</th><th>Issued By</th><th>Date</th><th>File</th></tr></thead>
+                    <thead>
+                        <tr><th>Title</th><th>Type</th><th>Issued By</th><th>Date</th><th>File</th></tr>
+                    </thead>
                     <tbody>
                         {% for cert in certificates %}
                         <tr>
                             <td style="font-weight:600;">{{ cert.title }}</td>
                             <td><span class="badge badge-primary" style="font-size:11px;">{{ cert.get_cert_type_display }}</span></td>
-                            <td>{{ cert.issued_by|default:"—" }}</td>
-                            <td>{{ cert.issued_date|date:"d M Y"|default:"—" }}</td>
+                            <td style="font-size:13px;">{{ cert.issued_by|default:"—" }}</td>
+                            <td style="font-size:13px;">{{ cert.issued_date|date:"d M Y"|default:"—" }}</td>
                             <td>
                                 {% if cert.document %}
-                                <a href="{{ cert.document.url }}" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:4px 8px;">View</a>
+                                <a href="{{ cert.document.url }}" target="_blank"
+                                   class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">
+                                    <i data-lucide="download" style="width:12px;height:12px;"></i> View
+                                </a>
                                 {% else %}—{% endif %}
                             </td>
                         </tr>
@@ -164,37 +270,38 @@
         </div>
         {% endif %}
 
-        <!-- Leave Requests -->
-        {% if leave_requests %}
-        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
+        <!-- ── KPI Full Table ────────────────────────────────── -->
+        {% if kpi_scores %}
+        <div class="card" style="margin-bottom:24px;">
             <div class="card-header">
-                <i data-lucide="file-check" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>Leave Requests</h3>
+                <i data-lucide="bar-chart-3" style="width:18px;height:18px;color:var(--primary);"></i>
+                <h3>KPI Evaluation Scores</h3>
             </div>
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>Type</th><th>Start Date</th><th>End Date</th><th>Days</th><th>Status</th><th>Recommendation</th></tr></thead>
-                    <tbody>
-                        {% for req in leave_requests %}
+                    <thead>
                         <tr>
-                            <td><strong>{{ req.leave_type.name }}</strong></td>
-                            <td>{{ req.start_date|date:"d M Y" }}</td>
-                            <td>{{ req.end_date|date:"d M Y" }}</td>
-                            <td><strong>{{ req.requested_days }}</strong></td>
+                            <th>Period</th><th>Type</th>
+                            <th>Job Know.</th><th>Work Qual.</th><th>Attendance</th>
+                            <th>Teamwork</th><th>Ethics</th><th>Overall</th><th>By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in kpi_scores %}
+                        <tr>
+                            <td style="white-space:nowrap;">{{ s.year }} {{ s.period }}</td>
+                            <td><span class="badge badge-primary" style="font-size:11px;">{{ s.evaluation_type|title }}</span></td>
+                            <td>{{ s.job_knowledge }}/5</td>
+                            <td>{{ s.work_quality }}/5</td>
+                            <td>{{ s.attendance }}/5</td>
+                            <td>{{ s.teamwork }}/5</td>
+                            <td>{{ s.ethics }}/5</td>
                             <td>
-                                <span class="badge {% if req.status == 'Approved' %}badge-success{% elif req.status == 'Pending' %}badge-warning{% elif req.status == 'Rejected' or req.status == 'Cancelled' %}badge-danger{% else %}badge-primary{% endif %}">
-                                    {{ req.status }}
-                                </span>
+                                <strong style="color:{% if s.overall_score >= 4 %}var(--success){% elif s.overall_score >= 3 %}var(--primary){% else %}var(--warning){% endif %};">
+                                    {{ s.overall_score|default:"—" }}
+                                </strong>
                             </td>
-                            <td style="font-size:12px;">
-                                {% if req.supervisor_recommendation == 'recommended' %}
-                                    <span class="badge badge-success">Recommended</span>
-                                {% elif req.supervisor_recommendation == 'not_recommended' %}
-                                    <span class="badge badge-danger">Not Recommended</span>
-                                {% else %}
-                                    <span style="color:var(--text-muted);">—</span>
-                                {% endif %}
-                            </td>
+                            <td style="font-size:12px;color:var(--text-light);">{{ s.evaluator.get_full_name|default:"—" }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -203,55 +310,37 @@
         </div>
         {% endif %}
 
-        <!-- Leave Balance -->
-        <div class="card" style="margin-bottom: 24px; overflow: hidden;">
-            <div class="card-header">
-                <i data-lucide="calendar" style="width:18px;height:18px;color:var(--primary);"></i>
-                <h3>Leave Balance</h3>
-            </div>
-            {% if leave_balances %}
-            <div class="card-body"><div class="chart-panel" style="height:300px;"><canvas id="leaveBalanceChart" aria-label="Leave balance chart"></canvas></div></div>
-            <div class="table-wrap" style="display:none;">
-                <table>
-                    <thead><tr><th>Leave Type</th><th>Allocated</th><th>Used</th><th>Remaining</th><th>Updated</th></tr></thead>
-                    <tbody>
-                        {% for lb in leave_balances %}
-                        <tr>
-                            <td>{{ lb.leave_type.name }}</td>
-                            <td>{{ lb.allocated_days|default:lb.remaining_days }}</td>
-                            <td>{{ lb.used_days|default:0 }}</td>
-                            <td><strong style="color:{% if lb.remaining_days > 5 %}var(--success){% elif lb.remaining_days > 0 %}var(--warning){% else %}var(--danger){% endif %};">{{ lb.remaining_days }} days</strong></td>
-                            <td>{{ lb.last_updated|date:"d M Y"|default:"—" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div style="padding: 32px; text-align: center; color: var(--text-muted);">No leave balance records found.</div>
-            {% endif %}
-        </div>
-
-        <!-- Payroll Records -->
+        <!-- ── Payroll Records ───────────────────────────────── -->
         {% if payroll_records %}
-        <div class="card" style="overflow: hidden;">
+        <div class="card">
             <div class="card-header">
                 <i data-lucide="credit-card" style="width:18px;height:18px;color:var(--primary);"></i>
                 <h3>Payroll Records</h3>
             </div>
             <div class="table-wrap">
                 <table>
-                    <thead><tr><th>Period</th><th>Base Salary</th><th>Gross</th><th>Deductions</th><th>Net Salary</th><th>Status</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Period</th><th>Base</th><th>Gross</th>
+                            <th>Deductions</th><th>Net</th><th>Status</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         {% for pr in payroll_records %}
                         <tr>
-                            <td style="font-weight:600;">{{ pr.period_start|date:"d M" }} – {{ pr.period_end|date:"d M Y" }}</td>
+                            <td style="font-weight:600;white-space:nowrap;">
+                                {{ pr.period_start|date:"d M" }} – {{ pr.period_end|date:"d M Y" }}
+                            </td>
                             <td>{{ pr.base_salary|floatformat:2 }}</td>
                             <td><strong>{{ pr.gross_salary|floatformat:2 }}</strong></td>
                             <td>{{ pr.total_deductions|floatformat:2 }}</td>
                             <td><strong style="color:var(--success);">{{ pr.net_salary|floatformat:2 }}</strong></td>
                             <td>
-                                <span class="badge {% if pr.payment_status == 'Paid' %}badge-success{% elif pr.payment_status == 'Pending' %}badge-warning{% elif pr.payment_status == 'On Hold' %}badge-danger{% else %}badge-primary{% endif %}">
+                                <span class="badge
+                                    {% if pr.payment_status == 'Paid' %}badge-success
+                                    {% elif pr.payment_status == 'Pending' %}badge-warning
+                                    {% elif pr.payment_status == 'On Hold' %}badge-danger
+                                    {% else %}badge-primary{% endif %}">
                                     {{ pr.payment_status }}
                                 </span>
                             </td>
@@ -262,23 +351,7 @@
             </div>
         </div>
         {% endif %}
-    </div>
-</div>
-{% endblock %}
-{% block extra_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const canvas = document.getElementById('leaveBalanceChart');
-  if (!canvas || !window.Chart) return;
-  new Chart(canvas, {
-    type: 'bar',
-    data: { labels: JSON.parse('{{ leave_balance_labels_json|escapejs }}'), datasets: [
-      {label: 'Used days', data: JSON.parse('{{ leave_balance_used_json|escapejs }}'), backgroundColor: '#f59e0b', borderRadius: 5},
-      {label: 'Remaining days', data: JSON.parse('{{ leave_balance_remaining_json|escapejs }}'), backgroundColor: '#10b981', borderRadius: 5}
-    ]},
-    options: {responsive: true, maintainAspectRatio: false, scales: {y: {beginAtZero: true, ticks: {precision: 0}}}, plugins: {legend: {position: 'bottom'}}}
-  });
-});
-</script>
+
+    </div><!-- /.right -->
+</div><!-- /.grid -->
 {% endblock %}

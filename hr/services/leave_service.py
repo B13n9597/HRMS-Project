@@ -6,6 +6,7 @@
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.db import transaction
 
 from hr.holiday_checker import is_day_off
 from hr.models import LeaveRequest, LeaveBalance, LeaveType, LeavePolicy, Employee, SystemSetting
@@ -13,15 +14,22 @@ from hr.models import LeaveRequest, LeaveBalance, LeaveType, LeavePolicy, Employ
 
 # ── Policy leave types ──────────────────────────────────────────────────────
 POLICY_LEAVE_TYPES = [
-    {'name': 'Annual',      'max_days': 18, 'description': 'Annual leave. Starts at 18 days/year and increases yearly.'},
-    {'name': 'Sick',        'max_days': 30, 'description': 'Sick leave with medical certificate.'},
-    {'name': 'Maternity',   'max_days': 90, 'description': 'Maternity leave (3 months).'},
-    {'name': 'Paternity',   'max_days': 5,  'description': 'Paternity leave (5 days).'},
-    {'name': 'Mourning',    'max_days': 3,  'description': 'Bereavement/mourning leave (3 days).'},
-    {'name': 'Unpaid',      'max_days': 30, 'description': 'Unpaid leave approved by HR.'},
-    {'name': 'Educational', 'max_days': 14, 'description': 'Study/exam leave.'},
-    {'name': 'Sabbatical',  'max_days': 365, 'description': 'Sabbatical: one year off after 4 years of service.'},
+    {'name': 'Annual',                       'max_days': 16, 'description': 'Annual leave starts at 16 days and increases by 1 day per completed year of service, capped at 30 days.'},
+    {'name': 'Sick',                         'max_days': 195, 'description': 'Tenure-tiered sick leave; medical certificate required.'},
+    {'name': 'Pre-Maternity',                'max_days': 30, 'description': 'Up to 30 paid days before the expected delivery date.'},
+    {'name': 'Post-Maternity',               'max_days': 90, 'description': 'Up to 90 paid days after delivery for post-natal care.'},
+    {'name': 'Pre-Paternity',                'max_days': 2,  'description': 'Up to 2 paid days before the expected delivery date.'},
+    {'name': 'Post-Paternity',               'max_days': 3,  'description': 'Up to 3 paid days after delivery.'},
+    {'name': 'Matrimonial',                  'max_days': 5,  'description': 'First-marriage leave: five consecutive paid days.'},
+    {'name': 'Mourning',                    'max_days': 8,  'description': 'Mourning leave is capped at 8 days per calendar year, with a maximum of 3 working days per event.'},
+    {'name': 'Unpaid',                      'max_days': 0,  'description': 'Exceptional leave without pay after annual leave is used.'},
+    {'name': 'Educational Examination',     'max_days': 3,  'description': 'Actual semester or annual examination days, up to 3 paid working days.'},
+    {'name': 'Educational Final Examination','max_days': 5,  'description': 'Up to 2 working preparation days plus actual final-examination days, max 5 days.'},
+    {'name': 'Educational Course (Unpaid)',  'max_days': 0,  'description': 'Short or long work-related course leave of absence without pay, at the President’s discretion.'},
+    {'name': 'Sabbatical',                  'max_days': 365,'description': 'Sabbatical leave: 365 days after four completed years of service.'},
 ]
+
+POLICY_LEAVE_TYPE_NAMES = {item['name'] for item in POLICY_LEAVE_TYPES}
 
 
 
@@ -29,10 +37,13 @@ POLICY_LEAVE_TYPES = [
 def seed_leave_types():
     """Ensure all 7 policy leave types exist in the DB."""
     for lt in POLICY_LEAVE_TYPES:
-        leave_type, _ = LeaveType.objects.get_or_create(
+        leave_type, created = LeaveType.objects.get_or_create(
             name=lt['name'],
             defaults={'max_days': lt['max_days'], 'description': lt['description']}
         )
+        if not created and (leave_type.max_days != lt['max_days'] or leave_type.description != lt['description']):
+            leave_type.max_days, leave_type.description = lt['max_days'], lt['description']
+            leave_type.save(update_fields=['max_days', 'description'])
         # Policies are data-driven, so HR can extend the rules without changing code.
         name_key = lt['name'].lower()
         allowed_gender = 'Female' if 'maternity' in name_key else ('Male' if 'paternity' in name_key else '')
@@ -43,14 +54,28 @@ def seed_leave_types():
 
 def get_annual_leave_days_for_employee(employee: Employee) -> int:
     """
-    Annual leave starts at 18 days and increases by 1 day per completed year of service.
-    Max is capped at 30 days.
+    Annual leave starts at 16 days and increases by 1 day for each completed
+    year of service, capped at 30 days.
     """
     if not employee.hire_date:
-        return 18
+        return 16
     today = timezone.localdate()
     years = (today - employee.hire_date).days // 365
-    return min(18 + years, 30)
+    return min(16 + years, 30)
+
+
+def get_sick_leave_days_for_employee(employee: Employee) -> int:
+    """Section 10.5 entitlement total, using 30 days per policy month."""
+    if not employee.hire_date:
+        return 0
+    years = (timezone.localdate() - employee.hire_date).days // 365
+    if years < 1:
+        return 0
+    if years <= 5:
+        return 195  # 1 month full-pay + 2.5 half-pay + 3 no-pay
+    if years <= 15:
+        return 240  # 2 months full-pay + 3 half-pay + 3 no-pay
+    return 300      # 3 months full-pay + 4 half-pay + 3 no-pay
 
 
 def get_sabbatical_days_for_employee(employee: Employee) -> int:
@@ -90,14 +115,14 @@ def ensure_leave_balances(employee: Employee):
     Rules:
     - All leave types start at full policy allocation when the employee is hired.
     - Sabbatical starts at 0 and becomes 365 only after 4 completed years of service.
-    - Annual leave starts at 18 days and gains 1 day per year of service (max 30).
+    - Annual leave starts at 16 days and gains 1 day per year of service (max 30).
     - Approved leave deductions are handled by approve_request(); this function
       never reduces remaining_days below what has already been used.
     - Called on first login, leave submission, and by management commands.
     """
     _sync_gender_from_recruitment_application(employee)
     seed_leave_types()
-    for lt in LeaveType.objects.all():
+    for lt in LeaveType.objects.filter(name__in=POLICY_LEAVE_TYPE_NAMES):
         # Do not create a balance for leave that the employee cannot request.
         # This also keeps newly hired employees' dashboards clean from the
         # beginning, rather than only hiding the leave-type dropdown option.
@@ -108,8 +133,10 @@ def ensure_leave_balances(employee: Employee):
 
         if name == 'annual':
             allocated = get_annual_leave_days_for_employee(employee)
-        elif 'sabbatical' in name:
-            allocated = get_sabbatical_days_for_employee(employee)  # 0 until 4 years
+        elif name == 'sick':
+            allocated = get_sick_leave_days_for_employee(employee)
+        elif name == 'sabbatical':
+            allocated = get_sabbatical_days_for_employee(employee)
         else:
             allocated = lt.max_days  # full policy allocation
 
@@ -125,13 +152,19 @@ def ensure_leave_balances(employee: Employee):
 
         if not created:
             # Only recalculate types whose allocation can change over time
-            if name in ('annual',) or 'sabbatical' in name:
+            if name in ('annual', 'sick', 'sabbatical'):
                 if balance.allocated_days != allocated:
                     delta = allocated - balance.allocated_days
                     balance.allocated_days = allocated
                     # Carry the delta into remaining (e.g. annual gains 1 day/year)
                     balance.remaining_days = max(0, balance.remaining_days + delta)
                     balance.save(update_fields=['allocated_days', 'remaining_days'])
+            elif name == 'mourning' and balance.last_updated.year < timezone.localdate().year:
+                # Section 10.4 permits up to eight mourning days in each calendar year.
+                balance.allocated_days = allocated
+                balance.used_days = 0
+                balance.remaining_days = allocated
+                balance.save(update_fields=['allocated_days', 'used_days', 'remaining_days'])
 
 
 def _sync_gender_from_recruitment_application(employee: Employee) -> None:
@@ -163,26 +196,47 @@ def count_working_days(start_date, end_date) -> int:
     return count
 
 
+def count_leave_days(leave_type: LeaveType, start_date, end_date) -> int:
+    """Apply the correct duration rule for a leave type.
+
+    Pre/post maternity, post-paternity and matrimonial leave are consecutive calendar days; other leave types use
+    working days so weekends and public holidays are not deducted.
+    """
+    if leave_type.name.strip().lower() in {
+        'pre-maternity', 'post-maternity', 'post-paternity', 'matrimonial'
+    }:
+        return (end_date - start_date).days + 1
+    return count_working_days(start_date, end_date)
+
+
 def get_all_leave_types():
     seed_leave_types()
-    return LeaveType.objects.all().order_by('name')
+    return LeaveType.objects.filter(name__in=POLICY_LEAVE_TYPE_NAMES).order_by('name')
 
 
 def get_leave_types_for_employee(employee: Employee):
     """Return only leave types allowed by the employee's recorded gender."""
     _sync_gender_from_recruitment_application(employee)
     seed_leave_types()
-    return [leave_type for leave_type in LeaveType.objects.select_related('policy').order_by('name')
+    return [leave_type for leave_type in LeaveType.objects.filter(name__in=POLICY_LEAVE_TYPE_NAMES).select_related('policy').order_by('name')
             if is_leave_type_available(employee, leave_type)]
 
 
 def is_leave_type_available(employee: Employee, leave_type: LeaveType) -> bool:
-    """Single policy check shared by dropdowns and all request submission paths."""
+    """Single policy check shared by dropdowns and all request submission paths.
+
+    Gender-specific leave (maternity/paternity) is shown for all employees
+    whose gender is not yet recorded, so the cards are always visible.
+    Once gender is set, only the appropriate set is shown.
+    """
     policy = getattr(leave_type, 'policy', None)
     required_gender = policy.allowed_gender if policy else ''
     if not required_gender:
         name = leave_type.name.lower()
         required_gender = 'Female' if 'maternity' in name else ('Male' if 'paternity' in name else '')
+    # If employee gender is not set, show all leave types (including both maternity and paternity)
+    if not employee.gender:
+        return True
     return not required_gender or employee.gender == required_gender
 
 
@@ -247,7 +301,8 @@ def get_employee_requests(employee_id: int):
 def submit_leave_request(employee_id: int, data: dict) -> LeaveRequest:
     """
     Employee submits a leave request.
-    Validates balance. Counts working days only.
+    Validates the available balance. Maternity uses calendar days; other leave
+    types use working days. Balances are deducted only after HR approval.
     Accepts optional document file and contact info.
     """
     employee   = get_object_or_404(Employee, pk=employee_id)
@@ -256,15 +311,21 @@ def submit_leave_request(employee_id: int, data: dict) -> LeaveRequest:
     if leave_type not in get_leave_types_for_employee(employee):
         raise ValidationError(f"{leave_type.name} leave is not available for this employee.")
 
+    if leave_type.name.strip().lower() == 'sick' and not data.get('document'):
+        raise ValidationError("A medical certificate is required for every sick leave request.")
+
     start = data.get('start_date')
     end   = data.get('end_date')
 
     if end < start:
         raise ValidationError("End date cannot be before start date.")
 
-    requested_days = count_working_days(start, end)
+    requested_days = count_leave_days(leave_type, start, end)
     if requested_days == 0:
         raise ValidationError("Selected dates contain no working days.")
+
+    if leave_type.name.strip().lower() == 'mourning' and requested_days > 3:
+        raise ValidationError("Mourning leave is limited to three working days per event and eight days per calendar year.")
 
     ensure_leave_balances(employee)
 
@@ -279,14 +340,14 @@ def submit_leave_request(employee_id: int, data: dict) -> LeaveRequest:
         )
 
     req = LeaveRequest(
-        employee                  = employee,
-        leave_type                = leave_type,
-        start_date                = start,
-        end_date                  = end,
-        requested_days            = requested_days,
-        comments                  = data.get('reason', ''),
-        contact_info_during_leave = data.get('contact_info_during_leave', ''),
-        status                    = 'Pending',
+        employee=employee,
+        leave_type=leave_type,
+        start_date=start,
+        end_date=end,
+        requested_days=requested_days,
+        comments=data.get('reason', ''),
+        contact_info_during_leave=data.get('contact_info_during_leave', ''),
+        status='Pending',
     )
     req.full_clean()
     req.save()
@@ -344,40 +405,48 @@ def supervisor_not_recommend(request_id: int, supervisor: Employee, note: str = 
 
 
 def approve_request(request_id: int, approver: Employee) -> LeaveRequest:
-    """HR approves and deducts from balance."""
+    """Approve a pending request and deduct the employee's balance once."""
     req = get_object_or_404(LeaveRequest, pk=request_id)
-    if req.status != 'Pending':
-        raise ValidationError("Only pending requests can be approved.")
-
-    req.status        = 'Approved'
-    req.approved_by   = approver
-    req.approved_date = timezone.localdate()
-    req.save()
-
-    balance = LeaveBalance.objects.filter(
-        employee=req.employee,
-        leave_type=req.leave_type,
-    ).first()
-    if balance and req.requested_days:
-        balance.used_days      = (balance.used_days or 0) + req.requested_days
-        balance.remaining_days = max(0, balance.remaining_days - req.requested_days)
-        balance.save()
-
+    ensure_leave_balances(req.employee)
+    with transaction.atomic():
+        req = LeaveRequest.objects.select_for_update().filter(pk=request_id).first()
+        if not req:
+            raise ValidationError("Leave request not found.")
+        if req.status != 'Pending':
+            raise ValidationError("Only pending requests can be approved.")
+        balance = LeaveBalance.objects.select_for_update().get(
+            employee=req.employee, leave_type=req.leave_type
+        )
+        requested_days = req.requested_days or 0
+        if balance.remaining_days < requested_days:
+            raise ValidationError(
+                f"Insufficient balance. {req.employee.get_full_name()} has "
+                f"{balance.remaining_days} {req.leave_type.name} days remaining."
+            )
+        balance.used_days = (balance.used_days or 0) + requested_days
+        balance.remaining_days -= requested_days
+        balance.save(update_fields=['used_days', 'remaining_days'])
+        req.status = 'Approved'
+        req.approved_by = approver
+        req.approved_date = timezone.localdate()
+        req.save(update_fields=['status', 'approved_by', 'approved_date'])
     return req
 
 
 def reject_request(request_id: int, approver: Employee, note: str = '') -> LeaveRequest:
     """HR rejects a pending leave request."""
-    req = get_object_or_404(LeaveRequest, pk=request_id)
-    if req.status != 'Pending':
-        raise ValidationError("Only pending requests can be rejected.")
-
-    req.status        = 'Rejected'
-    req.approved_by   = approver
-    req.approved_date = timezone.localdate()
-    if note:
-        req.comments = note
-    req.save()
+    with transaction.atomic():
+        req = LeaveRequest.objects.select_for_update().filter(pk=request_id).first()
+        if not req:
+            raise ValidationError("Leave request not found.")
+        if req.status != 'Pending':
+            raise ValidationError("Only pending requests can be rejected.")
+        req.status = 'Rejected'
+        req.approved_by = approver
+        req.approved_date = timezone.localdate()
+        if note:
+            req.comments = note
+        req.save()
     return req
 
 
@@ -386,12 +455,14 @@ def cancel_request(request_id: int, employee: Employee) -> LeaveRequest:
     Employee cancels their own pending leave request.
     Only Pending requests can be cancelled. Approved/Rejected cannot be cancelled.
     """
-    req = get_object_or_404(LeaveRequest, pk=request_id, employee=employee)
-    if req.status != 'Pending':
-        raise ValidationError("Only pending requests can be cancelled.")
-
-    req.status = 'Cancelled'
-    req.save(update_fields=['status'])
+    with transaction.atomic():
+        req = LeaveRequest.objects.select_for_update().filter(pk=request_id, employee=employee).first()
+        if not req:
+            raise ValidationError("Leave request not found.")
+        if req.status != 'Pending':
+            raise ValidationError("Only pending requests can be cancelled.")
+        req.status = 'Cancelled'
+        req.save(update_fields=['status'])
     return req
 
 

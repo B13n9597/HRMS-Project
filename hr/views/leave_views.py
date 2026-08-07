@@ -89,13 +89,30 @@ def employee_leave_manager(request):
             except Exception as exc:
                 error_msg = str(exc)
 
-    leave_types  = leave_service.get_leave_types_for_employee(employee) if employee else []
+    leave_types  = leave_service.get_all_leave_types() if employee else []
     my_requests = []
     my_balances  = []
+    leave_type_options = []
     if employee:
         my_requests = leave_service.get_employee_requests(employee.pk)
         # Enrich balances with sabbatical eligibility info for UI
         balances_qs = leave_service.get_leave_balance(employee.pk)
+        allowed_leave_ids = {lt.id for lt in leave_service.get_leave_types_for_employee(employee)}
+        for lt in leave_types:
+            name_key = lt.name.lower()
+            gender_note = ''
+            if 'maternity' in name_key:
+                gender_note = 'Female only'
+            elif 'paternity' in name_key:
+                gender_note = 'Male only'
+            leave_type_options.append({
+                'id': lt.id,
+                'name': lt.name,
+                'max_days': lt.max_days,
+                'description': lt.description,
+                'eligible': lt.id in allowed_leave_ids,
+                'gender_note': gender_note,
+            })
         enriched = []
         seen_sabbatical = False  # track whether we have already added a sabbatical card
         for b in balances_qs:
@@ -111,6 +128,7 @@ def employee_leave_manager(request):
                 'leave_type_name': b.leave_type.name,
                 'remaining_days': b.remaining_days,
                 'allocated_days': getattr(b, 'allocated_days', None),
+                'description': b.leave_type.description,
             }
             if is_sabbatical:
                 elig = sabbatical_eligibility(employee)
@@ -134,6 +152,7 @@ def employee_leave_manager(request):
     context = {
         'employee':        employee,
         'leave_types':     leave_types,
+        'leave_type_options': leave_type_options,
         'my_requests':     my_requests,
         'my_balances':     my_balances,
         'status_badge':    status_badge,

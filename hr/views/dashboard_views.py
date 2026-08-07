@@ -13,7 +13,7 @@ from hr.models import (
     Employee, Department, Attendance, LeaveRequest, LeaveType,
     BiannualKPIScore, AuditLog, EmployeeHistory, Role
 )
-from hr.services import employee_service
+from hr.services import employee_service, leave_service
 
 # ==============================================================================
 #  DEAN DASHBOARD (Department-Level Management)
@@ -107,6 +107,7 @@ def dean_dashboard_view(request):
         leave_qs = leave_qs.filter(status=leave_status_filter)
         
     pending_leaves = leave_qs.filter(status='Pending')
+    maternity_leave_count = leave_qs.filter(leave_type__name__iexact='Maternity').count()
     
     # 4. Performance (KPI Tracking)
     kpi_scores_qs = BiannualKPIScore.objects.select_related('employee', 'employee__department').filter(
@@ -186,6 +187,7 @@ def dean_dashboard_view(request):
         'absent_today':   absent_today_count,
         'attendance_logs':    attendance_logs[:15],
         'pending_leaves':     pending_leaves[:10],
+        'maternity_leave_count': maternity_leave_count,
         'all_leave_requests': leave_qs[:20],
         'leave_types':    LeaveType.objects.all(),
         'dept_perf_score': dept_perf_score,
@@ -241,20 +243,15 @@ def dean_leave_action_api(request):
         user_emp = employee_service.get_employee_for_user(request.user)
         
         if action == 'approve':
-            leave_req.status = 'Approved'
-            leave_req.approved_by = user_emp
-            leave_req.approved_date = timezone.localdate()
+            leave_req = leave_service.approve_request(leave_req.id, user_emp)
         elif action == 'reject':
-            leave_req.status = 'Rejected'
-            leave_req.approved_by = user_emp
-            leave_req.approved_date = timezone.localdate()
+            leave_req = leave_service.reject_request(leave_req.id, user_emp, comments)
         else:
             return JsonResponse({'error': 'Invalid action'}, status=400)
             
-        if comments:
+        if comments and action == 'approve':
             leave_req.comments = f"{leave_req.comments}\nDean Note: {comments}".strip()
-            
-        leave_req.save()
+            leave_req.save(update_fields=['comments'])
         
         # Log to AuditLog
         AuditLog.objects.create(

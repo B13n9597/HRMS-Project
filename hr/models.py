@@ -835,39 +835,111 @@ class DisciplinaryRecord(BaseModel):
 
 class EmployeeHistory(BaseModel):
     EVENT_CHOICES = [
-        ('hired',            'Hired'),
-        ('probation_passed', 'Probation Passed'),
-        ('probation_failed', 'Probation Failed'),
-        ('promoted',         'Promoted'),
-        ('transferred',      'Transferred'),
-        ('salary_raise',     'Salary Raise'),
-        ('warned',           'Warning Issued'),
-        ('suspended',        'Suspended'),
-        ('reinstated',       'Reinstated'),
-        ('resigned',         'Resigned'),
-        ('retired',          'Retired'),
-        ('contract_renewed', 'Contract Renewed'),
+        # ── Recruitment Pipeline ───────────────────────────────
+        ('application_submitted',    'Job Application Submitted'),
+        ('application_reviewed',     'Application Reviewed'),
+        ('interview_scheduled',      'Interview Scheduled'),
+        ('interview_completed',      'Interview Completed'),
+        ('candidate_selected',       'Candidate Selected'),
+        ('offer_sent',               'Offer Sent'),
+        ('offer_accepted',           'Offer Accepted'),
+        # ── Onboarding & Probation ────────────────────────────
+        ('hired',                    'Employee Created'),
+        ('recruitment_completed',    'Recruitment Completed'),
+        ('onboarding_started',       'Onboarding Started'),
+        ('onboarding_completed',     'Onboarding Completed'),
+        ('probation_started',        'Probation Started'),
+        ('probation_passed',         'Probation Completed'),
+        ('confirmed_permanent',      'Confirmed as Permanent Employee'),
+        ('probation_failed',         'Probation Failed'),
+        # ── Career Progression ────────────────────────────────
+        ('promoted',                 'Promotion'),
+        ('demoted',                  'Demotion'),
+        ('transferred',              'Department Transfer'),
+        ('position_change',          'Position Change'),
+        ('salary_change',            'Salary Grade Change'),
+        ('salary_raise',             'Salary Raise'),
+        ('contract_renewed',         'Contract Renewed'),
+        # ── Performance & Development ─────────────────────────
+        ('training_assigned',        'Training Assigned'),
+        ('training_completed',       'Training Completed'),
+        ('performance_review',       'Performance Review Completed'),
+        # ── Disciplinary ──────────────────────────────────────
+        ('warned',                   'Warning Issued'),
+        ('suspended',                'Suspended'),
+        ('reinstated',               'Reinstated / Reactivated'),
+        # ── Exit ──────────────────────────────────────────────
+        ('terminated',               'Termination'),
+        ('resigned',                 'Resignation'),
+        ('retired',                  'Retirement'),
     ]
+
+    # All event types that belong on the career timeline.
+    # Operational records (daily attendance, leave balance, payslips) are
+    # deliberately excluded — they live in their own modules.
+    CAREER_EVENT_TYPES = {
+        'application_submitted', 'application_reviewed', 'interview_scheduled',
+        'interview_completed', 'candidate_selected', 'offer_sent', 'offer_accepted',
+        'hired', 'recruitment_completed', 'onboarding_started', 'onboarding_completed',
+        'probation_started', 'probation_passed', 'confirmed_permanent', 'probation_failed',
+        'promoted', 'demoted', 'transferred', 'position_change',
+        'salary_change', 'salary_raise', 'contract_renewed',
+        'training_assigned', 'training_completed', 'performance_review',
+        'warned', 'suspended', 'reinstated',
+        'terminated', 'resigned', 'retired',
+    }
+
+    # Colour category used by the template to pick dot/badge colour
+    EVENT_CATEGORY = {
+        'application_submitted': 'blue',  'application_reviewed': 'blue',
+        'interview_scheduled':   'blue',  'interview_completed':  'blue',
+        'candidate_selected':    'blue',  'offer_sent':           'blue',
+        'offer_accepted':        'green',
+        'hired':                 'green', 'recruitment_completed':'green',
+        'onboarding_started':    'green', 'onboarding_completed': 'green',
+        'probation_started':     'green', 'probation_passed':     'green',
+        'confirmed_permanent':   'green', 'probation_failed':     'amber',
+        'promoted':              'purple','demoted':              'amber',
+        'transferred':           'purple','position_change':      'purple',
+        'salary_change':         'purple','salary_raise':         'purple',
+        'contract_renewed':      'purple',
+        'training_assigned':     'teal',  'training_completed':   'teal',
+        'performance_review':    'teal',
+        'warned':                'amber', 'suspended':            'amber',
+        'reinstated':            'green',
+        'terminated':            'red',   'resigned':             'red',
+        'retired':               'red',
+    }
 
     employee    = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True)
     department  = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True)
     position    = models.ForeignKey(Position, on_delete=models.SET_NULL, null=True)
 
-    # FIX 4 ↓ — event tracking
     event_type  = models.CharField(max_length=50, choices=EVENT_CHOICES)
-    old_value   = models.TextField(blank=True)   
-    new_value   = models.TextField(blank=True)   
+    old_value   = models.TextField(blank=True)
+    new_value   = models.TextField(blank=True)
     notes       = models.TextField(blank=True)
+
+    # Who triggered this event (HR officer, system, etc.)
+    performed_by = models.ForeignKey(
+        'auth.User', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='lifecycle_events_performed'
+    )
+    # Legacy FK kept for backward-compat (Employee-typed recorder)
     recorded_by = models.ForeignKey(
         Employee, on_delete=models.SET_NULL,
-        null=True, related_name='history_recorded'
+        null=True, blank=True, related_name='history_recorded'
     )
 
     start_date  = models.DateField()
+    event_time  = models.TimeField(null=True, blank=True)  # time within start_date
     end_date    = models.DateField(null=True, blank=True)
 
     class Meta:
-        ordering = ['-start_date']
+        ordering = ['-start_date', '-event_time']
+
+    def get_event_category(self):
+        return self.EVENT_CATEGORY.get(self.event_type, 'blue')
 
 
 # ============================================================

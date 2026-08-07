@@ -1,131 +1,319 @@
 {% extends 'hr/hr_base.html' %}
-
 {% block title %}Employee Lifecycle — HR{% endblock %}
 
 {% block extra_styles %}
 <style>
-    .page-header {
-        display: flex; justify-content: space-between; align-items: flex-end;
-        margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color);
-    }
-    .page-header h1 { font-family: var(--font-display); font-size: 28px; font-weight: 800; margin-bottom: 4px; }
-    .page-header p { color: var(--text-muted); font-size: 14px; }
-    
-    .search-bar { display: flex; gap: 8px; }
-    .search-input {
-        padding: 10px 16px;
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        width: 300px;
-        font-size: 14px;
-        background: #fff;
-    }
-    
-    .timeline-card {
-        background: #fff;
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-lg);
-        padding: 24px;
-        margin-bottom: 16px;
-        display: flex;
-        align-items: center;
-        gap: 24px;
-    }
-    
-    .timeline-avatar {
-        width: 48px; height: 48px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #025da2, #0ea5e9);
-        color: #fff;
-        font-family: var(--font-display); font-size: 18px; font-weight: 700;
-        display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0;
-    }
-    
-    .timeline-info { flex-grow: 1; }
-    .timeline-name { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 2px; }
-    .timeline-meta { font-size: 13px; color: var(--text-muted); }
-    
-    .timeline-steps {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-left: auto;
-    }
-    
-    .t-step {
-        display: flex; flex-direction: column; align-items: center; gap: 4px;
-        width: 80px; position: relative;
-    }
-    .t-dot {
-        width: 14px; height: 14px; border-radius: 50%;
-        background: var(--border-color);
-        z-index: 2;
-    }
-    .t-step.active .t-dot { background: var(--success); box-shadow: 0 0 0 4px var(--success-light); }
-    .t-step.past .t-dot { background: var(--primary); }
-    
-    .t-line {
-        position: absolute; top: 7px; left: 50%; width: 100%; height: 2px;
-        background: var(--border-color); z-index: 1;
-    }
-    .t-step.past .t-line { background: var(--primary); }
-    .t-step:last-child .t-line { display: none; }
-    
-    .t-lbl { font-size: 11px; font-weight: 600; color: var(--text-light); text-transform: uppercase; }
-    .t-step.active .t-lbl { color: var(--success-dark); }
+/* ── Page header ─────────────────────────────────────────── */
+.page-header {
+    display:flex; justify-content:space-between; align-items:flex-end;
+    margin-bottom:24px; padding-bottom:20px;
+    border-bottom:1px solid var(--border-color);
+}
+.page-header h1 { font-family:var(--font-display); font-size:28px; font-weight:800; margin-bottom:4px; }
+.page-header p   { color:var(--text-muted); font-size:14px; }
+
+/* ── Filters row ─────────────────────────────────────────── */
+.filter-row {
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px;
+}
+.filter-row input, .filter-row select {
+    padding:9px 14px; border:1px solid var(--border-color);
+    border-radius:var(--radius-sm); font-size:13px;
+    background:#fff; color:var(--text-main);
+    transition:var(--transition);
+}
+.filter-row input:focus, .filter-row select:focus {
+    outline:none; border-color:var(--primary);
+    box-shadow:0 0 0 3px rgba(2,93,162,.1);
+}
+.filter-row input { width:260px; }
+
+/* ── Employee lifecycle card ─────────────────────────────── */
+.lc-card {
+    background:#fff; border:1px solid var(--border-color);
+    border-radius:var(--radius-lg); padding:20px 24px;
+    margin-bottom:12px; display:flex; align-items:center;
+    gap:20px; transition:var(--transition);
+    text-decoration:none; color:inherit;
+}
+.lc-card:hover {
+    border-color:rgba(2,93,162,.28);
+    box-shadow:var(--shadow-md);
+    transform:translateY(-1px);
+}
+
+/* Avatar */
+.lc-avatar {
+    width:46px; height:46px; border-radius:50%;
+    background:linear-gradient(135deg,#025da2,#0ea5e9);
+    color:#fff; font-family:var(--font-display);
+    font-size:17px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+}
+.lc-avatar.exited { background:linear-gradient(135deg,#64748b,#94a3b8); }
+
+/* Employee info */
+.lc-info { flex:1; min-width:0; }
+.lc-name { font-size:15px; font-weight:700; color:var(--text-main); margin-bottom:3px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lc-meta { font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.lc-status-badge {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700;
+}
+
+/* ── Career stage track ──────────────────────────────────── */
+.stage-track {
+    display:flex; align-items:flex-start;
+    gap:0; flex-shrink:0;
+}
+/* Each step: dot + label, connected by a line */
+.stage-step {
+    display:flex; flex-direction:column; align-items:center;
+    position:relative; width:88px;
+}
+/* The connecting line sits behind the dots */
+.stage-step::before {
+    content:'';
+    position:absolute;
+    top:8px; left:50%; right:-50%;
+    width:100%; height:2px;
+    background:var(--border-color);
+    z-index:0;
+}
+.stage-step:last-child::before { display:none; }
+
+/* Dot states */
+.stage-dot {
+    width:18px; height:18px; border-radius:50%;
+    background:#fff; border:2.5px solid var(--border-color);
+    z-index:1; position:relative; flex-shrink:0;
+    transition:var(--transition);
+}
+/* Past (completed) */
+.stage-step.past::before { background:var(--primary); }
+.stage-step.past  .stage-dot {
+    background:var(--primary); border-color:var(--primary);
+}
+/* Active (current stage) */
+.stage-step.active .stage-dot {
+    background:var(--success); border-color:var(--success);
+    box-shadow:0 0 0 4px rgba(16,185,129,.18);
+}
+.stage-step.active::before { background:var(--primary); }
+/* Progression */
+.stage-step.prog .stage-dot {
+    background:#7c3aed; border-color:#7c3aed;
+    box-shadow:0 0 0 4px rgba(124,58,237,.15);
+}
+.stage-step.prog::before { background:var(--primary); }
+/* Development */
+.stage-step.dev .stage-dot {
+    background:#0369a1; border-color:#0369a1;
+    box-shadow:0 0 0 4px rgba(3,105,161,.15);
+}
+.stage-step.dev::before { background:var(--primary); }
+/* Exit */
+.stage-step.exited .stage-dot {
+    background:#ef4444; border-color:#ef4444;
+    box-shadow:0 0 0 4px rgba(239,68,68,.15);
+}
+/* Label */
+.stage-lbl {
+    font-size:10px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.04em; color:var(--text-light);
+    margin-top:5px; text-align:center; line-height:1.3;
+    white-space:nowrap;
+}
+.stage-step.past    .stage-lbl { color:var(--primary); }
+.stage-step.active  .stage-lbl { color:var(--success-dark); }
+.stage-step.prog    .stage-lbl { color:#7c3aed; }
+.stage-step.dev     .stage-lbl { color:#0369a1; }
+.stage-step.exited  .stage-lbl { color:#dc2626; }
+
+/* ── Events count badge ──────────────────────────────────── */
+.events-badge {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:22px; height:22px; padding:0 6px;
+    border-radius:999px; font-size:11px; font-weight:700;
+    background:var(--primary-light); color:var(--primary);
+    flex-shrink:0; margin-left:8px;
+}
+
+/* ── Empty state ─────────────────────────────────────────── */
+.empty-lc {
+    text-align:center; padding:60px 20px;
+    color:var(--text-muted);
+}
+
+/* Responsive */
+@media(max-width:960px) {
+    .stage-step { width:64px; }
+    .stage-lbl  { font-size:9px; }
+    .lc-card    { gap:14px; padding:16px; }
+}
+@media(max-width:700px) {
+    .stage-track { display:none; }
+    .lc-card     { flex-wrap:wrap; }
+}
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- ── Page Header ────────────────────────────────────────── -->
 <div class="page-header">
     <div>
         <h1>Employee Lifecycle</h1>
-        <p>Track the journey of every employee from recruitment to exit.</p>
+        <p>Track the career journey of every employee — from recruitment to exit.</p>
     </div>
-    <form method="GET" class="search-bar">
-        <input type="text" name="q" class="search-input" placeholder="Search by name..." value="{{ search_query }}">
-        <button type="submit" class="btn btn-primary"><i data-lucide="search" style="width:16px;height:16px;"></i></button>
-        {% if search_query %}
-            <a href="{% url 'hr_lifecycle' %}" class="btn btn-ghost">Clear</a>
-        {% endif %}
-    </form>
 </div>
 
+<!-- ── Filters ───────────────────────────────────────────── -->
+<form method="GET" class="filter-row">
+    <input type="text" name="q"
+           placeholder="Search by name…"
+           value="{{ search_query }}"
+           aria-label="Search employees">
+    <select name="department_id" onchange="this.form.submit()" aria-label="Filter by department">
+        <option value="">All Departments</option>
+        {% for dept in departments %}
+        <option value="{{ dept.id }}" {% if dept_id|stringformat:"s" == dept.id|stringformat:"s" %}selected{% endif %}>
+            {{ dept.name }}
+        </option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary" style="padding:9px 16px;">
+        <i data-lucide="search" style="width:15px;height:15px;"></i> Search
+    </button>
+    {% if search_query or dept_id %}
+    <a href="{% url 'hr_lifecycle' %}" class="btn btn-ghost">Clear</a>
+    {% endif %}
+    <span style="margin-left:auto;font-size:13px;color:var(--text-muted);">
+        {{ employees|length }} employee{{ employees|length|pluralize }}
+    </span>
+</form>
+
+<!-- ── Employee Cards ────────────────────────────────────── -->
 {% for emp in employees %}
-<a href="{% url 'employee_details' emp.id %}" style="text-decoration: none; display: block;">
-    <div class="timeline-card" style="transition: transform 0.2s, box-shadow 0.2s; cursor: pointer;">
-        <div class="timeline-avatar">{{ emp.first_name|first }}{{ emp.last_name|first }}</div>
-        <div class="timeline-info">
-            <div class="timeline-name">{{ emp.get_full_name }}</div>
-            <div class="timeline-meta">{{ emp.department.name|default:"No Department" }} &bull; Hired: {{ emp.hire_date|date:"Y-m-d"|default:"N/A" }}</div>
-        </div>
-        
-        <div class="timeline-steps">
-            <div class="t-step past">
-                <div class="t-dot"></div><div class="t-line"></div>
-                <div class="t-lbl">Recruitment</div>
-            </div>
-            <div class="t-step {% if emp.status.name == 'Active' %}active{% elif emp.status.name != 'Active' %}past{% endif %}">
-                <div class="t-dot"></div><div class="t-line"></div>
-                <div class="t-lbl">Employment</div>
-            </div>
-            <div class="t-step {% if emp.has_promotion %}active{% endif %}">
-                <div class="t-dot"></div><div class="t-line"></div>
-                <div class="t-lbl">Promotion</div>
-            </div>
-            <div class="t-step {% if emp.has_retirement or emp.status.name == 'Retired' %}active{% endif %}">
-                <div class="t-dot"></div>
-                <div class="t-lbl">Retirement</div>
-            </div>
+
+{% comment %}
+Determine the employee's current career stage class for each step.
+Steps: Hired → Onboarding → Employment → Progression → Development → Exit
+Rules:
+  - Every step UP TO AND INCLUDING the current one is 'past'
+  - The current step is 'active' (or 'prog' / 'dev' / 'exited' for colour)
+  - Steps after the current one have no class (grey)
+{% endcomment %}
+
+{% with is_exited=emp.has_exit has_dev=emp.has_development has_prog=emp.has_progression is_active=emp.status.name %}
+<a href="{% url 'employee_details' emp.id %}" class="lc-card" aria-label="View lifecycle for {{ emp.get_full_name }}">
+
+    <!-- Avatar -->
+    <div class="lc-avatar {% if is_exited %}exited{% endif %}">
+        {{ emp.first_name|slice:":1"|upper }}{{ emp.last_name|slice:":1"|upper }}
+    </div>
+
+    <!-- Info -->
+    <div class="lc-info">
+        <div class="lc-name">{{ emp.get_full_name }}</div>
+        <div class="lc-meta">
+            <span>{{ emp.department.name|default:"No Department" }}</span>
+            <span style="color:var(--border-color);">•</span>
+            <span>Hired: {{ emp.hire_date|date:"Y-m-d"|default:"—" }}</span>
+            {% if emp.position %}
+            <span style="color:var(--border-color);">•</span>
+            <span>{{ emp.position.title }}</span>
+            {% endif %}
+            <!-- Status badge -->
+            {% if emp.status %}
+                {% if emp.status.name == 'Active' %}
+                    <span class="lc-status-badge" style="background:var(--success-light);color:var(--success-dark);">
+                        <i data-lucide="check-circle" style="width:10px;height:10px;"></i>
+                        {{ emp.status.name }}
+                    </span>
+                {% elif emp.status.name == 'On Leave' %}
+                    <span class="lc-status-badge" style="background:var(--warning-light);color:#78350f;">
+                        <i data-lucide="clock" style="width:10px;height:10px;"></i>
+                        {{ emp.status.name }}
+                    </span>
+                {% elif emp.status.name == 'Terminated' or emp.status.name == 'Retired' or emp.status.name == 'Resigned' %}
+                    <span class="lc-status-badge" style="background:var(--danger-light);color:var(--danger-dark);">
+                        <i data-lucide="x-circle" style="width:10px;height:10px;"></i>
+                        {{ emp.status.name }}
+                    </span>
+                {% else %}
+                    <span class="lc-status-badge" style="background:var(--primary-light);color:var(--primary);">
+                        <i data-lucide="user" style="width:10px;height:10px;"></i>
+                        {{ emp.status.name }}
+                    </span>
+                {% endif %}
+            {% endif %}
         </div>
     </div>
+
+    <!-- Career Stage Track -->
+    <div class="stage-track" role="img" aria-label="Career stage">
+
+        <!-- Step 1: Hired — always completed -->
+        <div class="stage-step past">
+            <div class="stage-dot"></div>
+            <div class="stage-lbl">Hired</div>
+        </div>
+
+        <!-- Step 2: Onboarding / Recruitment -->
+        <div class="stage-step {% if emp.has_onboarding %}past{% elif not emp.has_onboarding and not is_exited %}active{% endif %}">
+            <div class="stage-dot"></div>
+            <div class="stage-lbl">Onboarding</div>
+        </div>
+
+        <!-- Step 3: Active Employment -->
+        <div class="stage-step
+            {% if is_exited %}past
+            {% elif has_prog or has_dev %}past
+            {% elif emp.has_onboarding %}active
+            {% endif %}">
+            <div class="stage-dot"></div>
+            <div class="stage-lbl">Employment</div>
+        </div>
+
+        <!-- Step 4: Progression (Promotion / Transfer / Position Change) -->
+        <div class="stage-step
+            {% if is_exited and has_prog %}past
+            {% elif has_prog and has_dev %}past
+            {% elif has_prog and not has_dev and not is_exited %}prog
+            {% endif %}">
+            <div class="stage-dot"></div>
+            <div class="stage-lbl">Progression</div>
+        </div>
+
+        <!-- Step 5: Development (Training / Performance Review) -->
+        <div class="stage-step
+            {% if is_exited and has_dev %}past
+            {% elif has_dev and not is_exited %}dev
+            {% endif %}">
+            <div class="stage-dot"></div>
+            <div class="stage-lbl">Development</div>
+        </div>
+
+        <!-- Step 6: Exit -->
+        <div class="stage-step {% if is_exited %}exited{% endif %}">
+            <div class="stage-dot"></div>
+            <div class="stage-lbl">Exit</div>
+        </div>
+
+    </div>
+
+    <!-- Arrow -->
+    <i data-lucide="chevron-right" style="width:18px;height:18px;color:var(--text-light);flex-shrink:0;"></i>
+
 </a>
+{% endwith %}
 {% empty %}
-<div class="card empty-state" style="text-align:center; padding: 60px 20px;">
-    <i data-lucide="users" style="width:40px;height:40px; color:var(--text-light); margin-bottom: 16px;"></i>
-    <h3>No employees found</h3>
-    <p style="color:var(--text-muted); margin-top:8px;">Try adjusting your search criteria.</p>
+<div class="card empty-lc">
+    <i data-lucide="users" style="width:42px;height:42px;color:var(--text-light);display:block;margin:0 auto 14px;opacity:.4;"></i>
+    <h3 style="font-family:var(--font-display);font-size:18px;font-weight:700;margin-bottom:6px;">No employees found</h3>
+    <p>Try adjusting your search or department filter.</p>
 </div>
 {% endfor %}
 {% endblock %}
